@@ -1,0 +1,497 @@
+[gd_scene load_steps=3 format=3 uid="uid://cutscene"]
+
+[ext_resource type="Script" path="res://scenes/cutscene/cutscene.gd" id="1_script"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dialogue"]
+bg_color = Color(0.08, 0.06, 0.12, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.6, 0.5, 0.8, 0.8)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0, 0, 0, 0.5)
+shadow_size = 8
+
+[node name="Cutscene" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("1_script")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.02, 0.03, 0.06, 1)
+
+[node name="Stars" type="Node2D" parent="."]
+position = Vector2(540, 400)
+
+[node name="Star1" type="Polygon2D" parent="Stars"]
+position = Vector2(-400, -200)
+color = Color(0.9, 0.9, 0.95, 0.8)
+polygon = PackedVector2Array(-2, 0, 0, -2, 2, 0, 0, 2)
+
+[node name="Star6" type="Polygon2D" parent="Stars"]
+position = Vector2(-350, 180)
+color = Color(0.88, 0.88, 0.92, 0.5)
+polygon = PackedVector2Array(-1, 0, 0, -1, 1, 0, 0, 1)
+
+[node name="Star7" type="Polygon2D" parent="Stars"]
+position = Vector2(380, 120)
+color = Color(0.92, 0.9, 0.88, 0.6)
+polygon = PackedVector2Array(-1.5, 0, 0, -1.5, 1.5, 0, 0, 1.5)
+
+[node name="Star8" type="Polygon2D" parent="Stars"]
+position = Vector2(-50, -250)
+color = Color(0.9, 0.9, 1, 0.7)
+polygon = PackedVector2Array(-2, 0, 0, -2, 2, 0, 0, 2)
+
+[node name="Spaceship" type="Node2D" parent="."]
+position = Vector2(683, 380)
+scale = Vector2(2.5, 2.5)
+
+[node name="Hull" type="Polygon2D" parent="Spaceship"]
+color = Color(0.25, 0.28, 0.35, 1)
+polygon = PackedVector2Array(-120, 25, -100, -15, -60, -35, 60, -35, 100, -15, 120, 25, 100, 45, -100, 45)
+
+[node name="Bridge" type="Polygon2D" parent="Spaceship"]
+position = Vector2(0, -20)
+color = Color(0.35, 0.4, 0.5, 1)
+polygon = PackedVector2Array(-35, 0, -25, -25, 25, -25, 35, 0)
+
+[node name="Windows" type="Polygon2D" parent="Spaceship"]
+position = Vector2(0, -30)
+color = Color(0.5, 0.7, 0.9, 0.9)
+polygon = PackedVector2Array(-18, 0, -12, -12, 12, -12, 18, 0)
+
+[node name="EngineLeft" type="Polygon2D" parent="Spaceship"]
+position = Vector2(-90, 35)
+color = Color(0.3, 0.35, 0.42, 1)
+polygon = PackedVector2Array(-15, -10, 15, -10, 20, 20, -20, 20)
+
+[node name="EngineRight" type="Polygon2D" parent="Spaceship"]
+position = Vector2(90, 35)
+color = Color(0.3, 0.35, 0.42, 1)
+polygon = PackedVector2Array(-15, -10, 15, -10, 20, 20, -20, 20)
+
+[node name="ThrustLeft" type="Polygon2D" parent="Spaceship"]
+position = Vector2(-90, 55)
+color = Color(0.4, 0.6, 0.9, 0.7)
+polygon = PackedVector2Array(-10, 0, 10, 0, 5, 30, -5, 30)
+
+[node name="ThrustRight" type="Polygon2D" parent="Spaceship"]
+position = Vector2(90, 55)
+color = Color(0.4, 0.6, 0.9, 0.7)
+polygon = PackedVector2Array(-10, 0, 10, 0, 5, 30, -5, 30)
+
+[node name="WingLeft" type="Polygon2D" parent="Spaceship"]
+position = Vector2(-80, 10)
+color = Color(0.22, 0.25, 0.32, 1)
+polygon = PackedVector2Array(0, -15, -50, 10, -40, 25, 0, 15)
+
+[node name="WingRight" type="Polygon2D" parent="Spaceship"]
+position = Vector2(80, 10)
+color = Color(0.22, 0.25, 0.32, 1)
+polygon = PackedVector2Array(0, -15, 50, 10, 40, 25, 0, 15)
+
+[node name="Antenna" type="Polygon2D" parent="Spaceship"]
+position = Vector2(0, -50)
+color = Color(0.4, 0.45, 0.55, 1)
+polygon = PackedVector2Array(-3, 10, -3, -15, 3, -15, 3, 10)
+
+[node name="AntennaLight" type="Polygon2D" parent="Spaceship"]
+position = Vector2(0, -68)
+color = Color(0.9, 0.3, 0.3, 0.9)
+polygon = PackedVector2Array(-4, 0, 0, -4, 4, 0, 0, 4)
+
+[node name="DetailLine1" type="Polygon2D" parent="Spaceship"]
+position = Vector2(-40, 5)
+color = Color(0.4, 0.45, 0.52, 1)
+polygon = PackedVector2Array(-30, -2, 30, -2, 30, 2, -30, 2)
+
+[node name="DetailLine2" type="Polygon2D" parent="Spaceship"]
+position = Vector2(40, 5)
+color = Color(0.4, 0.45, 0.52, 1)
+polygon = PackedVector2Array(-30, -2, 30, -2, 30, 2, -30, 2)
+
+[node name="NamePlate" type="Label" parent="Spaceship"]
+offset_left = -60.0
+offset_top = 50.0
+offset_right = 60.0
+offset_bottom = 70.0
+theme_override_font_sizes/font_size = 10
+theme_override_colors/font_color = Color(0.5, 0.55, 0.65, 0.7)
+text = "The Stellar Wanderer"
+horizontal_alignment = 1
+
+
+[node name="Star2" type="Polygon2D" parent="Stars"]
+position = Vector2(300, -150)
+color = Color(0.85, 0.85, 0.9, 0.6)
+polygon = PackedVector2Array(-1.5, 0, 0, -1.5, 1.5, 0, 0, 1.5)
+
+[node name="Star3" type="Polygon2D" parent="Stars"]
+position = Vector2(-200, 100)
+color = Color(0.95, 0.9, 0.85, 0.7)
+polygon = PackedVector2Array(-2, 0, 0, -2, 2, 0, 0, 2)
+
+[node name="Star4" type="Polygon2D" parent="Stars"]
+position = Vector2(150, 50)
+color = Color(0.9, 0.92, 1, 0.5)
+polygon = PackedVector2Array(-1, 0, 0, -1, 1, 0, 0, 1)
+
+[node name="Star5" type="Polygon2D" parent="Stars"]
+position = Vector2(-100, -100)
+color = Color(1, 0.95, 0.9, 0.6)
+polygon = PackedVector2Array(-1.5, 0, 0, -1.5, 1.5, 0, 0, 1.5)
+
+[node name="LocationLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -300.0
+offset_top = 60.0
+offset_right = 300.0
+offset_bottom = 100.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(0.5, 0.55, 0.65, 1)
+text = "The Stellar Wanderer - Deep Space"
+horizontal_alignment = 1
+
+[node name="SceneContainer" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_bottom = -350.0
+mouse_filter = 2
+
+[node name="CharacterLeft" type="Control" parent="SceneContainer"]
+visible = false
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -350.0
+offset_top = -300.0
+offset_right = -150.0
+offset_bottom = 0.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="Glow" type="Polygon2D" parent="SceneContainer/CharacterLeft"]
+modulate = Color(1, 1, 1, 0.15)
+position = Vector2(100, 130)
+color = Color(0.4, 0.6, 0.9, 1)
+polygon = PackedVector2Array(-55, 120, -55, -10, -30, -80, 30, -80, 55, -10, 55, 120)
+
+[node name="Sprite" type="Polygon2D" parent="SceneContainer/CharacterLeft"]
+position = Vector2(100, 150)
+color = Color(0.4, 0.6, 0.9, 1)
+polygon = PackedVector2Array(-40, 100, -40, 0, -25, -60, 25, -60, 40, 0, 40, 100)
+
+[node name="Head" type="Polygon2D" parent="SceneContainer/CharacterLeft"]
+position = Vector2(100, 80)
+color = Color(0.5, 0.7, 1, 1)
+polygon = PackedVector2Array(-30, 20, -30, -30, 30, -30, 30, 20)
+
+[node name="Eyes" type="Polygon2D" parent="SceneContainer/CharacterLeft"]
+position = Vector2(100, 70)
+color = Color(0.2, 0.3, 0.5, 1)
+polygon = PackedVector2Array(-18, -5, -18, -12, -8, -12, -8, -5, 8, -5, 8, -12, 18, -12, 18, -5)
+
+[node name="Antenna" type="Polygon2D" parent="SceneContainer/CharacterLeft"]
+position = Vector2(100, 50)
+color = Color(0.4, 0.6, 0.9, 0.9)
+polygon = PackedVector2Array(-3, 0, -3, -15, 3, -15, 3, 0)
+
+[node name="AntennaTip" type="Polygon2D" parent="SceneContainer/CharacterLeft"]
+position = Vector2(100, 30)
+color = Color(0.6, 0.8, 1, 1)
+polygon = PackedVector2Array(-5, 0, 0, -7, 5, 0, 0, 4)
+
+[node name="CharacterRight" type="Control" parent="SceneContainer"]
+visible = false
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = 150.0
+offset_top = -300.0
+offset_right = 350.0
+offset_bottom = 0.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="Glow" type="Polygon2D" parent="SceneContainer/CharacterRight"]
+modulate = Color(1, 1, 1, 0.15)
+position = Vector2(100, 130)
+color = Color(0.7, 0.5, 0.8, 1)
+polygon = PackedVector2Array(-55, 120, -55, -10, -30, -80, 30, -80, 55, -10, 55, 120)
+
+[node name="Robe" type="Polygon2D" parent="SceneContainer/CharacterRight"]
+position = Vector2(100, 155)
+color = Color(0.8, 0.65, 0.95, 0.5)
+polygon = PackedVector2Array(-48, 95, -48, 5, 0, -15, 48, 5, 48, 95)
+
+[node name="Sprite" type="Polygon2D" parent="SceneContainer/CharacterRight"]
+position = Vector2(100, 150)
+color = Color(0.7, 0.5, 0.8, 1)
+polygon = PackedVector2Array(-40, 100, -40, 0, -25, -60, 25, -60, 40, 0, 40, 100)
+
+[node name="Head" type="Polygon2D" parent="SceneContainer/CharacterRight"]
+position = Vector2(100, 80)
+color = Color(0.8, 0.65, 0.95, 1)
+polygon = PackedVector2Array(-30, 20, -30, -30, 30, -30, 30, 20)
+
+[node name="Eyes" type="Polygon2D" parent="SceneContainer/CharacterRight"]
+position = Vector2(100, 70)
+color = Color(0.4, 0.85, 0.95, 1)
+polygon = PackedVector2Array(-18, -5, -18, -12, -8, -12, -8, -5, 8, -5, 8, -12, 18, -12, 18, -5)
+
+[node name="Antenna" type="Polygon2D" parent="SceneContainer/CharacterRight"]
+position = Vector2(100, 50)
+color = Color(0.7, 0.5, 0.8, 0.9)
+polygon = PackedVector2Array(-3, 0, -3, -15, 3, -15, 3, 0)
+
+[node name="AntennaTip" type="Polygon2D" parent="SceneContainer/CharacterRight"]
+position = Vector2(100, 30)
+color = Color(0.9, 0.7, 1, 1)
+polygon = PackedVector2Array(-5, 0, 0, -7, 5, 0, 0, 4)
+
+[node name="CharacterCenter" type="Control" parent="SceneContainer"]
+visible = false
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -100.0
+offset_top = -350.0
+offset_right = 100.0
+offset_bottom = 0.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="Glow" type="Polygon2D" parent="SceneContainer/CharacterCenter"]
+modulate = Color(1, 1, 1, 0.2)
+position = Vector2(100, 150)
+color = Color(0.83, 0.66, 0.29, 1)
+polygon = PackedVector2Array(-70, 140, -70, -20, -40, -100, 40, -100, 70, -20, 70, 140)
+
+[node name="Sprite" type="Polygon2D" parent="SceneContainer/CharacterCenter"]
+position = Vector2(100, 180)
+color = Color(0.83, 0.66, 0.29, 1)
+polygon = PackedVector2Array(-50, 120, -50, 0, -30, -80, 30, -80, 50, 0, 50, 120)
+
+[node name="Head" type="Polygon2D" parent="SceneContainer/CharacterCenter"]
+position = Vector2(100, 90)
+color = Color(0.9, 0.75, 0.4, 1)
+polygon = PackedVector2Array(-35, 25, -35, -35, 35, -35, 35, 25)
+
+[node name="Eyes" type="Polygon2D" parent="SceneContainer/CharacterCenter"]
+position = Vector2(100, 80)
+color = Color(0.2, 0.15, 0.1, 1)
+polygon = PackedVector2Array(-20, -5, -20, -14, -8, -14, -8, -5, 8, -5, 8, -14, 20, -14, 20, -5)
+
+[node name="Antenna" type="Polygon2D" parent="SceneContainer/CharacterCenter"]
+position = Vector2(100, 55)
+color = Color(0.83, 0.66, 0.29, 0.9)
+polygon = PackedVector2Array(-3, 0, -3, -18, 3, -18, 3, 0)
+
+[node name="AntennaTip" type="Polygon2D" parent="SceneContainer/CharacterCenter"]
+position = Vector2(100, 32)
+color = Color(0.95, 0.85, 0.5, 1)
+polygon = PackedVector2Array(-6, 0, 0, -8, 6, 0, 0, 5)
+
+[node name="CharacterSystem" type="Control" parent="SceneContainer"]
+visible = false
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -150.0
+offset_top = 80.0
+offset_right = 150.0
+offset_bottom = 380.0
+grow_horizontal = 2
+mouse_filter = 2
+
+[node name="OuterGlow" type="Polygon2D" parent="SceneContainer/CharacterSystem"]
+modulate = Color(1, 1, 1, 0.15)
+position = Vector2(150, 150)
+color = Color(0.4, 0.8, 0.7, 1)
+polygon = PackedVector2Array(0, -120, 104, -60, 104, 60, 0, 120, -104, 60, -104, -60)
+
+[node name="OuterRing" type="Polygon2D" parent="SceneContainer/CharacterSystem"]
+position = Vector2(150, 150)
+color = Color(0.3, 0.7, 0.6, 0.6)
+polygon = PackedVector2Array(0, -100, 87, -50, 87, 50, 0, 100, -87, 50, -87, -50, 0, -100, 0, -85, -74, -42, -74, 42, 0, 85, 74, 42, 74, -42, 0, -85)
+
+[node name="MiddleRing" type="Polygon2D" parent="SceneContainer/CharacterSystem"]
+position = Vector2(150, 150)
+color = Color(0.4, 0.8, 0.7, 0.7)
+polygon = PackedVector2Array(0, -70, 61, -35, 61, 35, 0, 70, -61, 35, -61, -35, 0, -70, 0, -55, -48, -27, -48, 27, 0, 55, 48, 27, 48, -27, 0, -55)
+
+[node name="InnerCore" type="Polygon2D" parent="SceneContainer/CharacterSystem"]
+position = Vector2(150, 150)
+color = Color(0.5, 0.9, 0.8, 0.9)
+polygon = PackedVector2Array(0, -40, 35, -20, 35, 20, 0, 40, -35, 20, -35, -20)
+
+[node name="CoreCenter" type="Polygon2D" parent="SceneContainer/CharacterSystem"]
+position = Vector2(150, 150)
+color = Color(0.6, 1.0, 0.9, 1)
+polygon = PackedVector2Array(0, -20, 17, -10, 17, 10, 0, 20, -17, 10, -17, -10)
+
+[node name="DataLine1" type="Polygon2D" parent="SceneContainer/CharacterSystem"]
+position = Vector2(150, 150)
+color = Color(0.4, 0.8, 0.7, 0.5)
+polygon = PackedVector2Array(-2, -120, 2, -120, 2, -140, -2, -140)
+
+[node name="DataLine2" type="Polygon2D" parent="SceneContainer/CharacterSystem"]
+position = Vector2(150, 150)
+color = Color(0.4, 0.8, 0.7, 0.5)
+polygon = PackedVector2Array(104, -58, 108, -60, 124, -50, 120, -48)
+
+[node name="DataLine3" type="Polygon2D" parent="SceneContainer/CharacterSystem"]
+position = Vector2(150, 150)
+color = Color(0.4, 0.8, 0.7, 0.5)
+polygon = PackedVector2Array(104, 58, 108, 60, 124, 50, 120, 48)
+
+[node name="DataLine4" type="Polygon2D" parent="SceneContainer/CharacterSystem"]
+position = Vector2(150, 150)
+color = Color(0.4, 0.8, 0.7, 0.5)
+polygon = PackedVector2Array(-2, 120, 2, 120, 2, 140, -2, 140)
+
+[node name="DataLine5" type="Polygon2D" parent="SceneContainer/CharacterSystem"]
+position = Vector2(150, 150)
+color = Color(0.4, 0.8, 0.7, 0.5)
+polygon = PackedVector2Array(-104, 58, -108, 60, -124, 50, -120, 48)
+
+[node name="DataLine6" type="Polygon2D" parent="SceneContainer/CharacterSystem"]
+position = Vector2(150, 150)
+color = Color(0.4, 0.8, 0.7, 0.5)
+polygon = PackedVector2Array(-104, -58, -108, -60, -124, -50, -120, -48)
+
+[node name="Sprite" type="Polygon2D" parent="SceneContainer/CharacterSystem"]
+position = Vector2(150, 150)
+color = Color(0.4, 0.8, 0.7, 1)
+polygon = PackedVector2Array(0, -40, 35, -20, 35, 20, 0, 40, -35, 20, -35, -20)
+
+[node name="DialoguePanel" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -600.0
+offset_top = -40.0
+offset_right = 600.0
+offset_bottom = -40.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_dialogue")
+
+[node name="Margin" type="MarginContainer" parent="DialoguePanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 30
+theme_override_constants/margin_bottom = 20
+
+[node name="VBox" type="VBoxContainer" parent="DialoguePanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="SpeakerLabel" type="Label" parent="DialoguePanel/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(0.83, 0.66, 0.29, 1)
+text = "Agent Goacto"
+
+[node name="DialogueLabel" type="Label" parent="DialoguePanel/Margin/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 0)
+theme_override_font_sizes/font_size = 22
+text = "Dialogue text appears here with a typing effect..."
+autowrap_mode = 2
+
+[node name="ContinueHint" type="Label" parent="DialoguePanel/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.5, 0.5, 0.6, 1)
+text = "Tap to continue..."
+horizontal_alignment = 2
+
+[node name="ClickArea" type="Button" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+focus_mode = 0
+mouse_filter = 0
+flat = true
+
+[node name="BackButton" type="Button" parent="."]
+layout_mode = 1
+anchors_preset = 0
+anchor_left = 0.0
+anchor_right = 0.0
+offset_left = 40.0
+offset_top = 30.0
+offset_right = 140.0
+offset_bottom = 80.0
+grow_horizontal = 1
+focus_mode = 2
+mouse_filter = 0
+theme_override_font_sizes/font_size = 22
+theme_override_colors/font_color = Color(0.5, 0.5, 0.6, 1)
+text = "< Back"
+
+[node name="SkipButton" type="Button" parent="."]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -140.0
+offset_top = 30.0
+offset_right = -40.0
+offset_bottom = 80.0
+grow_horizontal = 0
+focus_mode = 2
+mouse_filter = 0
+theme_override_font_sizes/font_size = 22
+theme_override_colors/font_color = Color(0.5, 0.5, 0.6, 1)
+text = "Skip"
+
+[node name="FadeOverlay" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0)
+
+[connection signal="pressed" from="ClickArea" to="." method="_on_click_area"]
+[connection signal="pressed" from="BackButton" to="." method="_on_back"]
+[connection signal="pressed" from="SkipButton" to="." method="_on_skip"]

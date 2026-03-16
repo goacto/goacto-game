@@ -1,0 +1,187 @@
+================================================================================
+VOICE SCRIPTS - MINDSCAPE BY GOACTO
+Copy each line directly into ElevenLabs
+================================================================================
+
+================================================================================
+CUTSCENE: intro_part1
+================================================================================
+
+--- NARRATOR VOICE ---
+
+[s0_d0] Year 3,847 of the Galactic Calendar. The Stellar Wanderer cruises through the cosmos on a 50-year voyage across the galaxy.
+
+[s0_d1] Aboard this vessel, thousands of Goactorian families enjoy their intergalactic vacation...
+
+[s0_d2] ...while their children dream of adventure.
+
+--- GOACTO VOICE ---
+
+[s1_d0] Another rest stop. Another week of waiting.
+
+[s1_d1] I wish I could DO something. Something that matters.
+
+[s1_d3] I know, Mom. But... I want to help someone. Really help them grow.
+
+[s1_d5] Program? What program?
+
+[s1_d7] Connect? You mean I could actually HELP someone?!
+
+--- LUMINA VOICE ---
+
+[s1_d2] Still restless, little one? The journey is the destination, remember?
+
+[s1_d4] Hmm. You know, there IS that old program in the ship's archive...
+
+[s1_d6] Mindscape by GOACTO - your great-elder created it for his first Contribution Certification. It connects you with beings on distant worlds who have... untapped potential.
+
+[s1_d8] Why don't you see for yourself? The console is in your room.
+
+
+================================================================================
+CUTSCENE: intro_part2
+================================================================================
+
+--- GOACTO VOICE ---
+
+[s0_d0] Mindscape by GOACTO... let's see what this is about.
+
+[s0_d3] Earth? I've heard of that place. Fascinating species - so much potential, but they struggle to see it themselves.
+
+[s0_d5] Exceptional potential? This is the one. Show me their mindscape.
+
+[s1_d1] It's... empty. Just a barren platform floating in darkness.
+
+[s1_d2] But I can feel it. The potential. It's all there, waiting to bloom.
+
+[s1_d3] I'll help them see what they can become. Every focus session, every habit, every goal - I'll be there supporting them.
+
+[s1_d5] Alright, human. Let's begin your transformation. First step: a Focus Session. Let's see what you're capable of.
+
+--- SYSTEM VOICE ---
+
+[s0_d1] MINDSCAPE by GOACTO version 3.2. Contribution Training Program. Initializing neural link...
+
+[s0_d2] Scanning Sector 7G... Planet: Earth. Species: Human. Searching for high-potential candidates...
+
+[s0_d4] CANDIDATE DETECTED. Potential Index: EXCEPTIONAL. Growth Trajectory: UNTAPPED. Contribution Capacity: HIGH. This human shows remarkable potential for growth and positive impact.
+
+[s1_d0] MINDSCAPE VISUALIZATION ACTIVE. Note: This space reflects the human's inner world. It will evolve as they grow.
+
+[s1_d4] NEURAL SYNC ESTABLISHED. You are now connected to your human. When they focus, you assist. When they grow, you guide.
+
+
+================================================================================
+CUTSCENE: discipline_awakens
+================================================================================
+
+--- GOACTO VOICE ---
+
+[s0_d0] Look at this! The mindscape is starting to change!
+
+[s0_d3] What... who are you?
+
+[s0_d6] So you're... part of them? Part of their potential?
+
+--- NARRATOR VOICE ---
+
+[s0_d1] A golden light pulses at the center of the platform...
+
+--- DISCIPLINE VOICE ---
+
+[s0_d2] You have begun. That is what matters.
+
+[s0_d4] I am Discipline. The foundation upon which all growth is built. I have slept here, waiting for someone to take the first step.
+
+[s0_d5] Your human has shown commitment. Consistency. The willingness to begin. These are my gifts to nurture.
+
+[s0_d7] I am the part that shows up. Every day. Regardless of feeling. Help them build habits, and I will grow stronger.
+
+[s0_d8] Now. There is work to do. The Daily Rituals await.
+
+
+================================================================================
+CUTSCENE: _placeholder
+================================================================================
+
+--- SYSTEM VOICE ---
+
+[s0_d0] TRANSMISSION INTERRUPTED. This chapter of your journey is still being written...
+
+[s0_d3] RETURNING TO MINDSCAPE... Your progress has been saved.
+
+--- GOACTO VOICE ---
+
+[s0_d1] Hmm, it seems the neural link is experiencing some interference.
+
+[s0_d2] Don't worry - the story continues. Keep growing, and this path will reveal itself soon.
+
+
+================================================================================
+VOICE DESIGN PROMPTS (for ElevenLabs Voice Design)
+================================================================================
+
+Use these prompts in ElevenLabs Voice Design to create custom voices.
+Go to: Voices > Add Voice > Voice Design > Enter prompt below
+
+--- NARRATOR ---
+A deep, resonant male narrator voice with a cinematic quality. Speaks slowly
+and deliberately, like narrating an epic space documentary. Rich baritone with
+gravitas and wonder. British or mid-Atlantic accent. Warm but authoritative,
+like Morgan Freeman meets David Attenborough narrating a cosmic journey.
+
+--- GOACTO (Main Character) ---
+A young, gender-neutral alien voice that sounds like an enthusiastic teenager.
+Warm and curious with bright, optimistic energy. Speaks with wonder and
+determination. Slightly higher pitch, clear articulation. Think of an eager
+young explorer discovering something amazing for the first time. American
+accent, friendly and approachable.
+
+--- LUMINA (Goacto's Mother) ---
+A wise, gentle female voice with maternal warmth. Middle-aged, calm and
+knowing. Speaks with a slight smile in her voice, nurturing but not
+condescending. Soft and melodic with subtle playfulness. Think of a loving
+mother who knows more than she lets on. Slight ethereal quality, like she
+holds ancient wisdom.
+
+--- SYSTEM (Ship Computer) ---
+A clean, precise synthetic voice that still has warmth. Gender-neutral,
+slightly robotic but not cold. Clinical and informative like a helpful AI
+assistant. Clear enunciation, measured pace. Think of a friendly ship computer
+that genuinely wants to help. Slight electronic undertone but still pleasant
+to listen to.
+
+--- DISCIPLINE (Spirit Guide) ---
+A powerful, ancient male voice with deep resonance and commanding presence.
+Speaks with absolute certainty and calm authority. Low pitch, measured pace,
+every word has weight. Think of an ancient warrior monk or a wise king who
+has seen millennia. Encouraging but firm, like a mentor who believes in you
+completely. Slight echo or reverb quality.
+
+
+================================================================================
+VOICE SETTINGS QUICK REFERENCE (if using pre-made voices)
+================================================================================
+
+NARRATOR:    Voice="Daniel"    Stability=70%  Clarity=80%  Style=15%
+GOACTO:      Voice="Adam"      Stability=50%  Clarity=75%  Style=30%
+LUMINA:      Voice="Rachel"    Stability=65%  Clarity=70%  Style=20%
+SYSTEM:      Voice="Elli"      Stability=85%  Clarity=90%  Style=0%
+DISCIPLINE:  Voice="Josh"      Stability=60%  Clarity=75%  Style=25%
+
+
+================================================================================
+GENERATION TIPS
+================================================================================
+
+1. Generate all lines for ONE character before switching voices
+2. Keep the same browser tab open to maintain voice consistency
+3. If a generation sounds off, regenerate (don't adjust settings mid-session)
+4. Add "..." for natural pauses in speech
+5. For SYSTEM voice, add slight pauses between technical terms
+6. For emotional lines, use CAPS sparingly: "I could actually HELP someone?!"
+7. Export as MP3, then batch convert to OGG using:
+
+   ffmpeg -i input.mp3 -c:a libvorbis -q:a 6 output.ogg
+
+================================================================================

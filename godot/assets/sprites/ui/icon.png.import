@@ -1,0 +1,10 @@
+[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+uid="uid://icon"
+path="res://assets/sprites/ui/icon.png"
+
+[deps]
+
+source_file="res://assets/sprites/ui/icon.png"

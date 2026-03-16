@@ -1,0 +1,221 @@
+[gd_scene load_steps=2 format=3 uid="uid://focus_mode"]
+
+[ext_resource type="Script" path="res://scenes/focus_mode/focus_mode.gd" id="1_script"]
+
+[node name="FocusMode" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.06, 0.07, 0.1, 1)
+
+[node name="Stars" type="Node2D" parent="."]
+position = Vector2(760, 400)
+
+[node name="Star1" type="Polygon2D" parent="Stars"]
+position = Vector2(-600, -250)
+color = Color(0.9, 0.9, 0.95, 0.3)
+polygon = PackedVector2Array(-2, 0, 0, -2, 2, 0, 0, 2)
+
+[node name="Star2" type="Polygon2D" parent="Stars"]
+position = Vector2(500, -200)
+color = Color(0.85, 0.85, 0.9, 0.25)
+polygon = PackedVector2Array(-1.5, 0, 0, -1.5, 1.5, 0, 0, 1.5)
+
+[node name="Star3" type="Polygon2D" parent="Stars"]
+position = Vector2(-350, 200)
+color = Color(0.95, 0.9, 0.85, 0.3)
+polygon = PackedVector2Array(-2, 0, 0, -2, 2, 0, 0, 2)
+
+[node name="Star4" type="Polygon2D" parent="Stars"]
+position = Vector2(400, 250)
+color = Color(0.9, 0.92, 1, 0.25)
+polygon = PackedVector2Array(-1, 0, 0, -1, 1, 0, 0, 1)
+
+[node name="Star5" type="Polygon2D" parent="Stars"]
+position = Vector2(-150, -100)
+color = Color(1, 0.95, 0.9, 0.3)
+polygon = PackedVector2Array(-1.5, 0, 0, -1.5, 1.5, 0, 0, 1.5)
+
+[node name="Star6" type="Polygon2D" parent="Stars"]
+position = Vector2(600, 50)
+color = Color(0.9, 0.85, 1, 0.25)
+polygon = PackedVector2Array(-1, 0, 0, -1, 1, 0, 0, 1)
+
+[node name="Star7" type="Polygon2D" parent="Stars"]
+position = Vector2(150, 150)
+color = Color(0.88, 0.9, 0.95, 0.3)
+polygon = PackedVector2Array(-1.5, 0, 0, -1.5, 1.5, 0, 0, 1.5)
+
+[node name="Star8" type="Polygon2D" parent="Stars"]
+position = Vector2(-500, 100)
+color = Color(0.92, 0.88, 0.95, 0.25)
+polygon = PackedVector2Array(-2, 0, 0, -2, 2, 0, 0, 2)
+
+[node name="CenterContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/margin_left = 50
+theme_override_constants/margin_right = 50
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="ScrollContainer" type="ScrollContainer" parent="CenterContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="ContentCenter" type="CenterContainer" parent="CenterContainer/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="VBox" type="VBoxContainer" parent="CenterContainer/ScrollContainer/ContentCenter"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 25
+
+[node name="TopSection" type="VBoxContainer" parent="CenterContainer/ScrollContainer/ContentCenter/VBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 15
+
+[node name="TopicLabel" type="Label" parent="CenterContainer/ScrollContainer/ContentCenter/VBox/TopSection"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+theme_override_colors/font_color = Color(0.83, 0.66, 0.29, 1)
+text = "Focus Session"
+horizontal_alignment = 1
+
+[node name="TimerContainer" type="CenterContainer" parent="CenterContainer/ScrollContainer/ContentCenter/VBox/TopSection"]
+layout_mode = 2
+
+[node name="TimerRing" type="Control" parent="CenterContainer/ScrollContainer/ContentCenter/VBox/TopSection/TimerContainer"]
+custom_minimum_size = Vector2(280, 280)
+layout_mode = 2
+
+[node name="RingBG" type="ColorRect" parent="CenterContainer/ScrollContainer/ContentCenter/VBox/TopSection/TimerContainer/TimerRing"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.13, 0.18, 1)
+
+[node name="TimerLabel" type="Label" parent="CenterContainer/ScrollContainer/ContentCenter/VBox/TopSection/TimerContainer/TimerRing"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_font_sizes/font_size = 72
+text = "25:00"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="StatusLabel" type="Label" parent="CenterContainer/ScrollContainer/ContentCenter/VBox/TopSection"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.5, 0.7, 0.55, 1)
+text = "Ready to focus"
+horizontal_alignment = 1
+
+[node name="SessionPanel" type="VBoxContainer" parent="CenterContainer/ScrollContainer/ContentCenter/VBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 20
+
+[node name="Instructions" type="Label" parent="CenterContainer/ScrollContainer/ContentCenter/VBox/SessionPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.45, 0.48, 0.55, 1)
+text = "Start the timer, put your phone aside, and focus.
+Return when your session is complete."
+horizontal_alignment = 1
+
+[node name="ButtonContainer" type="VBoxContainer" parent="CenterContainer/ScrollContainer/ContentCenter/VBox/SessionPanel"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 15
+
+[node name="StartButton" type="Button" parent="CenterContainer/ScrollContainer/ContentCenter/VBox/SessionPanel/ButtonContainer"]
+custom_minimum_size = Vector2(400, 80)
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "Begin Session"
+
+[node name="CompleteButton" type="Button" parent="CenterContainer/ScrollContainer/ContentCenter/VBox/SessionPanel/ButtonContainer"]
+custom_minimum_size = Vector2(400, 80)
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "Complete Session"
+
+[node name="CancelButton" type="Button" parent="CenterContainer/ScrollContainer/ContentCenter/VBox/SessionPanel/ButtonContainer"]
+custom_minimum_size = Vector2(400, 50)
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.5, 0.5, 0.55, 1)
+text = "Cancel"
+flat = true
+
+[node name="ProgressSection" type="VBoxContainer" parent="CenterContainer/ScrollContainer/ContentCenter/VBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 8
+
+[node name="ProgressBar" type="ProgressBar" parent="CenterContainer/ScrollContainer/ContentCenter/VBox/ProgressSection"]
+custom_minimum_size = Vector2(400, 12)
+layout_mode = 2
+max_value = 1.0
+show_percentage = false
+
+[node name="ProgressLabel" type="Label" parent="CenterContainer/ScrollContainer/ContentCenter/VBox/ProgressSection"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.45, 0.48, 0.55, 1)
+text = "0% complete"
+horizontal_alignment = 1
+
+[node name="JournalPanel" type="VBoxContainer" parent="CenterContainer/ScrollContainer/ContentCenter/VBox"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 4
+custom_minimum_size = Vector2(500, 0)
+theme_override_constants/separation = 18
+
+[node name="JournalTitle" type="Label" parent="CenterContainer/ScrollContainer/ContentCenter/VBox/JournalPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+theme_override_colors/font_color = Color(0.83, 0.66, 0.29, 1)
+text = "Session Complete!"
+horizontal_alignment = 1
+
+[node name="JournalSubtitle" type="Label" parent="CenterContainer/ScrollContainer/ContentCenter/VBox/JournalPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.45, 0.48, 0.55, 1)
+text = "Take a moment to reflect on your session."
+horizontal_alignment = 1
+
+[node name="Spacer1" type="Control" parent="CenterContainer/ScrollContainer/ContentCenter/VBox/JournalPanel"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+
+[node name="SubmitButton" type="Button" parent="CenterContainer/ScrollContainer/ContentCenter/VBox/JournalPanel"]
+custom_minimum_size = Vector2(500, 70)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Save & Return to Base"
+
+[node name="Timer" type="Timer" parent="."]
+wait_time = 1.0
