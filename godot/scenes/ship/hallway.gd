@@ -135,6 +135,26 @@ const INTERACTIVE_OBJECTS = {
 		"name": "Supply Container",
 		"prompt": "Press SPACE to examine",
 		"action": "examine_crate2"
+	},
+	"BulletinBoard": {
+		"name": "Crew Bulletin Board",
+		"prompt": "Press SPACE to read notices",
+		"action": "read_bulletin_board"
+	},
+	"ShipStatus": {
+		"name": "Ship Status Display",
+		"prompt": "Press SPACE to check systems",
+		"action": "check_ship_status"
+	},
+	"AchievementDisplay": {
+		"name": "Achievement Display",
+		"prompt": "Press SPACE to view achievements",
+		"action": "view_achievements"
+	},
+	"MotivationalPoster": {
+		"name": "Motivational Poster",
+		"prompt": "Press SPACE to read",
+		"action": "read_poster"
 	}
 }
 
@@ -153,7 +173,11 @@ var object_positions: Dictionary = {
 	"Crate2": Vector2(1220, 40),
 	"EmergencyPanel": Vector2(-100, -100),
 	"HallwayWindow": Vector2(300, -100),
-	"VentGrate": Vector2(950, 60)
+	"VentGrate": Vector2(950, 60),
+	"BulletinBoard": Vector2(-280, -100),
+	"ShipStatus": Vector2(500, -100),
+	"AchievementDisplay": Vector2(1100, -100),
+	"MotivationalPoster": Vector2(780, -80)
 }
 
 
@@ -463,6 +487,14 @@ func _interact_with_object(object_id: String) -> void:
 			_show_hallway_space_view()
 		"examine_vent":
 			_show_dialogue("Ventilation Grate", "The ship's ventilation system hums softly.\n\nWarm, recycled air flows through the grate.\n\nYou can hear distant mechanical sounds from deeper in the ship - the heartbeat of the Stellar Wanderer.")
+		"read_bulletin_board":
+			_show_bulletin_board()
+		"check_ship_status":
+			_show_ship_status()
+		"view_achievements":
+			_show_achievement_display()
+		"read_poster":
+			_show_motivational_poster()
 
 
 func _confirm_go_stairs() -> void:
@@ -514,6 +546,113 @@ func _is_observatory_unlocked() -> bool:
 	if GameManager.player_data.get("console_placed_in_bedroom", false):
 		return true
 	return false
+
+
+func _show_bulletin_board() -> void:
+	## Show crew bulletin board with tips and messages
+	var tips = [
+		"Remember to take breaks during long focus sessions!",
+		"Hydration is key - drink water regularly.",
+		"A 5-minute walk can boost creativity.",
+		"Celebrate small wins - they add up!",
+		"Today's kindness can change someone's tomorrow."
+	]
+	var random_tip = tips[randi() % tips.size()]
+
+	var streak = GameManager.player_data.get("current_streak", 0)
+	var streak_msg = ""
+	if streak > 0:
+		streak_msg = "\n\n📊 Current Streak: " + str(streak) + " days!"
+
+	var content = "═══ CREW NOTICES ═══\n\n"
+	content += "💡 Daily Tip:\n\"" + random_tip + "\"\n"
+	content += streak_msg
+	content += "\n\n• Ship systems: Nominal\n• Morale level: Growing\n• ETA: 47 years"
+
+	_show_dialogue("Crew Bulletin Board", content)
+
+
+func _show_ship_status() -> void:
+	## Show detailed ship status display
+	var focus_sessions = GameManager.player_data.get("total_focus_sessions", 0)
+	var total_minutes = GameManager.player_data.get("total_focus_minutes", 0)
+	var habits_completed = GameManager.player_data.get("habits_completed_today", 0)
+	var evolution = GameManager.get_evolution_level() if GameManager else 1
+
+	var status = "╔═══ STELLAR WANDERER ═══╗\n\n"
+	status += "▸ Life Support: 100% ●\n"
+	status += "▸ Hull Integrity: 100% ●\n"
+	status += "▸ Navigation: AUTOPILOT ●\n"
+	status += "▸ Mindscape Link: ACTIVE ●\n\n"
+	status += "═══ CREW METRICS ═══\n\n"
+	status += "Focus Sessions: " + str(focus_sessions) + "\n"
+	status += "Focus Minutes: " + str(total_minutes) + "\n"
+	status += "Today's Habits: " + str(habits_completed) + "\n"
+	status += "Evolution Level: " + str(evolution) + "\n"
+	status += "\n╚═══════════════════════╝"
+
+	_show_dialogue("Ship Status Display", status)
+
+
+func _show_achievement_display() -> void:
+	## Show recent achievements
+	var achievements = []
+
+	# Check for achievements based on player progress
+	var focus_sessions = GameManager.player_data.get("total_focus_sessions", 0)
+	var streak = GameManager.player_data.get("current_streak", 0)
+	var evolution = GameManager.get_evolution_level() if GameManager else 1
+
+	if focus_sessions >= 1:
+		achievements.append("🎯 First Focus - Complete your first session")
+	if focus_sessions >= 10:
+		achievements.append("🔥 Focused Ten - Complete 10 focus sessions")
+	if focus_sessions >= 25:
+		achievements.append("⭐ Quarter Century - Complete 25 sessions")
+	if streak >= 3:
+		achievements.append("📅 Three-peat - Maintain a 3-day streak")
+	if streak >= 7:
+		achievements.append("🌟 Week Warrior - Maintain a 7-day streak")
+	if evolution >= 2:
+		achievements.append("🌱 Growing - Reach Evolution Level 2")
+	if evolution >= 5:
+		achievements.append("🌳 Flourishing - Reach Evolution Level 5")
+
+	var content = "═══ ACHIEVEMENT DISPLAY ═══\n\n"
+	if achievements.is_empty():
+		content += "No achievements yet.\n\nStart your journey by:\n• Completing focus sessions\n• Building daily habits\n• Exploring the mindscape"
+	else:
+		content += "Unlocked (" + str(achievements.size()) + "):\n\n"
+		for achievement in achievements:
+			content += achievement + "\n"
+
+	_show_dialogue("Achievement Display", content)
+
+
+func _show_motivational_poster() -> void:
+	## Show a random motivational quote
+	var quotes = [
+		{"quote": "The journey of a thousand miles begins with a single step.", "author": "Lao Tzu"},
+		{"quote": "You don't have to be great to start, but you have to start to be great.", "author": "Zig Ziglar"},
+		{"quote": "Progress, not perfection.", "author": "Unknown"},
+		{"quote": "Small steps every day lead to big changes over time.", "author": "Goactorian Proverb"},
+		{"quote": "Your future is created by what you do today.", "author": "Robert Kiyosaki"},
+		{"quote": "Discipline is choosing between what you want now and what you want most.", "author": "Abraham Lincoln"},
+		{"quote": "The mind is everything. What you think, you become.", "author": "Buddha"},
+		{"quote": "Every expert was once a beginner.", "author": "Helen Hayes"}
+	]
+
+	var random_quote = quotes[randi() % quotes.size()]
+
+	var content = "╭──────────────────────────╮\n"
+	content += "│                          │\n"
+	content += "│  \"" + random_quote.quote + "\"  │\n"
+	content += "│                          │\n"
+	content += "│  — " + random_quote.author + "  │\n"
+	content += "│                          │\n"
+	content += "╰──────────────────────────╯"
+
+	_show_dialogue("Motivational Poster", content)
 
 
 func _animate_lights(delta: float) -> void:
@@ -638,6 +777,10 @@ func _create_highlight_glows() -> void:
 		"EmergencyPanel": {"pos": Vector2(-100, -150), "size": Vector2(60, 80), "color": Color(0.8, 0.4, 0.3)},
 		"HallwayWindow": {"pos": Vector2(300, -150), "size": Vector2(100, 70), "color": Color(0.3, 0.5, 0.7)},
 		"VentGrate": {"pos": Vector2(950, 40), "size": Vector2(50, 40), "color": Color(0.4, 0.4, 0.5)},
+		"BulletinBoard": {"pos": Vector2(-280, -150), "size": Vector2(90, 70), "color": Color(0.6, 0.5, 0.3)},
+		"ShipStatus": {"pos": Vector2(500, -150), "size": Vector2(80, 60), "color": Color(0.3, 0.7, 0.5)},
+		"AchievementDisplay": {"pos": Vector2(1100, -150), "size": Vector2(70, 80), "color": Color(0.8, 0.7, 0.3)},
+		"MotivationalPoster": {"pos": Vector2(780, -150), "size": Vector2(60, 80), "color": Color(0.5, 0.5, 0.8)},
 	}
 
 	for object_id in glow_configs:

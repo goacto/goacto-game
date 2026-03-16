@@ -538,6 +538,40 @@ func play_ambient_mindscape() -> void:
 		print("[AudioManager] Mindscape ambient not found: ", path)
 
 
+## Play ambient from a specified path
+func play_ambient_from_path(path: String) -> void:
+	if not ResourceLoader.exists(path):
+		print("[AudioManager] Ambient not found: ", path)
+		return
+
+	var stream = load(path)
+	if stream:
+		# Ensure loop is enabled for ambient
+		if stream is AudioStreamWAV:
+			stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		play_ambient(stream)
+		print("[AudioManager] Playing ambient from: ", path)
+
+
+## Play focus session ambient (space, rain, forest, etc.)
+func play_focus_ambient(ambient_type: String) -> void:
+	var paths = {
+		"space": "res://audio/sfx/ambient_focus_space.wav",
+		"ship": "res://audio/sfx/ambient_ship_hum.wav",
+		"mindscape": "res://audio/sfx/ambient_mindscape.wav",
+		"rain": "res://audio/sfx/ambient_rain.wav",
+		"forest": "res://audio/sfx/ambient_forest.wav"
+	}
+
+	var path = paths.get(ambient_type, "")
+	if path != "" and ResourceLoader.exists(path):
+		play_ambient_from_path(path)
+	else:
+		# Fall back to mindscape ambient
+		print("[AudioManager] Focus ambient not found, using mindscape: ", ambient_type)
+		play_ambient_mindscape()
+
+
 # =============================================================================
 # VOLUME CONTROL
 # =============================================================================

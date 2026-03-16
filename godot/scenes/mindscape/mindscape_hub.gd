@@ -6879,6 +6879,15 @@ func _open_journal_viewer() -> void:
 		weekly_tab.add_theme_color_override("font_color", Color(0.83, 0.66, 0.29))
 	tab_row.add_child(weekly_tab)
 
+	var affirm_tab = Button.new()
+	affirm_tab.text = "Affirm"
+	affirm_tab.custom_minimum_size = Vector2(70, 40)
+	affirm_tab.add_theme_font_size_override("font_size", 16)
+	affirm_tab.pressed.connect(_show_journal_tab.bind("affirm"))
+	if current_journal_tab == "affirm":
+		affirm_tab.add_theme_color_override("font_color", Color(0.83, 0.66, 0.29))
+	tab_row.add_child(affirm_tab)
+
 	_add_habit_spacer(12)
 
 	# Build the current tab content
@@ -6893,6 +6902,8 @@ func _open_journal_viewer() -> void:
 			_build_checkin_tab()
 		"weekly":
 			_build_weekly_synthesis_tab()
+		"affirm":
+			_build_affirmations_tab()
 
 	_add_habit_spacer(15)
 
@@ -9010,6 +9021,9 @@ func _create_enhanced_hub_environment() -> void:
 	# Create center crystal enhancement
 	_create_hub_center_enhancement()
 
+	# Create progress indicators (streak flames, evolution ring)
+	_create_progress_indicators()
+
 
 func _create_hub_floor_patterns() -> void:
 	# Concentric diamond rings
@@ -9227,6 +9241,186 @@ func _create_hub_center_enhancement() -> void:
 		hub_env_container.add_child(line)
 
 
+# Progress indicator tracking
+var streak_flames: Array = []
+var evolution_ring: Node2D = null
+var evolution_segments: Array = []
+
+
+func _create_progress_indicators() -> void:
+	## Create visual indicators for player progress: streak flames and evolution ring
+
+	# Get current stats
+	var current_streak = GameManager.player_data.get("current_streak", 0)
+	var evolution_level = GameManager.get_evolution_level() if GameManager else 1
+	var evolution_progress = GameManager.get_evolution_progress() if GameManager else 0.0
+
+	# === STREAK FLAMES ===
+	# Positioned around the center crystal, more flames = higher streak
+	var flame_count = min(current_streak, 12)  # Max 12 flames
+	var flame_radius = 140
+
+	for i in range(flame_count):
+		var angle = (float(i) / max(flame_count, 1)) * TAU - PI/2
+		var flame_pos = Vector2(cos(angle) * flame_radius, sin(angle) * flame_radius * 0.5 - 60)
+
+		var flame_container = Node2D.new()
+		flame_container.name = "StreakFlame_" + str(i)
+		flame_container.position = flame_pos
+
+		# Flame base (orange/yellow gradient effect with polygons)
+		var flame_height = 20 + min(current_streak, 10) * 2  # Grows with streak
+		var flame_width = 8
+
+		# Outer flame (orange)
+		var outer_flame = Polygon2D.new()
+		outer_flame.polygon = PackedVector2Array([
+			Vector2(-flame_width, 0),
+			Vector2(-flame_width * 0.6, -flame_height * 0.4),
+			Vector2(-flame_width * 0.3, -flame_height * 0.7),
+			Vector2(0, -flame_height),
+			Vector2(flame_width * 0.3, -flame_height * 0.7),
+			Vector2(flame_width * 0.6, -flame_height * 0.4),
+			Vector2(flame_width, 0)
+		])
+		outer_flame.color = Color(0.95, 0.5, 0.1, 0.8)
+		flame_container.add_child(outer_flame)
+
+		# Inner flame (yellow)
+		var inner_flame = Polygon2D.new()
+		var inner_height = flame_height * 0.7
+		var inner_width = flame_width * 0.5
+		inner_flame.polygon = PackedVector2Array([
+			Vector2(-inner_width, 0),
+			Vector2(-inner_width * 0.5, -inner_height * 0.5),
+			Vector2(0, -inner_height),
+			Vector2(inner_width * 0.5, -inner_height * 0.5),
+			Vector2(inner_width, 0)
+		])
+		inner_flame.color = Color(1.0, 0.85, 0.2, 0.9)
+		flame_container.add_child(inner_flame)
+
+		# Core (white-hot)
+		var core = Polygon2D.new()
+		var core_height = flame_height * 0.4
+		var core_width = flame_width * 0.25
+		core.polygon = PackedVector2Array([
+			Vector2(-core_width, 0),
+			Vector2(0, -core_height),
+			Vector2(core_width, 0)
+		])
+		core.color = Color(1.0, 1.0, 0.9, 0.95)
+		flame_container.add_child(core)
+
+		flame_container.z_index = 5
+		hub_env_container.add_child(flame_container)
+
+		streak_flames.append({
+			"node": flame_container,
+			"base_pos": flame_pos,
+			"phase": randf() * TAU,
+			"flicker_speed": randf_range(8.0, 12.0)
+		})
+
+	# Streak counter display (if streak > 0)
+	if current_streak > 0:
+		var streak_label = Label.new()
+		streak_label.name = "StreakLabel"
+		streak_label.text = str(current_streak) + " day streak"
+		streak_label.add_theme_font_size_override("font_size", 14)
+		streak_label.add_theme_color_override("font_color", Color(0.95, 0.7, 0.3))
+		streak_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		streak_label.position = Vector2(-60, 80)
+		streak_label.z_index = 10
+
+		var streak_bg = ColorRect.new()
+		streak_bg.color = Color(0.1, 0.08, 0.15, 0.7)
+		streak_bg.custom_minimum_size = Vector2(120, 24)
+		streak_bg.position = Vector2(-60, 78)
+		streak_bg.z_index = 9
+
+		hub_env_container.add_child(streak_bg)
+		hub_env_container.add_child(streak_label)
+
+	# === EVOLUTION RING ===
+	# A ring around the platform that fills based on evolution progress
+	evolution_ring = Node2D.new()
+	evolution_ring.name = "EvolutionRing"
+	evolution_ring.position = Vector2(0, 0)
+
+	var ring_radius = 200
+	var ring_thickness = 6
+	var segment_count = 20
+
+	# Background ring (dark)
+	for i in range(segment_count):
+		var start_angle = (float(i) / segment_count) * TAU - PI/2
+		var end_angle = (float(i + 1) / segment_count) * TAU - PI/2
+
+		var segment = Polygon2D.new()
+		var outer_r = ring_radius + ring_thickness
+		var inner_r = ring_radius - ring_thickness
+
+		segment.polygon = PackedVector2Array([
+			Vector2(cos(start_angle) * inner_r, sin(start_angle) * inner_r * 0.5),
+			Vector2(cos(start_angle) * outer_r, sin(start_angle) * outer_r * 0.5),
+			Vector2(cos(end_angle) * outer_r, sin(end_angle) * outer_r * 0.5),
+			Vector2(cos(end_angle) * inner_r, sin(end_angle) * inner_r * 0.5)
+		])
+		segment.color = Color(0.15, 0.12, 0.2, 0.5)
+		evolution_ring.add_child(segment)
+
+	# Progress ring (glowing based on evolution)
+	var filled_segments = int(evolution_progress * segment_count)
+	var level_colors = [
+		Color(0.5, 0.5, 0.6),    # Level 1 - Gray
+		Color(0.4, 0.7, 0.5),    # Level 2 - Green
+		Color(0.3, 0.6, 0.9),    # Level 3 - Blue
+		Color(0.7, 0.5, 0.9),    # Level 4 - Purple
+		Color(0.9, 0.7, 0.3),    # Level 5 - Gold
+		Color(0.95, 0.4, 0.4),   # Level 6+ - Red/Fire
+	]
+	var ring_color = level_colors[min(evolution_level - 1, level_colors.size() - 1)]
+
+	for i in range(filled_segments):
+		var start_angle = (float(i) / segment_count) * TAU - PI/2
+		var end_angle = (float(i + 1) / segment_count) * TAU - PI/2
+
+		var segment = Polygon2D.new()
+		segment.name = "EvoSegment_" + str(i)
+		var outer_r = ring_radius + ring_thickness
+		var inner_r = ring_radius - ring_thickness
+
+		segment.polygon = PackedVector2Array([
+			Vector2(cos(start_angle) * inner_r, sin(start_angle) * inner_r * 0.5),
+			Vector2(cos(start_angle) * outer_r, sin(start_angle) * outer_r * 0.5),
+			Vector2(cos(end_angle) * outer_r, sin(end_angle) * outer_r * 0.5),
+			Vector2(cos(end_angle) * inner_r, sin(end_angle) * inner_r * 0.5)
+		])
+		segment.color = ring_color
+		evolution_ring.add_child(segment)
+
+		evolution_segments.append({
+			"polygon": segment,
+			"base_color": ring_color,
+			"index": i
+		})
+
+	evolution_ring.z_index = 2
+	hub_env_container.add_child(evolution_ring)
+
+	# Evolution level indicator
+	var evo_label = Label.new()
+	evo_label.name = "EvoLabel"
+	evo_label.text = "Evo " + str(evolution_level)
+	evo_label.add_theme_font_size_override("font_size", 12)
+	evo_label.add_theme_color_override("font_color", ring_color)
+	evo_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	evo_label.position = Vector2(-25, -220)
+	evo_label.z_index = 10
+	hub_env_container.add_child(evo_label)
+
+
 func _animate_hub_environment(delta: float) -> void:
 	hub_env_time += delta
 
@@ -9249,6 +9443,25 @@ func _animate_hub_environment(delta: float) -> void:
 	var rune_ring = hub_env_container.get_node_or_null("RuneRing")
 	if rune_ring:
 		rune_ring.rotation = hub_env_time * 0.1
+
+	# Animate streak flames
+	for flame in streak_flames:
+		if is_instance_valid(flame.node):
+			# Flickering movement
+			var flicker_x = sin(hub_env_time * flame.flicker_speed + flame.phase) * 2
+			var flicker_y = sin(hub_env_time * flame.flicker_speed * 1.3 + flame.phase) * 3
+			flame.node.position = flame.base_pos + Vector2(flicker_x, flicker_y)
+
+			# Scale pulsing
+			var scale_pulse = 1.0 + sin(hub_env_time * flame.flicker_speed * 0.8) * 0.1
+			flame.node.scale = Vector2(scale_pulse, scale_pulse)
+
+	# Animate evolution ring segments (subtle glow pulse)
+	for seg in evolution_segments:
+		if is_instance_valid(seg.polygon):
+			var pulse = 0.8 + sin(hub_env_time * 2.0 + seg.index * 0.3) * 0.2
+			var color = seg.base_color
+			seg.polygon.color = Color(color.r, color.g, color.b, color.a * pulse)
 
 
 # =============================================================================
@@ -10007,3 +10220,419 @@ func _close_experience_shop() -> void:
 		shop_panel = null
 		shop_item_grid = null
 	in_zone_panel = false
+
+
+# ============ AFFIRMATIONS SYSTEM ============
+
+const DEFAULT_AFFIRMATIONS = [
+	"I am capable of achieving my goals.",
+	"I embrace challenges as opportunities for growth.",
+	"I am worthy of success and happiness.",
+	"I choose to focus on what I can control.",
+	"I am becoming a better version of myself each day.",
+	"I have the power to create positive change.",
+	"I am resilient and can overcome obstacles.",
+	"I trust in my ability to learn and adapt.",
+	"I am grateful for this moment.",
+	"I deserve peace and inner calm.",
+	"My potential is limitless.",
+	"I am in charge of my own happiness.",
+	"I release what no longer serves me.",
+	"I attract positivity into my life.",
+	"I am enough, exactly as I am."
+]
+
+var _editing_affirmation_index: int = -1
+
+
+func _build_affirmations_tab() -> void:
+	## Build the affirmations tab in the Reflection Pool
+
+	var affirmations = _load_affirmations()
+	var today = Time.get_date_string_from_system()
+	var affirmed_today = GameManager.player_data.get("last_affirmation_date", "") == today
+
+	# Header
+	var header = Label.new()
+	header.text = "Daily Affirmations"
+	header.add_theme_font_size_override("font_size", 20)
+	header.add_theme_color_override("font_color", Color(0.9, 0.8, 0.5))
+	header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	zone_body.add_child(header)
+
+	var desc = Label.new()
+	desc.text = "Speak positive truths to yourself. What you believe, you become."
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD
+	desc.add_theme_color_override("font_color", Color(0.6, 0.6, 0.7))
+	desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	zone_body.add_child(desc)
+
+	_add_habit_spacer(12)
+
+	# Today's affirmation card
+	var today_card = PanelContainer.new()
+	var card_style = StyleBoxFlat.new()
+	card_style.bg_color = Color(0.15, 0.18, 0.25, 0.9)
+	card_style.set_corner_radius_all(10)
+	card_style.set_content_margin_all(15)
+	today_card.add_theme_stylebox_override("panel", card_style)
+
+	var card_vbox = VBoxContainer.new()
+	card_vbox.add_theme_constant_override("separation", 10)
+
+	var today_label = Label.new()
+	today_label.text = "Today's Affirmation"
+	today_label.add_theme_font_size_override("font_size", 14)
+	today_label.add_theme_color_override("font_color", Color(0.5, 0.6, 0.7))
+	today_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	card_vbox.add_child(today_label)
+
+	# Get today's affirmation (rotate based on day of year)
+	var day_of_year = _get_day_of_year()
+	var active_affirmations = affirmations.custom if not affirmations.custom.is_empty() else DEFAULT_AFFIRMATIONS
+	var today_index = day_of_year % active_affirmations.size()
+	var todays_affirmation = active_affirmations[today_index]
+
+	var affirmation_text = Label.new()
+	affirmation_text.text = "\"" + todays_affirmation + "\""
+	affirmation_text.autowrap_mode = TextServer.AUTOWRAP_WORD
+	affirmation_text.add_theme_font_size_override("font_size", 18)
+	affirmation_text.add_theme_color_override("font_color", Color(0.95, 0.9, 0.8))
+	affirmation_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	card_vbox.add_child(affirmation_text)
+
+	# Affirm button
+	if affirmed_today:
+		var affirmed_label = Label.new()
+		affirmed_label.text = "✓ Affirmed today"
+		affirmed_label.add_theme_font_size_override("font_size", 16)
+		affirmed_label.add_theme_color_override("font_color", Color(0.4, 0.8, 0.5))
+		affirmed_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		card_vbox.add_child(affirmed_label)
+	else:
+		var affirm_btn = Button.new()
+		affirm_btn.text = "I Affirm This"
+		affirm_btn.custom_minimum_size = Vector2(0, 45)
+		affirm_btn.add_theme_font_size_override("font_size", 16)
+		affirm_btn.pressed.connect(_affirm_today)
+		card_vbox.add_child(affirm_btn)
+
+	today_card.add_child(card_vbox)
+	zone_body.add_child(today_card)
+
+	_add_habit_spacer(16)
+
+	# Stats
+	var stats_row = HBoxContainer.new()
+	stats_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	stats_row.add_theme_constant_override("separation", 30)
+
+	var streak = affirmations.get("streak", 0)
+	var total = affirmations.get("total_affirmed", 0)
+
+	var streak_stat = _create_affirmation_stat("Streak", str(streak) + " days", Color(0.9, 0.6, 0.3))
+	stats_row.add_child(streak_stat)
+
+	var total_stat = _create_affirmation_stat("Total", str(total), Color(0.5, 0.7, 0.9))
+	stats_row.add_child(total_stat)
+
+	zone_body.add_child(stats_row)
+
+	_add_habit_spacer(16)
+
+	# Action buttons
+	var button_row = HBoxContainer.new()
+	button_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	button_row.add_theme_constant_override("separation", 10)
+
+	var manage_btn = Button.new()
+	manage_btn.text = "Manage Affirmations"
+	manage_btn.custom_minimum_size = Vector2(0, 40)
+	manage_btn.add_theme_font_size_override("font_size", 14)
+	manage_btn.pressed.connect(_show_affirmation_manager)
+	button_row.add_child(manage_btn)
+
+	var random_btn = Button.new()
+	random_btn.text = "Random Inspiration"
+	random_btn.custom_minimum_size = Vector2(0, 40)
+	random_btn.add_theme_font_size_override("font_size", 14)
+	random_btn.pressed.connect(_show_random_affirmation)
+	button_row.add_child(random_btn)
+
+	zone_body.add_child(button_row)
+
+
+func _create_affirmation_stat(label_text: String, value_text: String, color: Color) -> VBoxContainer:
+	var container = VBoxContainer.new()
+	container.add_theme_constant_override("separation", 2)
+
+	var value_label = Label.new()
+	value_label.text = value_text
+	value_label.add_theme_font_size_override("font_size", 22)
+	value_label.add_theme_color_override("font_color", color)
+	value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	container.add_child(value_label)
+
+	var text_label = Label.new()
+	text_label.text = label_text
+	text_label.add_theme_font_size_override("font_size", 12)
+	text_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.6))
+	text_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	container.add_child(text_label)
+
+	return container
+
+
+func _affirm_today() -> void:
+	var affirmations = _load_affirmations()
+	var today = Time.get_date_string_from_system()
+	var yesterday = _get_yesterday_date()
+
+	# Update streak
+	var last_date = affirmations.get("last_date", "")
+	if last_date == yesterday:
+		affirmations.streak = affirmations.get("streak", 0) + 1
+	elif last_date != today:
+		affirmations.streak = 1
+
+	affirmations.last_date = today
+	affirmations.total_affirmed = affirmations.get("total_affirmed", 0) + 1
+
+	_save_affirmations(affirmations)
+
+	# Mark as affirmed today
+	GameManager.player_data["last_affirmation_date"] = today
+
+	# Award XP
+	var xp_amount = 10
+	if GameManager and GameManager.has_method("add_aspect_experience"):
+		GameManager.add_aspect_experience("wisdom", xp_amount)
+
+	# Refresh view
+	_open_journal_viewer()
+
+
+func _show_random_affirmation() -> void:
+	var affirmations = _load_affirmations()
+	var all_affirmations = DEFAULT_AFFIRMATIONS.duplicate()
+	all_affirmations.append_array(affirmations.get("custom", []))
+
+	var random_index = randi() % all_affirmations.size()
+	var random_affirmation = all_affirmations[random_index]
+
+	_show_dialogue("Random Inspiration", "\"" + random_affirmation + "\"\n\nLet this truth guide your day.")
+
+
+func _show_affirmation_manager() -> void:
+	zone_title.text = "Manage Affirmations"
+	_clear_zone_body()
+
+	var affirmations = _load_affirmations()
+	var custom = affirmations.get("custom", [])
+
+	var intro = Label.new()
+	intro.text = "Create personal affirmations that resonate with you. Custom affirmations will be included in your daily rotation."
+	intro.autowrap_mode = TextServer.AUTOWRAP_WORD
+	intro.add_theme_color_override("font_color", Color(0.6, 0.6, 0.7))
+	zone_body.add_child(intro)
+
+	_add_habit_spacer(12)
+
+	# Custom affirmations list
+	if custom.is_empty():
+		var empty_label = Label.new()
+		empty_label.text = "No custom affirmations yet. Add your own below!"
+		empty_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.6))
+		zone_body.add_child(empty_label)
+	else:
+		var list_header = Label.new()
+		list_header.text = "Your Custom Affirmations:"
+		list_header.add_theme_color_override("font_color", Color(0.9, 0.8, 0.5))
+		zone_body.add_child(list_header)
+
+		_add_habit_spacer(6)
+
+		for i in range(custom.size()):
+			var affirmation = custom[i]
+			_add_affirmation_row(affirmation, i)
+
+	_add_habit_spacer(16)
+
+	# Add new affirmation
+	var add_btn = Button.new()
+	add_btn.text = "+ Add New Affirmation"
+	add_btn.custom_minimum_size = Vector2(0, 45)
+	add_btn.add_theme_font_size_override("font_size", 16)
+	add_btn.pressed.connect(_show_affirmation_editor.bind(-1))
+	zone_body.add_child(add_btn)
+
+	_add_habit_spacer(12)
+
+	var back_btn = Button.new()
+	back_btn.text = "← Back to Affirmations"
+	back_btn.pressed.connect(_show_journal_tab.bind("affirm"))
+	zone_body.add_child(back_btn)
+
+
+func _add_affirmation_row(affirmation: String, index: int) -> void:
+	var row = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+
+	var text_label = Label.new()
+	text_label.text = "\"" + affirmation + "\""
+	text_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	text_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	text_label.add_theme_font_size_override("font_size", 14)
+	row.add_child(text_label)
+
+	var edit_btn = Button.new()
+	edit_btn.text = "✎"
+	edit_btn.tooltip_text = "Edit"
+	edit_btn.custom_minimum_size = Vector2(35, 0)
+	edit_btn.pressed.connect(_show_affirmation_editor.bind(index))
+	row.add_child(edit_btn)
+
+	var delete_btn = Button.new()
+	delete_btn.text = "✕"
+	delete_btn.tooltip_text = "Delete"
+	delete_btn.custom_minimum_size = Vector2(35, 0)
+	delete_btn.pressed.connect(_delete_affirmation.bind(index))
+	row.add_child(delete_btn)
+
+	zone_body.add_child(row)
+	_add_habit_spacer(4)
+
+
+func _show_affirmation_editor(edit_index: int) -> void:
+	_editing_affirmation_index = edit_index
+	var is_edit = edit_index >= 0
+
+	zone_title.text = "Edit Affirmation" if is_edit else "Add Affirmation"
+	_clear_zone_body()
+
+	var existing_text = ""
+	if is_edit:
+		var affirmations = _load_affirmations()
+		var custom = affirmations.get("custom", [])
+		if edit_index < custom.size():
+			existing_text = custom[edit_index]
+
+	var prompt = Label.new()
+	prompt.text = "Write a positive statement that empowers you:"
+	zone_body.add_child(prompt)
+
+	_add_habit_spacer(8)
+
+	var input = TextEdit.new()
+	input.name = "AffirmationInput"
+	input.placeholder_text = "I am..."
+	input.text = existing_text
+	input.custom_minimum_size = Vector2(0, 80)
+	input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	zone_body.add_child(input)
+
+	_add_habit_spacer(12)
+
+	# Tips
+	var tips_label = Label.new()
+	tips_label.text = "Tips: Start with \"I am\", \"I can\", or \"I choose\". Keep it positive and present-tense."
+	tips_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	tips_label.add_theme_font_size_override("font_size", 12)
+	tips_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.6))
+	zone_body.add_child(tips_label)
+
+	_add_habit_spacer(16)
+
+	# Action buttons
+	var button_row = HBoxContainer.new()
+	button_row.add_theme_constant_override("separation", 10)
+
+	var cancel_btn = Button.new()
+	cancel_btn.text = "Cancel"
+	cancel_btn.pressed.connect(_show_affirmation_manager)
+	button_row.add_child(cancel_btn)
+
+	var save_btn = Button.new()
+	save_btn.text = "Save Affirmation"
+	save_btn.pressed.connect(_save_affirmation_from_editor)
+	button_row.add_child(save_btn)
+
+	zone_body.add_child(button_row)
+
+
+func _save_affirmation_from_editor() -> void:
+	var input = zone_body.find_child("AffirmationInput", true, false) as TextEdit
+	if not input or input.text.strip_edges() == "":
+		_show_dialogue("Error", "Please enter an affirmation.")
+		return
+
+	var affirmations = _load_affirmations()
+	if not affirmations.has("custom"):
+		affirmations.custom = []
+
+	var text = input.text.strip_edges()
+
+	if _editing_affirmation_index >= 0 and _editing_affirmation_index < affirmations.custom.size():
+		affirmations.custom[_editing_affirmation_index] = text
+	else:
+		affirmations.custom.append(text)
+
+	_save_affirmations(affirmations)
+	_editing_affirmation_index = -1
+
+	_show_affirmation_manager()
+
+
+func _delete_affirmation(index: int) -> void:
+	var affirmations = _load_affirmations()
+	if affirmations.has("custom") and index < affirmations.custom.size():
+		affirmations.custom.remove_at(index)
+		_save_affirmations(affirmations)
+
+	_show_affirmation_manager()
+
+
+func _get_day_of_year() -> int:
+	var date = Time.get_datetime_dict_from_system()
+	var day_of_year = date["day"]
+	for m in range(1, date["month"]):
+		var days_in_month = 31
+		if m in [4, 6, 9, 11]:
+			days_in_month = 30
+		elif m == 2:
+			days_in_month = 29 if date["year"] % 4 == 0 else 28
+		day_of_year += days_in_month
+	return day_of_year
+
+
+func _get_yesterday_date() -> String:
+	var today_dict = Time.get_datetime_dict_from_system()
+	var today_unix = Time.get_unix_time_from_datetime_dict(today_dict)
+	var yesterday_unix = today_unix - (24 * 60 * 60)
+	var yesterday_dict = Time.get_datetime_dict_from_unix_time(yesterday_unix)
+	return "%04d-%02d-%02d" % [yesterday_dict.year, yesterday_dict.month, yesterday_dict.day]
+
+
+func _load_affirmations() -> Dictionary:
+	var path = "user://affirmations.json"
+	if not FileAccess.file_exists(path):
+		return {"custom": [], "streak": 0, "total_affirmed": 0, "last_date": ""}
+
+	var file = FileAccess.open(path, FileAccess.READ)
+	if not file:
+		return {"custom": [], "streak": 0, "total_affirmed": 0, "last_date": ""}
+
+	var json = JSON.new()
+	var result = json.parse(file.get_as_text())
+	file.close()
+
+	if result == OK and json.data is Dictionary:
+		return json.data
+	return {"custom": [], "streak": 0, "total_affirmed": 0, "last_date": ""}
+
+
+func _save_affirmations(data: Dictionary) -> void:
+	var file = FileAccess.open("user://affirmations.json", FileAccess.WRITE)
+	if file:
+		file.store_string(JSON.stringify(data, "\t"))
+		file.close()
