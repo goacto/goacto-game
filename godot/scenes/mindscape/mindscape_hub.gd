@@ -72,9 +72,9 @@ var is_muted: bool = false
 
 # Player movement
 var player_speed: float = 320.0
-# Diamond platform bounds (half-widths) - expanded 25%
-var platform_half_width: float = 1060.0  # X extent
-var platform_half_height: float = 525.0  # Y extent
+# Diamond platform bounds (half-widths) - expanded 65% for more exploration
+var platform_half_width: float = 1400.0  # X extent
+var platform_half_height: float = 700.0  # Y extent
 
 # Camera/zoom
 var camera_zoom: float = 1.0
@@ -108,7 +108,8 @@ var move_sound_interval: float = 0.35
 # Progress indicators
 var progress_container: Node2D = null
 var streak_flames: Array = []
-var evolution_ring: Polygon2D = null
+var evolution_ring: Node2D = null
+var evolution_segments: Array = []
 var garden_patches: Array = []
 
 # Companion spirit
@@ -273,8 +274,8 @@ func _setup_zone_interactions() -> void:
 	zone_positions["FocusChamber"] = focus_chamber.position
 	zone_positions["DailyRituals"] = daily_rituals.position
 	zone_positions["ReflectionPool"] = reflection_pool.position
-	# Experience Shop position (near South portal area)
-	zone_positions["ExperienceShop"] = Vector2(300, 350)
+	# Experience Shop position (near South portal area) - expanded platform
+	zone_positions["ExperienceShop"] = Vector2(380, 420)
 
 	# Create Experience Shop visual
 	_create_experience_shop_visual()
@@ -777,14 +778,19 @@ func _setup_progress_indicators() -> void:
 	flames_label.size = Vector2(60, 15)
 	flames_container.add_child(flames_label)
 
-	# Create evolution ring
-	evolution_ring = Polygon2D.new()
+	# Create evolution ring container
+	evolution_ring = Node2D.new()
 	evolution_ring.name = "EvolutionRing"
-	evolution_ring.color = Color(0.6, 0.4, 0.8, 0.15)
-	evolution_ring.polygon = PackedVector2Array([
+	evolution_ring.position = Vector2(0, -60)
+
+	var ring_poly = Polygon2D.new()
+	ring_poly.name = "RingPoly"
+	ring_poly.color = Color(0.6, 0.4, 0.8, 0.15)
+	ring_poly.polygon = PackedVector2Array([
 		Vector2(-60, 0), Vector2(0, -30), Vector2(60, 0), Vector2(0, 30)
 	])
-	evolution_ring.position = Vector2(0, -60)
+	evolution_ring.add_child(ring_poly)
+
 	isometric_base.add_child(evolution_ring)
 	isometric_base.move_child(evolution_ring, 3)  # After InnerRing
 
@@ -883,58 +889,249 @@ func _update_evolution_ring() -> void:
 	# Add inner glow for progress within level
 	color.a = 0.15 + (evo_progress * 0.15)
 
-	evolution_ring.color = color
+	# Update the ring polygon child if it exists
+	var ring_poly = evolution_ring.get_node_or_null("RingPoly")
+	if ring_poly:
+		ring_poly.color = color
 	evolution_ring.scale = Vector2(scale_factor, scale_factor)
 
 
 func _create_garden_patches() -> void:
-	# Garden patches disabled - progress now shown in center status panel
-	# Keeping function for compatibility but not creating visual elements
-	pass
+	## Create garden patches around the hub that grow based on habit completion
+	## Each domain (Mind, Body, Soul, etc.) gets a patch that evolves
+
+	# Get habit stats per domain
+	var domain_stats = {}
+	if HabitManager:
+		var habits = HabitManager.get_all_habits()
+		for habit in habits:
+			var domain = habit.get("domain", 0)
+			var domain_name = HabitManager._domain_to_string(domain)
+			if not domain_stats.has(domain_name):
+				domain_stats[domain_name] = {"total_streak": 0, "count": 0, "completed_today": 0}
+			domain_stats[domain_name].total_streak += habit.get("streak", 0)
+			domain_stats[domain_name].count += 1
+			if HabitManager.is_completed_today(habit.id):
+				domain_stats[domain_name].completed_today += 1
+
+	# Garden patch positions around the hub (isometric positions)
+	var patch_configs = [
+		{"name": "Mind", "pos": Vector2(-350, -100), "base_color": Color(0.3, 0.5, 0.8)},
+		{"name": "Body", "pos": Vector2(350, -100), "base_color": Color(0.8, 0.4, 0.3)},
+		{"name": "Soul", "pos": Vector2(-350, 150), "base_color": Color(0.6, 0.4, 0.8)},
+		{"name": "Social", "pos": Vector2(350, 150), "base_color": Color(0.4, 0.7, 0.5)},
+		{"name": "Career", "pos": Vector2(-180, 280), "base_color": Color(0.7, 0.6, 0.3)},
+		{"name": "Wealth", "pos": Vector2(180, 280), "base_color": Color(0.8, 0.7, 0.2)}
+	]
+
+	for config in patch_configs:
+		var stats = domain_stats.get(config.name, {"total_streak": 0, "count": 0, "completed_today": 0})
+		var growth_level = _calculate_garden_growth(stats)
+
+		var patch = Node2D.new()
+		patch.name = "GardenPatch_" + config.name
+		patch.position = config.pos
+
+		# Create patch based on growth level
+		_create_garden_patch_visual(patch, config, growth_level, stats)
+
+		isometric_base.add_child(patch)
+		garden_patches.append({
+			"node": patch,
+			"name": config.name,
+			"growth": growth_level,
+			"phase": randf() * TAU
+		})
 
 
-func _update_garden_growth() -> void:
-	# Get weekly completions
-	var stats = HabitManager.get_weekly_stats() if HabitManager else {}
-	var completions = stats.get("this_week_completions", 0)
+func _calculate_garden_growth(stats: Dictionary) -> int:
+	## Calculate growth level 0-5 based on habit performance
+	var streak = stats.get("total_streak", 0)
+	var count = stats.get("count", 0)
+	var completed = stats.get("completed_today", 0)
 
-	# Determine growth level (0-5 plants per garden based on completions)
-	var growth_level = mini(int(completions / 3), 5)  # 3 completions per plant, max 5
+	if count == 0:
+		return 0  # No habits in this domain
 
-	for patch in garden_patches:
-		# Clear existing plants
-		for child in patch.get_children():
-			child.queue_free()
+	var avg_streak = float(streak) / count
+	var completion_rate = float(completed) / count if count > 0 else 0.0
 
-		# Add plants based on growth level
-		for i in range(growth_level):
-			var plant = _create_plant_polygon(i)
-			plant.position = Vector2((i - 2) * 15, 0)
-			patch.add_child(plant)
+	# Growth level based on avg streak
+	if avg_streak >= 30:
+		return 5  # Flourishing
+	elif avg_streak >= 14:
+		return 4  # Thriving
+	elif avg_streak >= 7:
+		return 3  # Growing
+	elif avg_streak >= 3:
+		return 2  # Sprouting
+	elif avg_streak >= 1 or completion_rate > 0:
+		return 1  # Seeded
+	return 0  # Dormant
 
 
-func _create_plant_polygon(index: int) -> Polygon2D:
-	var plant = Polygon2D.new()
+func _create_garden_patch_visual(patch: Node2D, config: Dictionary, growth: int, _stats: Dictionary) -> void:
+	## Create visual elements for a garden patch based on growth level
+	var base_color = config.base_color
 
-	# Vary plant color slightly
-	var base_green = Color(0.3, 0.6, 0.35, 0.8)
-	var hue_shift = (index * 0.05)
-	plant.color = Color(base_green.r, base_green.g + hue_shift, base_green.b, base_green.a)
-
-	# Simple plant shape
-	var height = 12 + (index % 3) * 4
-	plant.polygon = PackedVector2Array([
-		Vector2(-3, 0),
-		Vector2(-6, -height * 0.5),
-		Vector2(-2, -height * 0.7),
-		Vector2(0, -height),
-		Vector2(2, -height * 0.7),
-		Vector2(6, -height * 0.5),
-		Vector2(3, 0)
+	# Ground patch (soil)
+	var ground = Polygon2D.new()
+	ground.polygon = PackedVector2Array([
+		Vector2(-40, 0), Vector2(0, -20), Vector2(40, 0), Vector2(0, 20)
 	])
+	var soil_color = Color(0.25, 0.18, 0.12) if growth == 0 else Color(0.3, 0.22, 0.15)
+	ground.color = soil_color
+	patch.add_child(ground)
 
-	plant.set_meta("base_height", height)
-	return plant
+	if growth == 0:
+		# Dormant - just soil with small crack
+		var crack = Polygon2D.new()
+		crack.polygon = PackedVector2Array([
+			Vector2(-5, 0), Vector2(0, -3), Vector2(5, 0), Vector2(0, 3)
+		])
+		crack.color = Color(0.15, 0.1, 0.08, 0.5)
+		patch.add_child(crack)
+
+	elif growth == 1:
+		# Seeded - tiny sprout
+		var sprout = Polygon2D.new()
+		sprout.polygon = PackedVector2Array([
+			Vector2(-2, 0), Vector2(0, -12), Vector2(2, 0)
+		])
+		sprout.color = Color(0.3, 0.5, 0.25)
+		patch.add_child(sprout)
+
+	elif growth == 2:
+		# Sprouting - small plant
+		var stem = Polygon2D.new()
+		stem.polygon = PackedVector2Array([
+			Vector2(-3, 0), Vector2(-1, -20), Vector2(1, -20), Vector2(3, 0)
+		])
+		stem.color = Color(0.3, 0.55, 0.25)
+		patch.add_child(stem)
+
+		# Two small leaves
+		for side in [-1, 1]:
+			var leaf = Polygon2D.new()
+			leaf.polygon = PackedVector2Array([
+				Vector2(0, -12), Vector2(side * 10, -8), Vector2(side * 8, -14)
+			])
+			leaf.color = base_color.lerp(Color(0.3, 0.6, 0.3), 0.5)
+			patch.add_child(leaf)
+
+	elif growth == 3:
+		# Growing - medium plant with multiple leaves
+		var stem = Polygon2D.new()
+		stem.polygon = PackedVector2Array([
+			Vector2(-4, 0), Vector2(-2, -30), Vector2(2, -30), Vector2(4, 0)
+		])
+		stem.color = Color(0.25, 0.5, 0.2)
+		patch.add_child(stem)
+
+		# Multiple leaves
+		for i in range(3):
+			var y_offset = -10 - i * 8
+			var side = 1 if i % 2 == 0 else -1
+			var leaf = Polygon2D.new()
+			leaf.polygon = PackedVector2Array([
+				Vector2(0, y_offset), Vector2(side * 15, y_offset + 3), Vector2(side * 12, y_offset - 5)
+			])
+			leaf.color = base_color.lerp(Color(0.3, 0.65, 0.3), 0.4)
+			patch.add_child(leaf)
+
+	elif growth == 4:
+		# Thriving - full plant with bud
+		var stem = Polygon2D.new()
+		stem.polygon = PackedVector2Array([
+			Vector2(-5, 0), Vector2(-3, -40), Vector2(3, -40), Vector2(5, 0)
+		])
+		stem.color = Color(0.2, 0.45, 0.18)
+		patch.add_child(stem)
+
+		# Leaves
+		for i in range(4):
+			var y_offset = -8 - i * 9
+			var side = 1 if i % 2 == 0 else -1
+			var leaf = Polygon2D.new()
+			leaf.polygon = PackedVector2Array([
+				Vector2(0, y_offset), Vector2(side * 18, y_offset + 4), Vector2(side * 15, y_offset - 6)
+			])
+			leaf.color = base_color.lerp(Color(0.3, 0.7, 0.3), 0.3)
+			patch.add_child(leaf)
+
+		# Flower bud
+		var bud = Polygon2D.new()
+		bud.polygon = PackedVector2Array([
+			Vector2(-6, -38), Vector2(0, -50), Vector2(6, -38)
+		])
+		bud.color = base_color
+		patch.add_child(bud)
+
+	else:  # growth == 5
+		# Flourishing - full bloom with glow
+		var stem = Polygon2D.new()
+		stem.polygon = PackedVector2Array([
+			Vector2(-6, 0), Vector2(-4, -45), Vector2(4, -45), Vector2(6, 0)
+		])
+		stem.color = Color(0.18, 0.4, 0.15)
+		patch.add_child(stem)
+
+		# Rich foliage
+		for i in range(5):
+			var y_offset = -6 - i * 8
+			var side = 1 if i % 2 == 0 else -1
+			var leaf = Polygon2D.new()
+			leaf.polygon = PackedVector2Array([
+				Vector2(0, y_offset), Vector2(side * 22, y_offset + 5), Vector2(side * 18, y_offset - 8)
+			])
+			leaf.color = base_color.lerp(Color(0.25, 0.75, 0.25), 0.25)
+			patch.add_child(leaf)
+
+		# Full bloom flower
+		var petal_count = 6
+		for i in range(petal_count):
+			var angle = (float(i) / petal_count) * TAU
+			var petal = Polygon2D.new()
+			petal.polygon = PackedVector2Array([
+				Vector2(0, 0), Vector2(cos(angle) * 12, sin(angle) * 12 - 4),
+				Vector2(cos(angle + 0.3) * 8, sin(angle + 0.3) * 8 - 4)
+			])
+			petal.position = Vector2(0, -52)
+			petal.color = base_color
+			patch.add_child(petal)
+
+		# Flower center
+		var center = Polygon2D.new()
+		center.polygon = _create_garden_circle(5, 8)
+		center.position = Vector2(0, -52)
+		center.color = base_color.lightened(0.3)
+		patch.add_child(center)
+
+		# Glow effect
+		var glow = Polygon2D.new()
+		glow.polygon = _create_garden_circle(20, 12)
+		glow.position = Vector2(0, -52)
+		glow.color = Color(base_color.r, base_color.g, base_color.b, 0.15)
+		glow.z_index = -1
+		patch.add_child(glow)
+
+	# Add domain label
+	var label = Label.new()
+	label.text = config.name
+	label.add_theme_font_size_override("font_size", 10)
+	label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.7, 0.8))
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.position = Vector2(-20, 25)
+	patch.add_child(label)
+
+
+func _create_garden_circle(radius: float, segments: int) -> PackedVector2Array:
+	## Create a circular polygon for garden elements
+	var points = PackedVector2Array()
+	for i in range(segments):
+		var angle = (float(i) / segments) * TAU
+		points.append(Vector2(cos(angle) * radius, sin(angle) * radius))
+	return points
 
 
 func _animate_progress_indicators() -> void:
@@ -957,11 +1154,16 @@ func _animate_progress_indicators() -> void:
 		var pulse = sin(crystal_pulse_time * 1.5) * 0.03 + 1.0
 		evolution_ring.scale = evolution_ring.scale * pulse
 
-	# Animate garden plants
-	for patch in garden_patches:
-		for plant in patch.get_children():
-			var sway = sin(crystal_pulse_time * 1.2 + plant.position.x * 0.1) * 0.05
-			plant.rotation = sway
+	# Animate garden patches
+	for patch_data in garden_patches:
+		var patch_node = patch_data.get("node")
+		if patch_node and is_instance_valid(patch_node):
+			var phase = patch_data.get("phase", 0.0)
+			# Gentle sway for plants
+			for child in patch_node.get_children():
+				if child is Polygon2D:
+					var sway = sin(crystal_pulse_time * 1.2 + phase + child.position.x * 0.1) * 0.05
+					child.rotation = sway
 
 
 func _show_center_status_panel() -> void:
@@ -1522,10 +1724,10 @@ func _setup_minimap() -> void:
 	}
 
 	var portal_minimap_positions = {
-		"north": Vector2(0, -22),
-		"east": Vector2(45, 0),
-		"west": Vector2(-45, 0),
-		"south": Vector2(0, 22)
+		"north": Vector2(0, -21),   # Updated for expanded platform
+		"east": Vector2(34, 0),
+		"west": Vector2(-34, 0),
+		"south": Vector2(0, 20)
 	}
 
 	for region in portal_colors:
@@ -2638,10 +2840,22 @@ func _submit_habit_note(skip_note: bool) -> void:
 		var streak = habit.get("streak", 1)
 		var exp = habit.get("exp_reward", 25)
 		var streak_bonus = int(exp * streak * 0.1)
-		var msg = habit.name + " done!\n\n+" + str(exp + streak_bonus) + " XP (includes streak bonus)\n🔥 " + str(streak) + " day streak!"
-		if note_text != "":
-			msg += "\n\n📝 Note saved to journal"
-		_show_dialogue("Habit Complete!", msg, _open_habits_zone)
+
+		# Check for milestone celebration
+		var milestone = _get_streak_milestone(streak)
+		if milestone > 0:
+			_spawn_celebration_effects(milestone)
+			var msg = "🎉 " + habit.name + " MILESTONE! 🎉\n\n"
+			msg += _get_milestone_message(milestone) + "\n\n"
+			msg += "+" + str(exp + streak_bonus) + " XP\n🔥 " + str(streak) + " day streak!"
+			if note_text != "":
+				msg += "\n\n📝 Note saved to journal"
+			_show_dialogue("🏆 Streak Milestone!", msg, _open_habits_zone)
+		else:
+			var msg = habit.name + " done!\n\n+" + str(exp + streak_bonus) + " XP (includes streak bonus)\n🔥 " + str(streak) + " day streak!"
+			if note_text != "":
+				msg += "\n\n📝 Note saved to journal"
+			_show_dialogue("Habit Complete!", msg, _open_habits_zone)
 
 
 func _move_habit_up(habit_id: String) -> void:
@@ -2685,6 +2899,129 @@ func _bulk_complete_habits() -> void:
 	if completed_count > 0:
 		_close_zone()
 		_show_dialogue("All Habits Complete!", "%d habits completed!\n\n+%d XP total\n\n📔 All entries saved to journal\n\nKeep up the great work!" % [completed_count, total_xp], _open_habits_zone)
+
+
+# Streak milestone thresholds
+const STREAK_MILESTONES = [3, 7, 14, 21, 30, 60, 90, 100, 180, 365]
+
+
+func _get_streak_milestone(streak: int) -> int:
+	## Returns the milestone if streak exactly matches one, otherwise 0
+	if streak in STREAK_MILESTONES:
+		return streak
+	return 0
+
+
+func _get_milestone_message(milestone: int) -> String:
+	## Returns a special message for each milestone
+	match milestone:
+		3:
+			return "Three days strong!\nYou're building momentum."
+		7:
+			return "A FULL WEEK!\nConsistency is your superpower."
+		14:
+			return "TWO WEEKS!\nThis habit is becoming part of you."
+		21:
+			return "21 DAYS - HABIT FORMED!\nScience says you've rewired your brain!"
+		30:
+			return "ONE MONTH!\nYou're unstoppable now."
+		60:
+			return "TWO MONTHS!\nThis is who you are now."
+		90:
+			return "90 DAYS - LIFESTYLE ACHIEVED!\nYou've transformed."
+		100:
+			return "💯 ONE HUNDRED DAYS! 💯\nLEGENDARY STATUS ACHIEVED!"
+		180:
+			return "SIX MONTHS!\nHalf a year of dedication. Incredible."
+		365:
+			return "🏆 ONE FULL YEAR! 🏆\nYou are a MASTER of discipline!"
+		_:
+			return "Amazing milestone achieved!"
+
+
+func _spawn_celebration_effects(milestone: int) -> void:
+	## Spawn visual celebration effects for streak milestones
+	var effect_intensity = 1.0
+	if milestone >= 21:
+		effect_intensity = 1.5
+	if milestone >= 30:
+		effect_intensity = 2.0
+	if milestone >= 100:
+		effect_intensity = 3.0
+
+	# Create celebration container
+	var celebration = Node2D.new()
+	celebration.name = "CelebrationEffects"
+	celebration.z_index = 100
+	add_child(celebration)
+
+	# Spawn confetti particles
+	var num_particles = int(30 * effect_intensity)
+	var colors = [
+		Color(1.0, 0.8, 0.2),   # Gold
+		Color(1.0, 0.4, 0.3),   # Red
+		Color(0.4, 0.8, 1.0),   # Blue
+		Color(0.5, 1.0, 0.5),   # Green
+		Color(1.0, 0.5, 0.8),   # Pink
+		Color(0.8, 0.6, 1.0)    # Purple
+	]
+
+	var viewport_size = get_viewport().get_visible_rect().size
+
+	for i in range(num_particles):
+		var confetti = Polygon2D.new()
+		var size = randf_range(8, 16) * (effect_intensity * 0.5 + 0.5)
+		confetti.polygon = PackedVector2Array([
+			Vector2(-size/2, -size/2), Vector2(size/2, -size/2),
+			Vector2(size/2, size/2), Vector2(-size/2, size/2)
+		])
+		confetti.color = colors[randi() % colors.size()]
+		confetti.position = Vector2(
+			randf_range(0, viewport_size.x),
+			-randf_range(20, 100)
+		)
+		confetti.rotation = randf() * TAU
+		celebration.add_child(confetti)
+
+		# Animate falling with rotation
+		var fall_duration = randf_range(2.0, 4.0)
+		var tween = create_tween()
+		tween.set_parallel(true)
+		tween.tween_property(confetti, "position:y", viewport_size.y + 50, fall_duration)
+		tween.tween_property(confetti, "rotation", confetti.rotation + randf_range(-TAU, TAU), fall_duration)
+		tween.tween_property(confetti, "modulate:a", 0.0, fall_duration).set_delay(fall_duration * 0.7)
+
+	# Spawn sparkle bursts
+	var num_sparkles = int(8 * effect_intensity)
+	for i in range(num_sparkles):
+		var sparkle = Polygon2D.new()
+		sparkle.polygon = PackedVector2Array([
+			Vector2(-3, 0), Vector2(0, -12), Vector2(3, 0), Vector2(0, 12)
+		])
+		sparkle.color = Color(1.0, 1.0, 0.8, 1.0)
+		sparkle.position = Vector2(
+			viewport_size.x / 2 + randf_range(-200, 200),
+			viewport_size.y / 2 + randf_range(-100, 100)
+		)
+		sparkle.scale = Vector2.ZERO
+		celebration.add_child(sparkle)
+
+		var sparkle_tween = create_tween()
+		sparkle_tween.tween_property(sparkle, "scale", Vector2(1.5, 1.5), 0.3).set_ease(Tween.EASE_OUT)
+		sparkle_tween.tween_property(sparkle, "scale", Vector2.ZERO, 0.3).set_delay(0.1)
+		sparkle_tween.tween_property(sparkle, "modulate:a", 0.0, 0.2)
+
+	# Play celebration sound
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("play_sfx_from_path"):
+		audio.play_sfx_from_path("res://audio/sfx/achievement_unlock.wav")
+
+	# Clean up after animations
+	var cleanup_timer = get_tree().create_timer(5.0)
+	cleanup_timer.timeout.connect(func():
+		if is_instance_valid(celebration):
+			celebration.queue_free()
+	)
 
 
 func _show_habit_stats(habit_id: String) -> void:
@@ -7755,6 +8092,37 @@ func _show_new_checkin(is_update: bool) -> void:
 
 	_add_habit_spacer(15)
 
+	# Gratitude prompt section
+	var gratitude_header = Label.new()
+	gratitude_header.text = "What are you grateful for today?"
+	gratitude_header.add_theme_font_size_override("font_size", 16)
+	gratitude_header.add_theme_color_override("font_color", Color(0.75, 0.65, 0.5))
+	zone_body.add_child(gratitude_header)
+
+	_add_habit_spacer(4)
+
+	# Show a random gratitude prompt
+	var gratitude_prompt_label = Label.new()
+	gratitude_prompt_label.text = _get_random_gratitude_prompt()
+	gratitude_prompt_label.add_theme_font_size_override("font_size", 13)
+	gratitude_prompt_label.add_theme_color_override("font_color", Color(0.55, 0.55, 0.6))
+	gratitude_prompt_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	zone_body.add_child(gratitude_prompt_label)
+
+	_add_habit_spacer(4)
+
+	var gratitude_input = TextEdit.new()
+	gratitude_input.name = "GratitudeInput"
+	gratitude_input.placeholder_text = "Three things I'm grateful for..."
+	gratitude_input.custom_minimum_size = Vector2(0, 60)
+	gratitude_input.add_theme_font_size_override("font_size", 15)
+	gratitude_input.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+	if today_checkin.size() > 0:
+		gratitude_input.text = today_checkin[0].get("gratitude", "")
+	zone_body.add_child(gratitude_input)
+
+	_add_habit_spacer(15)
+
 	# Buttons
 	var button_row = HBoxContainer.new()
 	button_row.add_theme_constant_override("separation", 12)
@@ -7816,9 +8184,33 @@ func _get_energy_icon(level: int) -> String:
 	return "⚡️"  # Peak
 
 
+func _get_random_gratitude_prompt() -> String:
+	var prompts = [
+		"What made you smile today?",
+		"Who helped you recently that you're thankful for?",
+		"What simple pleasure did you enjoy today?",
+		"What challenge are you grateful to have faced?",
+		"What's something in your life you often take for granted?",
+		"What ability or skill are you thankful to have?",
+		"What moment of peace did you experience recently?",
+		"What's something beautiful you noticed today?",
+		"Who in your life brings you comfort?",
+		"What opportunity are you grateful for?",
+		"What lesson did you learn recently that you're thankful for?",
+		"What made you feel hopeful today?",
+		"What's a small victory you achieved recently?",
+		"What memory makes you feel warm inside?",
+		"What part of your daily routine brings you joy?"
+	]
+	return prompts[randi() % prompts.size()]
+
+
 func _save_checkin() -> void:
 	var notes_input = zone_body.find_child("CheckinNotes", true, false) as TextEdit
 	var notes = notes_input.text.strip_edges() if notes_input else ""
+
+	var gratitude_input = zone_body.find_child("GratitudeInput", true, false) as TextEdit
+	var gratitude = gratitude_input.text.strip_edges() if gratitude_input else ""
 
 	var today = Time.get_date_string_from_system()
 	var checkins = _load_checkins()
@@ -7832,18 +8224,28 @@ func _save_checkin() -> void:
 		"timestamp": Time.get_unix_time_from_system(),
 		"mood": current_checkin_mood,
 		"energy": current_checkin_energy,
-		"notes": notes
+		"notes": notes,
+		"gratitude": gratitude
 	}
 	checkins.append(entry)
 
 	# Save
 	_save_checkins(checkins)
 
-	# Award XP for checking in
-	GameManager.add_aspect_experience("wisdom", 15)
+	# Award XP for checking in (bonus XP if gratitude included)
+	var xp_amount = 15
+	var xp_text = "+15 Wisdom XP"
+	if gratitude != "":
+		xp_amount += 5
+		xp_text = "+20 Wisdom XP (includes gratitude bonus!)"
+	GameManager.add_aspect_experience("wisdom", xp_amount)
 
 	# Show confirmation and return to tab
-	_show_dialogue("Check-In Saved", "Your daily check-in has been recorded.\n\n" + MOOD_EMOJIS[current_checkin_mood - 1] + " Mood: " + _get_mood_label(current_checkin_mood) + "\n" + _get_energy_icon(current_checkin_energy) + " Energy: " + ENERGY_LABELS[current_checkin_energy - 1] + "\n\n+15 Wisdom XP")
+	var confirm_text = "Your daily check-in has been recorded.\n\n" + MOOD_EMOJIS[current_checkin_mood - 1] + " Mood: " + _get_mood_label(current_checkin_mood) + "\n" + _get_energy_icon(current_checkin_energy) + " Energy: " + ENERGY_LABELS[current_checkin_energy - 1]
+	if gratitude != "":
+		confirm_text += "\n🙏 Gratitude: Recorded"
+	confirm_text += "\n\n" + xp_text
+	_show_dialogue("Check-In Saved", confirm_text)
 
 	# Return to check-in tab after dialog closes
 	await get_tree().create_timer(0.1).timeout
@@ -7981,16 +8383,24 @@ func _add_checkin_card(checkin: Dictionary) -> void:
 	energy_label.custom_minimum_size = Vector2(50, 0)
 	hbox.add_child(energy_label)
 
-	# Notes preview
+	# Notes/gratitude preview
 	var notes = checkin.get("notes", "")
-	if notes != "":
-		var notes_preview = Label.new()
-		notes_preview.text = notes.substr(0, 30) + ("..." if notes.length() > 30 else "")
-		notes_preview.add_theme_font_size_override("font_size", 13)
-		notes_preview.add_theme_color_override("font_color", Color(0.5, 0.55, 0.6))
-		notes_preview.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		notes_preview.clip_text = true
-		hbox.add_child(notes_preview)
+	var gratitude = checkin.get("gratitude", "")
+	var preview_text = ""
+
+	if gratitude != "":
+		preview_text = "🙏 " + gratitude.substr(0, 25) + ("..." if gratitude.length() > 25 else "")
+	elif notes != "":
+		preview_text = notes.substr(0, 30) + ("..." if notes.length() > 30 else "")
+
+	if preview_text != "":
+		var preview_label = Label.new()
+		preview_label.text = preview_text
+		preview_label.add_theme_font_size_override("font_size", 13)
+		preview_label.add_theme_color_override("font_color", Color(0.5, 0.55, 0.6))
+		preview_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		preview_label.clip_text = true
+		hbox.add_child(preview_label)
 
 	zone_body.add_child(card)
 	_add_habit_spacer(4)
@@ -8137,11 +8547,11 @@ func _show_checkin_trends() -> void:
 		stats_grid.add_theme_constant_override("h_separation", 20)
 		stats_grid.add_theme_constant_override("v_separation", 6)
 
-		_add_stat_row(stats_grid, "Total Check-ins:", str(total_checkins))
-		_add_stat_row(stats_grid, "Average Mood:", "%.1f " % avg_mood + MOOD_EMOJIS[int(avg_mood) - 1])
-		_add_stat_row(stats_grid, "Average Energy:", "%.1f" % avg_energy)
-		_add_stat_row(stats_grid, "Best Mood Day:", _format_date(best_mood_day.date) + " (" + str(best_mood_day.mood) + ")")
-		_add_stat_row(stats_grid, "Best Energy Day:", _format_date(best_energy_day.date) + " (" + str(best_energy_day.energy) + ")")
+		_add_grid_stat_row(stats_grid, "Total Check-ins:", str(total_checkins))
+		_add_grid_stat_row(stats_grid, "Average Mood:", "%.1f " % avg_mood + MOOD_EMOJIS[int(avg_mood) - 1])
+		_add_grid_stat_row(stats_grid, "Average Energy:", "%.1f" % avg_energy)
+		_add_grid_stat_row(stats_grid, "Best Mood Day:", _format_date(best_mood_day.date) + " (" + str(best_mood_day.mood) + ")")
+		_add_grid_stat_row(stats_grid, "Best Energy Day:", _format_date(best_energy_day.date) + " (" + str(best_energy_day.energy) + ")")
 
 		zone_body.add_child(stats_grid)
 
@@ -8155,7 +8565,7 @@ func _show_checkin_trends() -> void:
 	zone_body.add_child(back_btn)
 
 
-func _add_stat_row(grid: GridContainer, label_text: String, value_text: String) -> void:
+func _add_grid_stat_row(grid: GridContainer, label_text: String, value_text: String) -> void:
 	var label = Label.new()
 	label.text = label_text
 	label.add_theme_font_size_override("font_size", 14)
@@ -8281,16 +8691,16 @@ func _show_week_stats_preview() -> void:
 	stats_grid.add_theme_constant_override("h_separation", 20)
 	stats_grid.add_theme_constant_override("v_separation", 4)
 
-	_add_stat_row(stats_grid, "Focus Sessions:", str(stats.focus_sessions))
-	_add_stat_row(stats_grid, "Focus Minutes:", str(stats.focus_minutes))
-	_add_stat_row(stats_grid, "Habits Completed:", str(stats.habits_completed))
-	_add_stat_row(stats_grid, "Goals Achieved:", str(stats.goals_completed))
-	_add_stat_row(stats_grid, "Check-Ins:", str(stats.checkins))
+	_add_grid_stat_row(stats_grid, "Focus Sessions:", str(stats.focus_sessions))
+	_add_grid_stat_row(stats_grid, "Focus Minutes:", str(stats.focus_minutes))
+	_add_grid_stat_row(stats_grid, "Habits Completed:", str(stats.habits_completed))
+	_add_grid_stat_row(stats_grid, "Goals Achieved:", str(stats.goals_completed))
+	_add_grid_stat_row(stats_grid, "Check-Ins:", str(stats.checkins))
 
 	if stats.avg_mood > 0:
-		_add_stat_row(stats_grid, "Avg Mood:", "%.1f " % stats.avg_mood + MOOD_EMOJIS[int(stats.avg_mood) - 1])
+		_add_grid_stat_row(stats_grid, "Avg Mood:", "%.1f " % stats.avg_mood + MOOD_EMOJIS[int(stats.avg_mood) - 1])
 	if stats.avg_energy > 0:
-		_add_stat_row(stats_grid, "Avg Energy:", "%.1f" % stats.avg_energy)
+		_add_grid_stat_row(stats_grid, "Avg Energy:", "%.1f" % stats.avg_energy)
 
 	stats_container.add_child(stats_grid)
 	zone_body.add_child(stats_container)
@@ -8999,6 +9409,19 @@ var hub_particles: Array = []
 var hub_orbs: Array = []
 var hub_env_time: float = 0.0
 
+# Weather/atmosphere system
+var weather_overlay: ColorRect = null
+var weather_particles: Array = []
+var atmosphere_level: int = 0  # 0-5 based on progress
+const ATMOSPHERE_COLORS = [
+	Color(0.05, 0.05, 0.1, 0.0),    # Level 0: No tint (starting)
+	Color(0.1, 0.08, 0.15, 0.05),   # Level 1: Slight purple mist
+	Color(0.08, 0.12, 0.15, 0.08),  # Level 2: Ethereal blue
+	Color(0.12, 0.1, 0.18, 0.1),    # Level 3: Deeper mystical
+	Color(0.15, 0.12, 0.2, 0.12),   # Level 4: Rich atmosphere
+	Color(0.18, 0.15, 0.25, 0.15)   # Level 5: Full mystical realm
+]
+
 func _create_enhanced_hub_environment() -> void:
 	# Create container for enhanced visuals
 	hub_env_container = Node2D.new()
@@ -9021,19 +9444,189 @@ func _create_enhanced_hub_environment() -> void:
 	# Create center crystal enhancement
 	_create_hub_center_enhancement()
 
-	# Create progress indicators (streak flames, evolution ring)
+	# Create progress indicators (streak flames, evolution ring, garden patches)
 	_create_progress_indicators()
+
+	# Create weather/atmosphere effects based on progress
+	_create_weather_atmosphere()
+
+
+func _create_weather_atmosphere() -> void:
+	## Create dynamic weather effects based on player progress
+	## Higher evolution = more magical atmosphere
+
+	# Calculate atmosphere level based on progress
+	var evolution = GameManager.get_evolution_level() if GameManager else 1
+	var streak = GameManager.player_data.get("current_streak", 0) if GameManager else 0
+	var total_sessions = GameManager.player_data.get("total_focus_sessions", 0) if GameManager else 0
+
+	# Determine atmosphere level (0-5)
+	if evolution >= 8 or total_sessions >= 100:
+		atmosphere_level = 5
+	elif evolution >= 6 or total_sessions >= 50:
+		atmosphere_level = 4
+	elif evolution >= 4 or total_sessions >= 25:
+		atmosphere_level = 3
+	elif evolution >= 2 or total_sessions >= 10:
+		atmosphere_level = 2
+	elif total_sessions >= 3:
+		atmosphere_level = 1
+	else:
+		atmosphere_level = 0
+
+	# Create atmosphere overlay (subtle color tint)
+	weather_overlay = ColorRect.new()
+	weather_overlay.name = "AtmosphereOverlay"
+	weather_overlay.color = ATMOSPHERE_COLORS[atmosphere_level]
+	weather_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	weather_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	weather_overlay.z_index = 100
+	add_child(weather_overlay)
+
+	# Create floating weather particles based on level
+	_create_weather_particles()
+
+	# Add streak-based aurora effect if streak is high
+	if streak >= 7:
+		_create_aurora_effect(streak)
+
+
+func _create_weather_particles() -> void:
+	## Create magical floating particles that increase with atmosphere level
+	var particle_count = atmosphere_level * 8  # 0, 8, 16, 24, 32, 40 particles
+
+	for i in range(particle_count):
+		var particle = Polygon2D.new()
+		particle.name = "WeatherParticle_" + str(i)
+
+		# Random size based on atmosphere level
+		var size = randf_range(2, 4 + atmosphere_level)
+		particle.polygon = _create_soft_circle(size, 6)
+
+		# Position randomly across the view
+		var viewport_size = get_viewport_rect().size
+		particle.position = Vector2(
+			randf_range(0, viewport_size.x),
+			randf_range(0, viewport_size.y)
+		)
+
+		# Color varies by atmosphere level
+		var hue = randf_range(0.6, 0.8)  # Purple to blue range
+		var sat = randf_range(0.3, 0.6)
+		var val = randf_range(0.7, 1.0)
+		var alpha = randf_range(0.1, 0.3) * (atmosphere_level / 5.0 + 0.2)
+		particle.color = Color.from_hsv(hue, sat, val, alpha)
+
+		particle.z_index = 50
+		particle.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(particle)
+
+		weather_particles.append({
+			"node": particle,
+			"base_y": particle.position.y,
+			"speed": randf_range(0.3, 0.8),
+			"drift_speed": randf_range(0.5, 1.5),
+			"phase": randf() * TAU,
+			"amplitude": randf_range(20, 50)
+		})
+
+
+func _create_aurora_effect(streak: int) -> void:
+	## Create subtle aurora bands for high streaks
+	var aurora_container = Node2D.new()
+	aurora_container.name = "Aurora"
+	aurora_container.z_index = 1
+
+	var band_count = mini(streak / 7, 4)  # Max 4 bands
+
+	for i in range(band_count):
+		var band = Polygon2D.new()
+		band.name = "AuroraBand_" + str(i)
+
+		# Create a wide curved band shape
+		var points = PackedVector2Array()
+		var y_base = -300 - i * 40
+		var segments = 20
+		for j in range(segments + 1):
+			var x = (float(j) / segments) * 2000 - 1000
+			var y = y_base + sin(float(j) / segments * PI) * 30
+			points.append(Vector2(x, y))
+		# Close the bottom
+		for j in range(segments, -1, -1):
+			var x = (float(j) / segments) * 2000 - 1000
+			var y = y_base + 20 + sin(float(j) / segments * PI) * 25
+			points.append(Vector2(x, y))
+
+		band.polygon = points
+
+		# Aurora colors
+		var aurora_colors = [
+			Color(0.2, 0.8, 0.4, 0.08),   # Green
+			Color(0.3, 0.6, 0.9, 0.06),   # Blue
+			Color(0.6, 0.3, 0.8, 0.05),   # Purple
+			Color(0.2, 0.7, 0.7, 0.04)    # Teal
+		]
+		band.color = aurora_colors[i % aurora_colors.size()]
+
+		aurora_container.add_child(band)
+
+	isometric_base.add_child(aurora_container)
+	isometric_base.move_child(aurora_container, 0)  # Behind everything
+
+
+func _animate_weather_effects(delta: float) -> void:
+	## Animate weather particles with gentle floating motion
+	var viewport_size = get_viewport_rect().size
+
+	for p in weather_particles:
+		if not is_instance_valid(p.node):
+			continue
+
+		# Gentle horizontal drift
+		p.node.position.x += p.drift_speed * delta * 20
+
+		# Vertical floating
+		var float_offset = sin(hub_env_time * p.speed + p.phase) * p.amplitude * delta
+		p.node.position.y = p.base_y + sin(hub_env_time * p.speed + p.phase) * 30
+
+		# Wrap around screen
+		if p.node.position.x > viewport_size.x + 50:
+			p.node.position.x = -50
+			p.base_y = randf_range(0, viewport_size.y)
+		elif p.node.position.x < -50:
+			p.node.position.x = viewport_size.x + 50
+			p.base_y = randf_range(0, viewport_size.y)
+
+		# Subtle alpha pulsing
+		var pulse = sin(hub_env_time * 2.0 + p.phase) * 0.1 + 0.9
+		p.node.modulate.a = pulse
+
+	# Animate aurora if present
+	var aurora = isometric_base.get_node_or_null("Aurora")
+	if aurora:
+		for band in aurora.get_children():
+			# Gentle wave motion
+			var wave = sin(hub_env_time * 0.3 + band.get_index() * 0.5) * 5
+			band.position.y = wave
+
+	# Subtle atmosphere overlay pulse
+	if weather_overlay:
+		var base_color = ATMOSPHERE_COLORS[atmosphere_level]
+		var pulse = sin(hub_env_time * 0.5) * 0.02
+		weather_overlay.color.a = base_color.a + pulse
 
 
 func _create_hub_floor_patterns() -> void:
-	# Concentric diamond rings
+	# Concentric diamond rings - expanded for larger platform
 	var ring_colors = [
 		Color(0.15, 0.12, 0.22, 0.4),
+		Color(0.16, 0.13, 0.24, 0.38),
 		Color(0.18, 0.14, 0.26, 0.35),
+		Color(0.19, 0.15, 0.27, 0.32),
 		Color(0.2, 0.16, 0.28, 0.3),
 		Color(0.22, 0.18, 0.3, 0.25)
 	]
-	var ring_sizes = [850, 650, 450, 250]
+	var ring_sizes = [1300, 1100, 900, 700, 500, 300]
 
 	for i in range(ring_sizes.size()):
 		var ring = Polygon2D.new()
@@ -9045,12 +9638,23 @@ func _create_hub_floor_patterns() -> void:
 		ring.color = ring_colors[i]
 		hub_env_container.add_child(ring)
 
-	# Add subtle star patterns on floor
+	# Add subtle star patterns on floor - expanded coverage
 	var star_positions = [
-		Vector2(-600, -200), Vector2(600, -200),
-		Vector2(-500, 200), Vector2(500, 200),
-		Vector2(-300, -350), Vector2(300, -350),
-		Vector2(0, 400)
+		# Inner stars
+		Vector2(-400, -150), Vector2(400, -150),
+		Vector2(-350, 150), Vector2(350, 150),
+		Vector2(-200, -300), Vector2(200, -300),
+		Vector2(0, 350),
+		# Middle ring stars
+		Vector2(-750, -250), Vector2(750, -250),
+		Vector2(-650, 300), Vector2(650, 300),
+		Vector2(-450, -450), Vector2(450, -450),
+		Vector2(0, 550),
+		# Outer ring stars
+		Vector2(-1000, -150), Vector2(1000, -150),
+		Vector2(-900, 350), Vector2(900, 350),
+		Vector2(-600, -550), Vector2(600, -550),
+		Vector2(-200, 600), Vector2(200, 600)
 	]
 	for pos in star_positions:
 		var star = Polygon2D.new()
@@ -9063,15 +9667,105 @@ func _create_hub_floor_patterns() -> void:
 		star.color = Color(0.5, 0.4, 0.7, 0.2)
 		hub_env_container.add_child(star)
 
+	# Add mystical pathway markings connecting zones
+	_create_pathway_markers()
+
+
+func _create_pathway_markers() -> void:
+	# Create glowing pathway lines connecting key zones
+	var pathway_configs = [
+		# Center to portals
+		{"from": Vector2(0, 0), "to": Vector2(0, -550), "color": Color(0.4, 0.5, 0.8, 0.15)},  # North
+		{"from": Vector2(0, 0), "to": Vector2(800, 0), "color": Color(0.7, 0.4, 0.5, 0.15)},   # East
+		{"from": Vector2(0, 0), "to": Vector2(-800, 0), "color": Color(0.4, 0.7, 0.5, 0.15)},  # West
+		{"from": Vector2(0, 0), "to": Vector2(0, 450), "color": Color(0.6, 0.5, 0.4, 0.15)},   # South
+	]
+
+	for config in pathway_configs:
+		_create_dotted_pathway(config["from"], config["to"], config["color"])
+
+	# Add exploration zone markers at expanded edges
+	var zone_markers = [
+		{"pos": Vector2(-1100, -350), "color": Color(0.5, 0.7, 0.9, 0.25), "label": "Discovery"},
+		{"pos": Vector2(1100, -350), "color": Color(0.9, 0.6, 0.5, 0.25), "label": "Insight"},
+		{"pos": Vector2(-1100, 400), "color": Color(0.5, 0.9, 0.6, 0.25), "label": "Serenity"},
+		{"pos": Vector2(1100, 400), "color": Color(0.8, 0.5, 0.8, 0.25), "label": "Creativity"},
+	]
+
+	for marker_data in zone_markers:
+		_create_exploration_zone_marker(marker_data)
+
+
+func _create_dotted_pathway(from_pos: Vector2, to_pos: Vector2, color: Color) -> void:
+	var direction = (to_pos - from_pos).normalized()
+	var distance = from_pos.distance_to(to_pos)
+	var dot_spacing = 40.0
+	var num_dots = int(distance / dot_spacing)
+
+	for i in range(1, num_dots):  # Skip first dot (at center)
+		var t = float(i) / num_dots
+		var pos = from_pos.lerp(to_pos, t)
+
+		var dot = Polygon2D.new()
+		var size = 4.0 - t * 2.0  # Dots get smaller toward edges
+		dot.polygon = _create_soft_circle(size, 6)
+		dot.position = pos
+		dot.color = color
+		dot.color.a = 0.3 - t * 0.2  # Fade toward edges
+		hub_env_container.add_child(dot)
+
+
+func _create_exploration_zone_marker(marker_data: Dictionary) -> void:
+	var pos = marker_data["pos"]
+	var color = marker_data["color"]
+
+	# Outer glow ring
+	var outer_ring = Polygon2D.new()
+	outer_ring.polygon = _create_soft_circle(50, 12)
+	outer_ring.position = pos
+	outer_ring.color = color
+	outer_ring.color.a = 0.1
+	hub_env_container.add_child(outer_ring)
+
+	# Inner glow
+	var inner = Polygon2D.new()
+	inner.polygon = _create_soft_circle(25, 10)
+	inner.position = pos
+	inner.color = color
+	inner.color.a = 0.2
+	hub_env_container.add_child(inner)
+
+	# Center crystal
+	var crystal = Polygon2D.new()
+	crystal.polygon = PackedVector2Array([
+		Vector2(0, -15), Vector2(8, -5), Vector2(8, 5),
+		Vector2(0, 15), Vector2(-8, 5), Vector2(-8, -5)
+	])
+	crystal.position = pos
+	crystal.color = color
+	crystal.color.a = 0.4
+	hub_env_container.add_child(crystal)
+
 
 func _create_hub_glow_orbs() -> void:
-	# Subtle floating orbs - small ambient light points
+	# Subtle floating orbs - expanded for larger platform
 	var orb_positions = [
-		{"pos": Vector2(-750, -150), "color": Color(0.6, 0.65, 0.95, 0.2), "size": 8},
-		{"pos": Vector2(750, -150), "color": Color(0.65, 0.6, 0.9, 0.2), "size": 8},
-		{"pos": Vector2(-650, 280), "color": Color(0.5, 0.75, 0.65, 0.18), "size": 7},
-		{"pos": Vector2(650, 280), "color": Color(0.75, 0.55, 0.6, 0.18), "size": 7},
-		{"pos": Vector2(0, -400), "color": Color(0.6, 0.6, 0.85, 0.15), "size": 6}
+		# Inner ring
+		{"pos": Vector2(-550, -180), "color": Color(0.6, 0.65, 0.95, 0.2), "size": 8},
+		{"pos": Vector2(550, -180), "color": Color(0.65, 0.6, 0.9, 0.2), "size": 8},
+		{"pos": Vector2(-500, 250), "color": Color(0.5, 0.75, 0.65, 0.18), "size": 7},
+		{"pos": Vector2(500, 250), "color": Color(0.75, 0.55, 0.6, 0.18), "size": 7},
+		{"pos": Vector2(0, -380), "color": Color(0.6, 0.6, 0.85, 0.15), "size": 6},
+		# Outer ring - new exploration zones
+		{"pos": Vector2(-950, -280), "color": Color(0.5, 0.7, 0.9, 0.18), "size": 9},
+		{"pos": Vector2(950, -280), "color": Color(0.9, 0.6, 0.5, 0.18), "size": 9},
+		{"pos": Vector2(-900, 380), "color": Color(0.5, 0.9, 0.6, 0.16), "size": 8},
+		{"pos": Vector2(900, 380), "color": Color(0.8, 0.5, 0.8, 0.16), "size": 8},
+		# Far corners
+		{"pos": Vector2(-1200, -100), "color": Color(0.55, 0.65, 0.85, 0.12), "size": 7},
+		{"pos": Vector2(1200, -100), "color": Color(0.85, 0.55, 0.6, 0.12), "size": 7},
+		{"pos": Vector2(-1150, 200), "color": Color(0.55, 0.85, 0.65, 0.12), "size": 6},
+		{"pos": Vector2(1150, 200), "color": Color(0.75, 0.55, 0.75, 0.12), "size": 6}
 	]
 
 	for orb_data in orb_positions:
@@ -9112,8 +9806,8 @@ func _create_soft_circle(radius: float, segments: int) -> PackedVector2Array:
 
 
 func _create_hub_floating_particles() -> void:
-	# Small floating sparkles/particles
-	for i in range(20):
+	# Small floating sparkles/particles - expanded for larger platform
+	for i in range(35):  # More particles for bigger area
 		var particle = Polygon2D.new()
 		var size = randf_range(2, 5)
 		particle.polygon = PackedVector2Array([
@@ -9121,8 +9815,8 @@ func _create_hub_floating_particles() -> void:
 			Vector2(size, 0), Vector2(0, size)
 		])
 		particle.position = Vector2(
-			randf_range(-900, 900),
-			randf_range(-450, 450)
+			randf_range(-1250, 1250),
+			randf_range(-620, 620)
 		)
 		var brightness = randf_range(0.4, 0.8)
 		particle.color = Color(0.7, 0.65, 0.9, brightness)
@@ -9140,16 +9834,21 @@ func _create_hub_floating_particles() -> void:
 
 
 func _create_hub_path_decorations() -> void:
-	# Small glowing markers along paths
+	# Small glowing markers along paths - extended for larger platform
 	var path_marker_positions = [
 		# North path
-		Vector2(0, -150), Vector2(0, -250), Vector2(0, -350),
+		Vector2(0, -150), Vector2(0, -280), Vector2(0, -410), Vector2(0, -540),
 		# East path
-		Vector2(200, 0), Vector2(400, 0), Vector2(600, 0),
+		Vector2(250, 0), Vector2(500, 0), Vector2(750, 0), Vector2(1000, 0),
 		# West path
-		Vector2(-200, 0), Vector2(-400, 0), Vector2(-600, 0),
+		Vector2(-250, 0), Vector2(-500, 0), Vector2(-750, 0), Vector2(-1000, 0),
 		# South path
-		Vector2(0, 150), Vector2(0, 250), Vector2(0, 350)
+		Vector2(0, 150), Vector2(0, 280), Vector2(0, 410),
+		# Diagonal paths to new zones
+		Vector2(-300, -200), Vector2(-550, -350), Vector2(-800, -500),
+		Vector2(300, -200), Vector2(550, -350), Vector2(800, -500),
+		Vector2(-350, 180), Vector2(-600, 320), Vector2(-850, 460),
+		Vector2(350, 180), Vector2(600, 320), Vector2(850, 460)
 	]
 
 	for pos in path_marker_positions:
@@ -9239,12 +9938,6 @@ func _create_hub_center_enhancement() -> void:
 		line.position = Vector2(0, -60)
 		line.color = Color(0.5, 0.4, 0.8, 0.2)
 		hub_env_container.add_child(line)
-
-
-# Progress indicator tracking
-var streak_flames: Array = []
-var evolution_ring: Node2D = null
-var evolution_segments: Array = []
 
 
 func _create_progress_indicators() -> void:
@@ -9462,6 +10155,9 @@ func _animate_hub_environment(delta: float) -> void:
 			var pulse = 0.8 + sin(hub_env_time * 2.0 + seg.index * 0.3) * 0.2
 			var color = seg.base_color
 			seg.polygon.color = Color(color.r, color.g, color.b, color.a * pulse)
+
+	# Animate weather/atmosphere effects
+	_animate_weather_effects(delta)
 
 
 # =============================================================================

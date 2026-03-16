@@ -27,6 +27,10 @@ var habit_row_nodes: Dictionary = {}  # habit_id -> row node
 var stats_panel: Control = null
 var stats_period: int = 7  # 7 = weekly, 30 = monthly
 
+# Relationships panel
+var relationships_panel: Control = null
+var selected_relationship_id: String = ""
+
 # Journal prompt
 var journal_dialog: PanelContainer = null
 var journal_input: TextEdit = null
@@ -158,11 +162,21 @@ func _load_habits() -> void:
 	# Stats button
 	var stats_btn = Button.new()
 	stats_btn.text = "Stats"
-	stats_btn.custom_minimum_size = Vector2(80, 45)
+	stats_btn.custom_minimum_size = Vector2(70, 45)
 	stats_btn.add_theme_font_size_override("font_size", 16)
 	stats_btn.add_theme_color_override("font_color", Color(0.6, 0.7, 0.9))
 	stats_btn.pressed.connect(_show_stats_panel)
 	action_row.add_child(stats_btn)
+
+	# Relationships button
+	var rel_btn = Button.new()
+	rel_btn.text = "Rel"
+	rel_btn.tooltip_text = "Relationship Health Tracker"
+	rel_btn.custom_minimum_size = Vector2(55, 45)
+	rel_btn.add_theme_font_size_override("font_size", 16)
+	rel_btn.add_theme_color_override("font_color", Color(0.9, 0.6, 0.7))
+	rel_btn.pressed.connect(_show_relationships_panel)
+	action_row.add_child(rel_btn)
 
 	# Archived habits
 	var archived = HabitManager.get_archived_habits()
@@ -1706,3 +1720,502 @@ func _animate_shrine() -> void:
 			var drift = cos(animation_time * 0.8 + i * 0.7) * 5
 			ember.position = base_pos + Vector2(drift, float_offset)
 			ember.modulate.a = 0.3 + sin(animation_time * 3.0 + i * 0.4) * 0.2
+
+
+# =============================================================================
+# RELATIONSHIP HEALTH TRACKER
+# =============================================================================
+
+func _show_relationships_panel() -> void:
+	if relationships_panel:
+		relationships_panel.queue_free()
+		relationships_panel = null
+		return
+
+	relationships_panel = PanelContainer.new()
+	relationships_panel.name = "RelationshipsPanel"
+	relationships_panel.set_anchors_preset(Control.PRESET_CENTER)
+	relationships_panel.custom_minimum_size = Vector2(520, 580)
+	relationships_panel.position = Vector2(-260, -290)
+
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.08, 0.1, 0.14, 0.98)
+	style.corner_radius_top_left = 16
+	style.corner_radius_top_right = 16
+	style.corner_radius_bottom_left = 16
+	style.corner_radius_bottom_right = 16
+	style.border_color = Color(0.6, 0.4, 0.5)
+	style.border_width_left = 2
+	style.border_width_right = 2
+	style.border_width_top = 2
+	style.border_width_bottom = 2
+	relationships_panel.add_theme_stylebox_override("panel", style)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 25)
+	margin.add_theme_constant_override("margin_top", 20)
+	margin.add_theme_constant_override("margin_right", 25)
+	margin.add_theme_constant_override("margin_bottom", 20)
+	relationships_panel.add_child(margin)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 14)
+	margin.add_child(vbox)
+
+	# Header with title and close
+	var header = HBoxContainer.new()
+	header.add_theme_constant_override("separation", 10)
+	vbox.add_child(header)
+
+	var title = Label.new()
+	title.text = "Relationship Health"
+	title.add_theme_font_size_override("font_size", 24)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(title)
+
+	var close_btn = Button.new()
+	close_btn.text = "X"
+	close_btn.flat = true
+	close_btn.custom_minimum_size = Vector2(35, 35)
+	close_btn.add_theme_font_size_override("font_size", 18)
+	close_btn.pressed.connect(_close_relationships_panel)
+	header.add_child(close_btn)
+
+	# Stats summary
+	var stats = RelationshipManager.get_statistics()
+	var stats_row = HBoxContainer.new()
+	stats_row.add_theme_constant_override("separation", 20)
+	vbox.add_child(stats_row)
+
+	_add_rel_stat(stats_row, str(stats.total_relationships), "People", Color(0.7, 0.8, 0.9))
+	_add_rel_stat(stats_row, str(stats.healthy_relationships), "Thriving", Color(0.5, 0.9, 0.5))
+	_add_rel_stat(stats_row, str(stats.needs_attention), "Need Care", Color(0.9, 0.6, 0.4))
+	_add_rel_stat(stats_row, str(stats.interactions_this_week), "This Week", Color(0.6, 0.7, 0.9))
+
+	# Add new relationship button
+	var add_btn = Button.new()
+	add_btn.text = "+ Add Relationship"
+	add_btn.custom_minimum_size = Vector2(0, 42)
+	add_btn.add_theme_font_size_override("font_size", 16)
+	add_btn.add_theme_color_override("font_color", Color(0.6, 0.8, 0.7))
+	add_btn.pressed.connect(_show_add_relationship_form)
+	vbox.add_child(add_btn)
+
+	# Relationships list
+	var scroll = ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(0, 350)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	vbox.add_child(scroll)
+
+	var rel_list = VBoxContainer.new()
+	rel_list.name = "RelationshipsList"
+	rel_list.add_theme_constant_override("separation", 10)
+	scroll.add_child(rel_list)
+
+	# Load relationships
+	_populate_relationships_list(rel_list)
+
+	add_child(relationships_panel)
+
+	# Fade in
+	relationships_panel.modulate.a = 0.0
+	var tween = create_tween()
+	tween.tween_property(relationships_panel, "modulate:a", 1.0, 0.2)
+
+
+func _add_rel_stat(container: Control, value: String, label_text: String, color: Color) -> void:
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 2)
+	container.add_child(vbox)
+
+	var val_label = Label.new()
+	val_label.text = value
+	val_label.add_theme_font_size_override("font_size", 22)
+	val_label.add_theme_color_override("font_color", color)
+	val_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(val_label)
+
+	var text_label = Label.new()
+	text_label.text = label_text
+	text_label.add_theme_font_size_override("font_size", 12)
+	text_label.add_theme_color_override("font_color", Color(0.5, 0.55, 0.6))
+	text_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(text_label)
+
+
+func _populate_relationships_list(container: VBoxContainer) -> void:
+	# Clear existing
+	for child in container.get_children():
+		child.queue_free()
+
+	var relationships = RelationshipManager.get_all_relationships()
+
+	if relationships.is_empty():
+		var empty_label = Label.new()
+		empty_label.text = "No relationships tracked yet.\nAdd people you care about to nurture those connections!"
+		empty_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+		empty_label.add_theme_font_size_override("font_size", 15)
+		empty_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.6))
+		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		container.add_child(empty_label)
+		return
+
+	# Show relationships needing attention first
+	var needs_attention = RelationshipManager.get_relationships_needing_attention()
+	if needs_attention.size() > 0:
+		var attention_label = Label.new()
+		attention_label.text = "Needs Attention"
+		attention_label.add_theme_font_size_override("font_size", 14)
+		attention_label.add_theme_color_override("font_color", Color(0.9, 0.6, 0.4))
+		container.add_child(attention_label)
+
+	for rel in relationships:
+		_add_relationship_row(container, rel)
+
+
+func _add_relationship_row(container: VBoxContainer, rel: Dictionary) -> void:
+	var row = PanelContainer.new()
+	var row_style = StyleBoxFlat.new()
+	row_style.bg_color = Color(0.1, 0.12, 0.16, 0.8)
+	row_style.corner_radius_top_left = 8
+	row_style.corner_radius_top_right = 8
+	row_style.corner_radius_bottom_left = 8
+	row_style.corner_radius_bottom_right = 8
+	row.add_theme_stylebox_override("panel", row_style)
+	container.add_child(row)
+
+	var row_margin = MarginContainer.new()
+	row_margin.add_theme_constant_override("margin_left", 12)
+	row_margin.add_theme_constant_override("margin_right", 12)
+	row_margin.add_theme_constant_override("margin_top", 10)
+	row_margin.add_theme_constant_override("margin_bottom", 10)
+	row.add_child(row_margin)
+
+	var hbox = HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 12)
+	row_margin.add_child(hbox)
+
+	# Health indicator
+	var health_info = RelationshipManager.HEALTH_LEVELS.get(rel.health, RelationshipManager.HEALTH_LEVELS[3])
+	var health_dot = ColorRect.new()
+	health_dot.color = health_info.color
+	health_dot.custom_minimum_size = Vector2(12, 12)
+	hbox.add_child(health_dot)
+
+	# Name and category
+	var info_vbox = VBoxContainer.new()
+	info_vbox.add_theme_constant_override("separation", 2)
+	info_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hbox.add_child(info_vbox)
+
+	var name_label = Label.new()
+	name_label.text = rel.name
+	name_label.add_theme_font_size_override("font_size", 17)
+	info_vbox.add_child(name_label)
+
+	var category_label = Label.new()
+	category_label.text = RelationshipManager.get_category_name(rel.category) + " - " + health_info.name
+	category_label.add_theme_font_size_override("font_size", 12)
+	category_label.add_theme_color_override("font_color", Color(0.5, 0.55, 0.6))
+	info_vbox.add_child(category_label)
+
+	# Streak
+	if rel.streak_weeks > 0:
+		var streak_label = Label.new()
+		streak_label.text = str(rel.streak_weeks) + "w"
+		streak_label.tooltip_text = str(rel.streak_weeks) + " week streak"
+		streak_label.add_theme_font_size_override("font_size", 14)
+		streak_label.add_theme_color_override("font_color", Color(0.9, 0.7, 0.3))
+		hbox.add_child(streak_label)
+
+	# Log interaction button
+	var log_btn = Button.new()
+	log_btn.text = "Log"
+	log_btn.custom_minimum_size = Vector2(55, 32)
+	log_btn.add_theme_font_size_override("font_size", 14)
+	log_btn.add_theme_color_override("font_color", Color(0.5, 0.8, 0.6))
+	log_btn.pressed.connect(_show_log_interaction_form.bind(rel.id))
+	hbox.add_child(log_btn)
+
+
+func _close_relationships_panel() -> void:
+	if not relationships_panel:
+		return
+
+	var tween = create_tween()
+	tween.tween_property(relationships_panel, "modulate:a", 0.0, 0.15)
+	tween.tween_callback(func():
+		if relationships_panel:
+			relationships_panel.queue_free()
+			relationships_panel = null
+	)
+
+
+func _show_add_relationship_form() -> void:
+	_close_relationships_panel()
+	await get_tree().create_timer(0.2).timeout
+
+	var dialog = PanelContainer.new()
+	dialog.name = "AddRelationshipDialog"
+	dialog.set_anchors_preset(Control.PRESET_CENTER)
+	dialog.custom_minimum_size = Vector2(380, 340)
+	dialog.position = Vector2(-190, -170)
+
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.1, 0.12, 0.18, 0.98)
+	style.corner_radius_top_left = 16
+	style.corner_radius_top_right = 16
+	style.corner_radius_bottom_left = 16
+	style.corner_radius_bottom_right = 16
+	style.border_color = Color(0.5, 0.6, 0.5)
+	style.border_width_left = 2
+	style.border_width_right = 2
+	style.border_width_top = 2
+	style.border_width_bottom = 2
+	dialog.add_theme_stylebox_override("panel", style)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 25)
+	margin.add_theme_constant_override("margin_top", 20)
+	margin.add_theme_constant_override("margin_right", 25)
+	margin.add_theme_constant_override("margin_bottom", 20)
+	dialog.add_child(margin)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 12)
+	margin.add_child(vbox)
+
+	var title = Label.new()
+	title.text = "Add Relationship"
+	title.add_theme_font_size_override("font_size", 22)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(title)
+
+	# Name input
+	var name_label = Label.new()
+	name_label.text = "Name"
+	name_label.add_theme_font_size_override("font_size", 14)
+	vbox.add_child(name_label)
+
+	var name_input = LineEdit.new()
+	name_input.name = "NameInput"
+	name_input.placeholder_text = "Person's name"
+	name_input.custom_minimum_size = Vector2(0, 40)
+	vbox.add_child(name_input)
+
+	# Category dropdown
+	var cat_label = Label.new()
+	cat_label.text = "Category"
+	cat_label.add_theme_font_size_override("font_size", 14)
+	vbox.add_child(cat_label)
+
+	var cat_dropdown = OptionButton.new()
+	cat_dropdown.name = "CategoryDropdown"
+	cat_dropdown.custom_minimum_size = Vector2(0, 40)
+	cat_dropdown.add_item("Family", RelationshipManager.RelationshipCategory.FAMILY)
+	cat_dropdown.add_item("Friend", RelationshipManager.RelationshipCategory.FRIEND)
+	cat_dropdown.add_item("Romantic", RelationshipManager.RelationshipCategory.ROMANTIC)
+	cat_dropdown.add_item("Professional", RelationshipManager.RelationshipCategory.PROFESSIONAL)
+	cat_dropdown.add_item("Mentor", RelationshipManager.RelationshipCategory.MENTOR)
+	cat_dropdown.add_item("Community", RelationshipManager.RelationshipCategory.COMMUNITY)
+	vbox.add_child(cat_dropdown)
+
+	# Notes
+	var notes_label = Label.new()
+	notes_label.text = "Notes (optional)"
+	notes_label.add_theme_font_size_override("font_size", 14)
+	vbox.add_child(notes_label)
+
+	var notes_input = LineEdit.new()
+	notes_input.name = "NotesInput"
+	notes_input.placeholder_text = "Any notes about this relationship"
+	notes_input.custom_minimum_size = Vector2(0, 40)
+	vbox.add_child(notes_input)
+
+	# Buttons
+	var btn_row = HBoxContainer.new()
+	btn_row.add_theme_constant_override("separation", 12)
+	vbox.add_child(btn_row)
+
+	var cancel_btn = Button.new()
+	cancel_btn.text = "Cancel"
+	cancel_btn.custom_minimum_size = Vector2(0, 42)
+	cancel_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cancel_btn.pressed.connect(func():
+		dialog.queue_free()
+		_show_relationships_panel()
+	)
+	btn_row.add_child(cancel_btn)
+
+	var add_btn = Button.new()
+	add_btn.text = "Add"
+	add_btn.custom_minimum_size = Vector2(0, 42)
+	add_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	add_btn.add_theme_color_override("font_color", Color(0.5, 0.8, 0.6))
+	add_btn.pressed.connect(func():
+		var rel_name = name_input.text.strip_edges()
+		if rel_name == "":
+			return
+		var category = cat_dropdown.get_selected_id()
+		var notes = notes_input.text.strip_edges()
+		RelationshipManager.add_relationship(rel_name, category, notes)
+		dialog.queue_free()
+		_show_relationships_panel()
+	)
+	btn_row.add_child(add_btn)
+
+	add_child(dialog)
+	name_input.grab_focus()
+
+
+func _show_log_interaction_form(relationship_id: String) -> void:
+	selected_relationship_id = relationship_id
+	var rel = RelationshipManager.get_relationship(relationship_id)
+	if rel.is_empty():
+		return
+
+	_close_relationships_panel()
+	await get_tree().create_timer(0.2).timeout
+
+	var dialog = PanelContainer.new()
+	dialog.name = "LogInteractionDialog"
+	dialog.set_anchors_preset(Control.PRESET_CENTER)
+	dialog.custom_minimum_size = Vector2(400, 420)
+	dialog.position = Vector2(-200, -210)
+
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.1, 0.12, 0.18, 0.98)
+	style.corner_radius_top_left = 16
+	style.corner_radius_top_right = 16
+	style.corner_radius_bottom_left = 16
+	style.corner_radius_bottom_right = 16
+	style.border_color = Color(0.5, 0.7, 0.6)
+	style.border_width_left = 2
+	style.border_width_right = 2
+	style.border_width_top = 2
+	style.border_width_bottom = 2
+	dialog.add_theme_stylebox_override("panel", style)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 25)
+	margin.add_theme_constant_override("margin_top", 20)
+	margin.add_theme_constant_override("margin_right", 25)
+	margin.add_theme_constant_override("margin_bottom", 20)
+	dialog.add_child(margin)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 12)
+	margin.add_child(vbox)
+
+	var title = Label.new()
+	title.text = "Log Interaction with " + rel.name
+	title.add_theme_font_size_override("font_size", 20)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_color_override("font_color", Color(0.6, 0.8, 0.7))
+	vbox.add_child(title)
+
+	# Interaction type grid
+	var type_label = Label.new()
+	type_label.text = "What did you do?"
+	type_label.add_theme_font_size_override("font_size", 14)
+	vbox.add_child(type_label)
+
+	var types_grid = GridContainer.new()
+	types_grid.columns = 2
+	types_grid.add_theme_constant_override("h_separation", 8)
+	types_grid.add_theme_constant_override("v_separation", 8)
+	vbox.add_child(types_grid)
+
+	var selected_type = "message"  # Default
+	var type_buttons: Dictionary = {}
+
+	for type_id in RelationshipManager.INTERACTION_TYPES:
+		var type_info = RelationshipManager.INTERACTION_TYPES[type_id]
+		var type_btn = Button.new()
+		type_btn.name = "TypeBtn_" + type_id
+		type_btn.text = type_info.name + " (+" + str(type_info.xp) + ")"
+		type_btn.custom_minimum_size = Vector2(165, 36)
+		type_btn.add_theme_font_size_override("font_size", 13)
+		type_btn.toggle_mode = true
+		type_btn.button_pressed = (type_id == selected_type)
+		if type_id == selected_type:
+			type_btn.add_theme_color_override("font_color", Color(0.5, 0.9, 0.6))
+		type_btn.pressed.connect(func():
+			# Unselect all others
+			for tid in type_buttons:
+				type_buttons[tid].button_pressed = (tid == type_id)
+				if tid == type_id:
+					type_buttons[tid].add_theme_color_override("font_color", Color(0.5, 0.9, 0.6))
+				else:
+					type_buttons[tid].remove_theme_color_override("font_color")
+			selected_type = type_id
+		)
+		types_grid.add_child(type_btn)
+		type_buttons[type_id] = type_btn
+
+	# Note input
+	var note_label = Label.new()
+	note_label.text = "Note (optional)"
+	note_label.add_theme_font_size_override("font_size", 14)
+	vbox.add_child(note_label)
+
+	var note_input = TextEdit.new()
+	note_input.name = "NoteInput"
+	note_input.placeholder_text = "How did it go? What did you talk about?"
+	note_input.custom_minimum_size = Vector2(0, 80)
+	note_input.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+	vbox.add_child(note_input)
+
+	# Buttons
+	var btn_row = HBoxContainer.new()
+	btn_row.add_theme_constant_override("separation", 12)
+	vbox.add_child(btn_row)
+
+	var cancel_btn = Button.new()
+	cancel_btn.text = "Cancel"
+	cancel_btn.custom_minimum_size = Vector2(0, 42)
+	cancel_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cancel_btn.pressed.connect(func():
+		dialog.queue_free()
+		_show_relationships_panel()
+	)
+	btn_row.add_child(cancel_btn)
+
+	var log_btn = Button.new()
+	log_btn.text = "Log Interaction"
+	log_btn.custom_minimum_size = Vector2(0, 42)
+	log_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	log_btn.add_theme_color_override("font_color", Color(0.5, 0.8, 0.6))
+	log_btn.pressed.connect(func():
+		# Find selected type
+		var final_type = "message"
+		for tid in type_buttons:
+			if type_buttons[tid].button_pressed:
+				final_type = tid
+				break
+		var note = note_input.text.strip_edges()
+		var result = RelationshipManager.log_interaction(relationship_id, final_type, note)
+		if not result.is_empty():
+			_show_interaction_feedback(rel.name, result.xp_earned)
+		dialog.queue_free()
+		_show_relationships_panel()
+	)
+	btn_row.add_child(log_btn)
+
+	add_child(dialog)
+
+
+func _show_interaction_feedback(name: String, xp: int) -> void:
+	# Play sound
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("play_habit_complete"):
+		audio.play_habit_complete()
+
+	# Update subtitle
+	subtitle_label.text = "Connected with " + name + "! +" + str(xp) + " Compassion XP"
+	subtitle_label.add_theme_color_override("font_color", Color(0.6, 0.8, 0.7))
+
+	await get_tree().create_timer(2.5).timeout
+
+	subtitle_label.text = "Complete your daily rituals to grow"
+	subtitle_label.add_theme_color_override("font_color", Color(0.55, 0.55, 0.65))

@@ -42,6 +42,7 @@ TransitionManager="*res://autoload/TransitionManager.gd"
 ShopManager="*res://autoload/ShopManager.gd"
 CustomizationManager="*res://autoload/CustomizationManager.gd"
 MailManager="*res://autoload/MailManager.gd"
+RelationshipManager="*res://autoload/RelationshipManager.gd"
 
 [display]
 

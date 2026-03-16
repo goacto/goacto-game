@@ -13,25 +13,25 @@
 - [ ] Habit categories/tags for organization
 - [ ] Custom habit icons selection
 - [ ] Habit reminders/notifications integration
-- [ ] Weekly/monthly habit statistics view
-- [ ] Habit streaks celebration animations
+- [x] Weekly/monthly habit statistics view (toggle, completion rates, per-habit stats)
+- [x] Habit streaks celebration animations (confetti, sparkles at 3/7/14/21/30/60/90/100 days)
 
 ### Focus Mode Improvements
 - [x] Session notes during focus timer (collapsible panel, saves to journal)
 - [x] Return to spawn position near Focus Chamber after session
 - [x] Focus Analytics Dashboard (bedroom, unlocks after 1st session)
-- [ ] Background audio/ambient sounds during focus sessions
-- [ ] Pomodoro-style break reminders
-- [ ] Session completion rewards (XP bonuses, visual effects)
+- [x] Background audio/ambient sounds during focus sessions (5 options: silence, space, ship, rain, forest)
+- [x] Pomodoro-style break reminders (25-min intervals, mini-break timer)
+- [x] Session completion rewards (XP bonuses, visual effects)
 
 ### Self-Improvement Features (NEW)
 - [x] Daily Check-In System (mood/energy tracking, trends, history)
 - [x] Weekly Synthesis Ritual (auto-gathered stats, reflections, XP rewards)
 - [x] Values Compass (define 3-5 core values, weekly alignment check)
 - [x] Kindness/Contribution Log (6 categories, streak tracking, Compassion XP)
-- [ ] Affirmations system (daily positive statements)
-- [ ] Relationship health tracker
-- [ ] Gratitude prompts integration with check-ins
+- [x] Affirmations system (daily positive statements, custom affirmations, streaks)
+- [x] Relationship health tracker (add relationships, log interactions, health levels, streaks, Compassion XP)
+- [x] Gratitude prompts integration with check-ins (random prompts, +5 bonus XP, history display)
 
 ---
 
@@ -52,9 +52,9 @@
 - [x] Viewing balcony meditation bench (timed sessions)
 - [x] Console placement system (find in storage, place in bedroom)
 - [x] Room access gating (observatory, mail room unlock conditions)
-- [ ] Hallway unique interactive elements
-- [ ] Mail room package collection flow
-- [ ] Add detail views for sleep pod (dream sequences?)
+- [x] Hallway interactive elements (bulletin board, ship status, achievements, poster)
+- [x] Mail room package collection flow (collect individual/all, item lists)
+- [x] Add detail views for sleep pod (dream sequences, rest meditation)
 
 ### Mindscape Hub
 - [x] Gateway portal graphics (themed decorations for each direction)
@@ -63,12 +63,13 @@
 - [x] Experience Shop (purchase cosmetics with XP)
 - [x] Daily Check-In tab in Reflection Pool
 - [x] Weekly Synthesis tab in Reflection Pool
-- [ ] Expand platform size for more exploration space
-- [ ] Add progress indicators (streak flames, evolution ring, garden patches)
-- [ ] Achievement pedestals showing recent unlocks
-- [ ] Lore stones with discoverable backstory
-- [ ] Companion spirit NPC with contextual tips
-- [ ] Weather/atmosphere changes based on progress
+- [x] Expand platform size for more exploration space (65% larger, pathway markers, 4 discovery zones)
+- [x] Progress indicators (streak flames, evolution ring with level colors)
+- [x] Garden patches evolution based on habits (6 domain patches, 5 growth levels)
+- [x] Achievement pedestals showing recent unlocks (3 pedestals, 20+ achievements)
+- [x] Lore stones with discoverable backstory (3 stones with world-building content)
+- [x] Companion spirit NPC with contextual tips (floating orb, follows player)
+- [x] Weather/atmosphere changes based on progress (5 atmosphere levels, aurora for streaks)
 
 ### Mindscape Regions
 - [x] Values Compass in Goal Compass (South)
@@ -118,7 +119,7 @@
 - [x] Campaign progression gates (bedroom items unlock with engagement)
 - [ ] Evolution stages for mindscape (visual changes)
 - [ ] Achievement system with rewards
-- [ ] Garden patches evolution based on habits
+- [x] Garden patches evolution based on habits
 
 ### Social Features (Future)
 - [ ] Friend system for accountability
@@ -189,19 +190,31 @@
 - [x] Package management UI in Script Lab
 - [x] ShipSceneBase class for code reuse
 - [x] GitHub repository created and pushed
+- [x] Affirmations system (daily positive statements, custom affirmations, streaks)
+- [x] Progress indicators (streak flames, evolution ring in hub)
+- [x] Background Focus Audio (space, rain, forest ambient sounds)
+- [x] Hallway enhancements (bulletin board, ship status, achievements, poster)
+- [x] Habit streak celebrations (confetti, sparkles at milestones)
+- [x] Garden patches evolution (6 domains, 5 growth levels based on habit streaks)
+- [x] Lore stones (3 discoverable backstory stones in hub)
+- [x] Gratitude prompts integration (random prompts, +5 bonus XP, history display)
+- [x] Weather/Atmosphere changes (5 levels, aurora for streaks)
+- [x] Pomodoro break reminders (25-min intervals, mini-break timer)
+- [x] Sleep pod dream sequences (progress-based dreams, rest meditation)
+- [x] Hub platform expansion (65% larger, pathway markers, 4 discovery zones)
+- [x] Script Lab template library (18 curated templates across all domains/operational types)
+- [x] Relationship Health Tracker (RelationshipManager autoload, 6 categories, 10 interaction types, health levels, streaks, Compassion XP rewards)
+- [x] CLAUDE.md comprehensive app overview document (~2100 lines, full story bible, system documentation)
 
 ---
 
 ## Immediate Next Steps (Suggested)
 
-1. **Affirmations System** - Daily positive statements with reminders
-2. **Progress Indicators** - Add streak flames, evolution ring to hub
-3. **Hub Platform Expansion** - Larger exploration area with more zones
-4. **Hallway Enhancements** - Interactive elements, visual polish
-5. **Mail Room Package Flow** - Collect and open packages
-6. **Achievement Pedestals** - Display recent unlocks in hub
-7. **Background Focus Audio** - Ambient sounds during focus sessions
-8. **Garden Patches** - Visual evolution based on habit completion
+1. **Northern Gardens Expansion** - More interactive plants and activities
+2. **Eastern Shores Activities** - Water-themed interactive elements
+3. **Chapter System** - Clear story progression with cutscenes
+4. **Music Tracks** - Add ambient music for different areas
+5. **Accessibility Options** - Font size, high contrast, colorblind modes
 
 ---
 

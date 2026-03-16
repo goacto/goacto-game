@@ -439,6 +439,13 @@ func _create_toolbar() -> void:
 	packages_button.pressed.connect(_show_packages_view)
 	toolbar.add_child(packages_button)
 
+	# Templates button
+	var templates_button = Button.new()
+	templates_button.text = "Templates"
+	templates_button.add_theme_color_override("font_color", Color(0.4, 0.8, 0.6))
+	templates_button.pressed.connect(_show_templates_browser)
+	toolbar.add_child(templates_button)
+
 	# Spacer
 	var spacer = Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -953,6 +960,344 @@ func _show_packages_view() -> void:
 
 
 # =============================================================================
+# TEMPLATE LIBRARY BROWSER
+# =============================================================================
+
+var templates_panel: Control = null
+var template_filter_domain: String = ""
+var template_filter_operational: String = ""
+
+
+func _show_templates_browser() -> void:
+	_play_sfx("res://audio/sfx/ui_click.wav")
+
+	if templates_panel:
+		return
+
+	# Create fullscreen overlay
+	templates_panel = Control.new()
+	templates_panel.name = "TemplatesPanel"
+	templates_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(templates_panel)
+
+	# Background
+	var bg = ColorRect.new()
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.color = Color(0.04, 0.05, 0.08, 0.98)
+	templates_panel.add_child(bg)
+
+	# Main panel
+	var main_panel = PanelContainer.new()
+	main_panel.set_anchors_preset(Control.PRESET_CENTER)
+	main_panel.offset_left = -550
+	main_panel.offset_right = 550
+	main_panel.offset_top = -400
+	main_panel.offset_bottom = 400
+	var main_style = StyleBoxFlat.new()
+	main_style.bg_color = Color(0.08, 0.09, 0.12, 0.98)
+	main_style.set_corner_radius_all(12)
+	main_style.border_color = Color(0.3, 0.6, 0.4, 0.6)
+	main_style.set_border_width_all(2)
+	main_panel.add_theme_stylebox_override("panel", main_style)
+	templates_panel.add_child(main_panel)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 25)
+	margin.add_theme_constant_override("margin_right", 25)
+	margin.add_theme_constant_override("margin_top", 20)
+	margin.add_theme_constant_override("margin_bottom", 20)
+	main_panel.add_child(margin)
+
+	var main_vbox = VBoxContainer.new()
+	main_vbox.add_theme_constant_override("separation", 12)
+	margin.add_child(main_vbox)
+
+	# Header
+	var header_row = HBoxContainer.new()
+	main_vbox.add_child(header_row)
+
+	var title = Label.new()
+	title.text = "Script Template Library"
+	title.add_theme_font_size_override("font_size", 26)
+	title.add_theme_color_override("font_color", Color(0.4, 0.8, 0.6))
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header_row.add_child(title)
+
+	var close_btn = Button.new()
+	close_btn.text = "X"
+	close_btn.custom_minimum_size = Vector2(45, 45)
+	close_btn.add_theme_font_size_override("font_size", 18)
+	close_btn.pressed.connect(_close_templates_browser)
+	header_row.add_child(close_btn)
+
+	# Subtitle
+	var subtitle = Label.new()
+	subtitle.text = "Choose a template to spark inspiration and accelerate your progress"
+	subtitle.add_theme_font_size_override("font_size", 14)
+	subtitle.add_theme_color_override("font_color", MUTED_COLOR)
+	main_vbox.add_child(subtitle)
+
+	# Filter row
+	var filter_row = HBoxContainer.new()
+	filter_row.add_theme_constant_override("separation", 20)
+	main_vbox.add_child(filter_row)
+
+	# Domain filter
+	var domain_label = Label.new()
+	domain_label.text = "Domain:"
+	domain_label.add_theme_font_size_override("font_size", 14)
+	domain_label.add_theme_color_override("font_color", MUTED_COLOR)
+	filter_row.add_child(domain_label)
+
+	var domain_filter_btn = OptionButton.new()
+	domain_filter_btn.name = "DomainFilter"
+	domain_filter_btn.add_item("All Domains", 0)
+	for i in range(ScriptManager.DEFAULT_LAYERS.size()):
+		var layer = ScriptManager.DEFAULT_LAYERS[i]
+		domain_filter_btn.add_item(layer.name, i + 1)
+	domain_filter_btn.item_selected.connect(_on_template_domain_filter_changed)
+	filter_row.add_child(domain_filter_btn)
+
+	# Operational filter
+	var op_label = Label.new()
+	op_label.text = "Type:"
+	op_label.add_theme_font_size_override("font_size", 14)
+	op_label.add_theme_color_override("font_color", MUTED_COLOR)
+	filter_row.add_child(op_label)
+
+	var op_filter_btn = OptionButton.new()
+	op_filter_btn.name = "OperationalFilter"
+	op_filter_btn.add_item("All Types", 0)
+	for i in range(ScriptManager.OPERATIONAL_LAYERS.size()):
+		var layer = ScriptManager.OPERATIONAL_LAYERS[i]
+		op_filter_btn.add_item(layer.name, i + 1)
+	op_filter_btn.item_selected.connect(_on_template_op_filter_changed)
+	filter_row.add_child(op_filter_btn)
+
+	var sep = HSeparator.new()
+	main_vbox.add_child(sep)
+
+	# Template grid scroll
+	var scroll = ScrollContainer.new()
+	scroll.name = "TemplateScroll"
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	main_vbox.add_child(scroll)
+
+	var grid = GridContainer.new()
+	grid.name = "TemplateGrid"
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 15)
+	grid.add_theme_constant_override("v_separation", 15)
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(grid)
+
+	# Populate templates
+	_populate_template_grid()
+
+
+func _populate_template_grid() -> void:
+	if not templates_panel:
+		return
+
+	var grid = templates_panel.get_node_or_null("TemplatesPanel/PanelContainer/MarginContainer/VBoxContainer/TemplateScroll/TemplateGrid")
+	if not grid:
+		grid = templates_panel.find_child("TemplateGrid", true, false)
+	if not grid:
+		return
+
+	# Clear existing
+	for child in grid.get_children():
+		child.queue_free()
+
+	# Get all templates
+	var templates = ScriptManager.get_templates()
+
+	# Apply filters
+	var filtered = []
+	for t in templates:
+		var domain_match = template_filter_domain == "" or t.layer_id == template_filter_domain
+		var op_match = template_filter_operational == "" or t.operational_layer == template_filter_operational
+		if domain_match and op_match:
+			filtered.append(t)
+
+	# Create template cards
+	for template in filtered:
+		var card = _create_template_card(template)
+		grid.add_child(card)
+
+
+func _create_template_card(template: Dictionary) -> PanelContainer:
+	var card = PanelContainer.new()
+	card.custom_minimum_size = Vector2(500, 140)
+
+	# Get colors based on domain and operational layer
+	var domain_color = _get_domain_color(template.layer_id)
+	var op_color = _get_operational_color(template.operational_layer)
+
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.1, 0.11, 0.15, 0.95)
+	style.set_corner_radius_all(8)
+	style.border_color = domain_color.darkened(0.3)
+	style.border_width_left = 4
+	style.set_border_width_all(1)
+	style.border_width_left = 4
+	card.add_theme_stylebox_override("panel", style)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 15)
+	margin.add_theme_constant_override("margin_right", 15)
+	margin.add_theme_constant_override("margin_top", 12)
+	margin.add_theme_constant_override("margin_bottom", 12)
+	card.add_child(margin)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 6)
+	margin.add_child(vbox)
+
+	# Header row
+	var header_row = HBoxContainer.new()
+	header_row.add_theme_constant_override("separation", 10)
+	vbox.add_child(header_row)
+
+	var name_label = Label.new()
+	name_label.text = template.name
+	name_label.add_theme_font_size_override("font_size", 17)
+	name_label.add_theme_color_override("font_color", Color(0.9, 0.92, 0.95))
+	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header_row.add_child(name_label)
+
+	# Use button
+	var use_btn = Button.new()
+	use_btn.text = "Use Template"
+	use_btn.add_theme_font_size_override("font_size", 13)
+	use_btn.add_theme_color_override("font_color", ACCENT_COLOR)
+	use_btn.pressed.connect(_use_template.bind(template.id))
+	header_row.add_child(use_btn)
+
+	# Tags row
+	var tags_row = HBoxContainer.new()
+	tags_row.add_theme_constant_override("separation", 8)
+	vbox.add_child(tags_row)
+
+	# Domain tag
+	var domain_tag = _create_tag(template.layer_id.capitalize(), domain_color)
+	tags_row.add_child(domain_tag)
+
+	# Operational tag
+	var op_tag = _create_tag(template.operational_layer.capitalize(), op_color)
+	tags_row.add_child(op_tag)
+
+	# Description
+	var desc_label = Label.new()
+	desc_label.text = template.description
+	desc_label.add_theme_font_size_override("font_size", 13)
+	desc_label.add_theme_color_override("font_color", MUTED_COLOR)
+	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	desc_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.add_child(desc_label)
+
+	# Preview of first 3 lines
+	var preview = Label.new()
+	var preview_text = ""
+	for i in range(mini(3, template.lines.size())):
+		preview_text += str(i + 1) + ". " + template.lines[i] + "\n"
+	preview.text = preview_text.strip_edges()
+	preview.add_theme_font_size_override("font_size", 11)
+	preview.add_theme_color_override("font_color", Color(0.45, 0.5, 0.55))
+	vbox.add_child(preview)
+
+	return card
+
+
+func _create_tag(text: String, color: Color) -> PanelContainer:
+	var tag = PanelContainer.new()
+	var style = StyleBoxFlat.new()
+	style.bg_color = color.darkened(0.6)
+	style.bg_color.a = 0.4
+	style.set_corner_radius_all(4)
+	tag.add_theme_stylebox_override("panel", style)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 8)
+	margin.add_theme_constant_override("margin_right", 8)
+	margin.add_theme_constant_override("margin_top", 2)
+	margin.add_theme_constant_override("margin_bottom", 2)
+	tag.add_child(margin)
+
+	var label = Label.new()
+	label.text = text
+	label.add_theme_font_size_override("font_size", 11)
+	label.add_theme_color_override("font_color", color)
+	margin.add_child(label)
+
+	return tag
+
+
+func _get_domain_color(domain_id: String) -> Color:
+	match domain_id:
+		"mind": return Color(0.5, 0.7, 0.9)
+		"body": return Color(0.9, 0.5, 0.5)
+		"soul": return Color(0.8, 0.6, 0.9)
+		"social": return Color(0.5, 0.9, 0.7)
+		"career": return Color(0.9, 0.8, 0.4)
+		"wealth": return Color(0.4, 0.9, 0.6)
+	return Color(0.6, 0.6, 0.7)
+
+
+func _get_operational_color(op_id: String) -> Color:
+	match op_id:
+		"baseline": return Color(0.5, 0.7, 0.9)
+		"update": return Color(0.3, 0.6, 0.9)
+		"upgrade": return Color(0.4, 0.8, 0.4)
+		"bloatware": return Color(0.9, 0.6, 0.2)
+		"virus": return Color(0.8, 0.3, 0.3)
+	return Color(0.6, 0.6, 0.7)
+
+
+func _on_template_domain_filter_changed(index: int) -> void:
+	if index == 0:
+		template_filter_domain = ""
+	else:
+		template_filter_domain = ScriptManager.DEFAULT_LAYERS[index - 1].id
+	_populate_template_grid()
+
+
+func _on_template_op_filter_changed(index: int) -> void:
+	if index == 0:
+		template_filter_operational = ""
+	else:
+		template_filter_operational = ScriptManager.OPERATIONAL_LAYERS[index - 1].id
+	_populate_template_grid()
+
+
+func _use_template(template_id: String) -> void:
+	_play_sfx("res://audio/sfx/ui_click.wav")
+
+	# Create script from template
+	var script_id = ScriptManager.create_script_from_template(template_id)
+
+	if script_id != "":
+		# Close templates panel
+		_close_templates_browser()
+
+		# Reload scripts and select the new one
+		_load_scripts()
+		_on_script_selected(script_id)
+
+		# Show confirmation
+		print("[ScriptLab] Created script from template: ", script_id)
+
+
+func _close_templates_browser() -> void:
+	if templates_panel:
+		templates_panel.queue_free()
+		templates_panel = null
+	template_filter_domain = ""
+	template_filter_operational = ""
+
+
+# =============================================================================
 # PACKAGE MANAGEMENT
 # =============================================================================
 
@@ -1294,7 +1639,7 @@ func _show_package_details(pkg_id: String) -> void:
 		scripts_list.add_child(empty)
 	else:
 		for script_id in script_ids:
-			var script = ScriptManager.get_script(script_id)
+			var script = ScriptManager.get_script_by_id(script_id)
 			if script.is_empty():
 				continue
 
@@ -1632,7 +1977,7 @@ func _run_package(pkg_id: String) -> void:
 	# Get all scripts
 	var scripts_to_run: Array = []
 	for sid in script_ids:
-		var script = ScriptManager.get_script(sid)
+		var script = ScriptManager.get_script_by_id(sid)
 		if not script.is_empty():
 			scripts_to_run.append(script)
 

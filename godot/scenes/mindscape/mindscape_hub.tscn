@@ -299,7 +299,7 @@ polygon = PackedVector2Array(-35, 40, -40, -30, 0, -80, 40, -30, 35, 40, 0, 55)
 [node name="Portals" type="Node2D" parent="GameWorld/IsometricBase"]
 
 [node name="NorthPortal" type="Node2D" parent="GameWorld/IsometricBase/Portals"]
-position = Vector2(0, -475)
+position = Vector2(0, -580)
 
 [node name="Frame" type="Polygon2D" parent="GameWorld/IsometricBase/Portals/NorthPortal"]
 color = Color(0.25, 0.35, 0.3, 1)
@@ -367,7 +367,7 @@ polygon = PackedVector2Array(-4, -4, 4, -4, 4, 2, 2, 2, 2, 10, -2, 10, -2, 2, -4
 shape = SubResource("RectangleShape2D_north")
 
 [node name="EastPortal" type="Node2D" parent="GameWorld/IsometricBase/Portals"]
-position = Vector2(750, 0)
+position = Vector2(950, 0)
 
 [node name="Frame" type="Polygon2D" parent="GameWorld/IsometricBase/Portals/EastPortal"]
 color = Color(0.3, 0.3, 0.45, 1)
@@ -435,7 +435,7 @@ polygon = PackedVector2Array(-4, -4, 4, -4, 4, 2, 2, 2, 2, 10, -2, 10, -2, 2, -4
 shape = SubResource("RectangleShape2D_east")
 
 [node name="WestPortal" type="Node2D" parent="GameWorld/IsometricBase/Portals"]
-position = Vector2(-750, 0)
+position = Vector2(-950, 0)
 
 [node name="Frame" type="Polygon2D" parent="GameWorld/IsometricBase/Portals/WestPortal"]
 color = Color(0.35, 0.25, 0.4, 1)
@@ -503,7 +503,7 @@ polygon = PackedVector2Array(-4, -4, 4, -4, 4, 2, 2, 2, 2, 10, -2, 10, -2, 2, -4
 shape = SubResource("RectangleShape2D_west")
 
 [node name="SouthPortal" type="Node2D" parent="GameWorld/IsometricBase/Portals"]
-position = Vector2(0, 475)
+position = Vector2(0, 550)
 
 [node name="Frame" type="Polygon2D" parent="GameWorld/IsometricBase/Portals/SouthPortal"]
 color = Color(0.4, 0.32, 0.25, 1)

@@ -58,6 +58,11 @@ var lines_container: VBoxContainer = null
 var session_auto_completed: bool = false
 var confetti_particles: Array = []
 
+# Pomodoro break reminders
+const POMODORO_INTERVAL_MINUTES: int = 25
+var pomodoro_reminders_shown: Array = []  # Track which intervals we've shown reminders for
+var break_reminder_panel: PanelContainer = null
+
 # Session summary data
 var summary_xp_earned: int = 0
 var summary_minutes: int = 0
@@ -756,6 +761,9 @@ func _on_timer_tick() -> void:
 	_update_timer_display()
 	_update_progress()
 
+	# Check for Pomodoro break reminder (every 25 minutes)
+	_check_pomodoro_reminder()
+
 	# Check if timer just hit zero
 	var target_seconds = session_duration_minutes * 60
 	if elapsed_seconds >= target_seconds and not session_auto_completed:
@@ -776,6 +784,215 @@ func _update_progress() -> void:
 	progress = clampf(progress, 0.0, 1.0)
 	progress_bar.value = progress
 	progress_label.text = "%d%% complete" % int(progress * 100)
+
+
+func _check_pomodoro_reminder() -> void:
+	# Check if we've hit a Pomodoro interval (25 minutes)
+	var elapsed_minutes = elapsed_seconds / 60
+	var pomodoro_count = elapsed_minutes / POMODORO_INTERVAL_MINUTES
+
+	# Only show reminder at exact interval marks (25, 50, 75 min, etc.)
+	if pomodoro_count > 0 and elapsed_seconds == pomodoro_count * POMODORO_INTERVAL_MINUTES * 60:
+		if pomodoro_count not in pomodoro_reminders_shown:
+			pomodoro_reminders_shown.append(pomodoro_count)
+			_show_pomodoro_reminder(pomodoro_count)
+
+
+func _show_pomodoro_reminder(pomodoro_count: int) -> void:
+	# Don't show if already showing a reminder or other panel
+	if break_reminder_panel or summary_panel or break_panel:
+		return
+
+	# Play notification sound
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("play_notification"):
+		audio.play_notification()
+
+	break_reminder_panel = PanelContainer.new()
+	break_reminder_panel.name = "PomodoroReminder"
+
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.1, 0.12, 0.18, 0.95)
+	style.corner_radius_top_left = 10
+	style.corner_radius_top_right = 10
+	style.corner_radius_bottom_left = 10
+	style.corner_radius_bottom_right = 10
+	style.border_color = Color(0.5, 0.7, 0.9, 0.6)
+	style.border_width_left = 2
+	style.border_width_right = 2
+	style.border_width_top = 2
+	style.border_width_bottom = 2
+	break_reminder_panel.add_theme_stylebox_override("panel", style)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 20)
+	margin.add_theme_constant_override("margin_right", 20)
+	margin.add_theme_constant_override("margin_top", 15)
+	margin.add_theme_constant_override("margin_bottom", 15)
+	break_reminder_panel.add_child(margin)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 10)
+	margin.add_child(vbox)
+
+	# Title with pomodoro count
+	var title = Label.new()
+	if pomodoro_count >= 4:
+		title.text = "Long Break Time?"
+	else:
+		title.text = "Pomodoro #" + str(pomodoro_count) + " Complete!"
+	title.add_theme_font_size_override("font_size", 20)
+	title.add_theme_color_override("font_color", Color(0.5, 0.75, 0.9))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(title)
+
+	# Message
+	var msg = Label.new()
+	if pomodoro_count >= 4:
+		msg.text = "You've completed " + str(pomodoro_count) + " pomodoros!\nConsider a longer 15-20 min break."
+	else:
+		msg.text = str(pomodoro_count * 25) + " minutes of focus achieved.\nTake a short break?"
+	msg.add_theme_font_size_override("font_size", 14)
+	msg.add_theme_color_override("font_color", Color(0.6, 0.65, 0.7))
+	msg.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(msg)
+
+	# Buttons
+	var btn_row = HBoxContainer.new()
+	btn_row.add_theme_constant_override("separation", 10)
+	btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_child(btn_row)
+
+	var continue_btn = Button.new()
+	continue_btn.text = "Keep Going"
+	continue_btn.custom_minimum_size = Vector2(110, 40)
+	continue_btn.add_theme_font_size_override("font_size", 14)
+	continue_btn.pressed.connect(_dismiss_pomodoro_reminder)
+	btn_row.add_child(continue_btn)
+
+	var break_btn = Button.new()
+	break_btn.text = "Take Break"
+	break_btn.custom_minimum_size = Vector2(110, 40)
+	break_btn.add_theme_font_size_override("font_size", 14)
+	break_btn.add_theme_color_override("font_color", Color(0.5, 0.8, 0.6))
+	break_btn.pressed.connect(_take_pomodoro_break)
+	btn_row.add_child(break_btn)
+
+	# Position at top of screen
+	break_reminder_panel.position = Vector2(
+		(get_viewport_rect().size.x - 300) / 2,
+		50
+	)
+	break_reminder_panel.custom_minimum_size = Vector2(300, 0)
+
+	add_child(break_reminder_panel)
+
+	# Auto-dismiss after 10 seconds if no action
+	await get_tree().create_timer(10.0).timeout
+	_dismiss_pomodoro_reminder()
+
+
+func _dismiss_pomodoro_reminder() -> void:
+	if break_reminder_panel and is_instance_valid(break_reminder_panel):
+		break_reminder_panel.queue_free()
+		break_reminder_panel = null
+
+
+func _take_pomodoro_break() -> void:
+	_dismiss_pomodoro_reminder()
+
+	# Pause the session timer temporarily
+	is_running = false
+
+	# Show a mini-break timer (5 minutes)
+	_show_mini_break()
+
+
+func _show_mini_break() -> void:
+	var mini_break = PanelContainer.new()
+	mini_break.name = "MiniBreak"
+
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.08, 0.12, 0.1, 0.98)
+	style.corner_radius_top_left = 12
+	style.corner_radius_top_right = 12
+	style.corner_radius_bottom_left = 12
+	style.corner_radius_bottom_right = 12
+	style.border_color = Color(0.4, 0.7, 0.5, 0.5)
+	style.border_width_left = 2
+	style.border_width_right = 2
+	style.border_width_top = 2
+	style.border_width_bottom = 2
+	mini_break.add_theme_stylebox_override("panel", style)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 30)
+	margin.add_theme_constant_override("margin_right", 30)
+	margin.add_theme_constant_override("margin_top", 25)
+	margin.add_theme_constant_override("margin_bottom", 25)
+	mini_break.add_child(margin)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 15)
+	margin.add_child(vbox)
+
+	var title = Label.new()
+	title.text = "Break Time"
+	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_color_override("font_color", Color(0.5, 0.8, 0.6))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(title)
+
+	var timer_lbl = Label.new()
+	timer_lbl.name = "MiniBreakTimer"
+	timer_lbl.text = "5:00"
+	timer_lbl.add_theme_font_size_override("font_size", 48)
+	timer_lbl.add_theme_color_override("font_color", Color(1, 1, 1))
+	timer_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(timer_lbl)
+
+	var tip = Label.new()
+	tip.text = "Stretch, hydrate, rest your eyes"
+	tip.add_theme_font_size_override("font_size", 16)
+	tip.add_theme_color_override("font_color", Color(0.6, 0.65, 0.7))
+	tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(tip)
+
+	var resume_btn = Button.new()
+	resume_btn.text = "Resume Session"
+	resume_btn.custom_minimum_size = Vector2(200, 50)
+	resume_btn.add_theme_font_size_override("font_size", 18)
+	resume_btn.pressed.connect(func():
+		mini_break.queue_free()
+		is_running = true
+		status_label.text = "Focus Session Active"
+	)
+	vbox.add_child(resume_btn)
+
+	mini_break.position = Vector2(
+		(get_viewport_rect().size.x - 350) / 2,
+		(get_viewport_rect().size.y - 280) / 2
+	)
+	mini_break.custom_minimum_size = Vector2(350, 0)
+
+	add_child(mini_break)
+
+	# Run mini break countdown
+	var break_secs = 300  # 5 minutes
+	while break_secs > 0 and is_instance_valid(mini_break):
+		var mins = break_secs / 60
+		var secs = break_secs % 60
+		var timer_node = mini_break.find_child("MiniBreakTimer", true, false)
+		if timer_node:
+			timer_node.text = "%d:%02d" % [mins, secs]
+		await get_tree().create_timer(1.0).timeout
+		break_secs -= 1
+
+	# Auto-resume after break
+	if is_instance_valid(mini_break):
+		mini_break.queue_free()
+		is_running = true
+		status_label.text = "Focus Session Active"
 
 
 func _update_current_line_highlight() -> void:

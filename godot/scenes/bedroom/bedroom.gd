@@ -92,8 +92,8 @@ const INTERACTIVE_OBJECTS = {
 	},
 	"Bed": {
 		"name": "Sleep Pod",
-		"prompt": "Press SPACE to save progress",
-		"action": "save_game"
+		"prompt": "Press SPACE to interact",
+		"action": "open_sleep_pod"
 	},
 	"Bookshelf": {
 		"name": "Data Archive",
@@ -555,6 +555,8 @@ func _interact_with_object(object_id: String) -> void:
 			_show_space_view()
 		"save_game":
 			_show_save_panel()
+		"open_sleep_pod":
+			_open_sleep_pod_menu()
 		"browse_books":
 			_show_bookshelf_detail_view()
 		"examine_plant":
@@ -2098,6 +2100,371 @@ func _animate_sleep_pod(delta: float) -> void:
 		status.modulate.a = 0.7 + sin(animation_time * 3) * 0.15
 		if fmod(animation_time, 5.0) < 0.1:
 			status.modulate.a = 0.4
+
+
+# =============================================================================
+# SLEEP POD MENU & DREAM SEQUENCES
+# =============================================================================
+
+var sleep_pod_menu: PanelContainer = null
+var dream_viewer: PanelContainer = null
+
+func _open_sleep_pod_menu() -> void:
+	if sleep_pod_menu:
+		return
+
+	sleep_pod_menu = PanelContainer.new()
+	sleep_pod_menu.name = "SleepPodMenu"
+
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.08, 0.1, 0.15, 0.95)
+	style.corner_radius_top_left = 12
+	style.corner_radius_top_right = 12
+	style.corner_radius_bottom_left = 12
+	style.corner_radius_bottom_right = 12
+	style.border_color = Color(0.5, 0.4, 0.7, 0.6)
+	style.border_width_left = 2
+	style.border_width_right = 2
+	style.border_width_top = 2
+	style.border_width_bottom = 2
+	sleep_pod_menu.add_theme_stylebox_override("panel", style)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 25)
+	margin.add_theme_constant_override("margin_right", 25)
+	margin.add_theme_constant_override("margin_top", 20)
+	margin.add_theme_constant_override("margin_bottom", 20)
+	sleep_pod_menu.add_child(margin)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 12)
+	margin.add_child(vbox)
+
+	# Title
+	var title = Label.new()
+	title.text = "Sleep Pod"
+	title.add_theme_font_size_override("font_size", 24)
+	title.add_theme_color_override("font_color", Color(0.6, 0.5, 0.8))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(title)
+
+	var sep = HSeparator.new()
+	vbox.add_child(sep)
+
+	# Options
+	var dream_btn = Button.new()
+	dream_btn.text = "View Dream Memories"
+	dream_btn.custom_minimum_size = Vector2(250, 50)
+	dream_btn.add_theme_font_size_override("font_size", 16)
+	dream_btn.add_theme_color_override("font_color", Color(0.7, 0.6, 0.9))
+	dream_btn.pressed.connect(_open_dream_viewer)
+	vbox.add_child(dream_btn)
+
+	var save_btn = Button.new()
+	save_btn.text = "Save Progress"
+	save_btn.custom_minimum_size = Vector2(250, 50)
+	save_btn.add_theme_font_size_override("font_size", 16)
+	save_btn.pressed.connect(func():
+		_close_sleep_pod_menu()
+		_show_save_panel()
+	)
+	vbox.add_child(save_btn)
+
+	var rest_btn = Button.new()
+	rest_btn.text = "Rest & Meditate"
+	rest_btn.custom_minimum_size = Vector2(250, 50)
+	rest_btn.add_theme_font_size_override("font_size", 16)
+	rest_btn.pressed.connect(_start_rest_meditation)
+	vbox.add_child(rest_btn)
+
+	var close_btn = Button.new()
+	close_btn.text = "Back"
+	close_btn.custom_minimum_size = Vector2(250, 45)
+	close_btn.add_theme_font_size_override("font_size", 14)
+	close_btn.pressed.connect(_close_sleep_pod_menu)
+	vbox.add_child(close_btn)
+
+	sleep_pod_menu.set_anchors_preset(Control.PRESET_CENTER)
+	sleep_pod_menu.position = Vector2(-175, -160)
+	sleep_pod_menu.custom_minimum_size = Vector2(350, 0)
+
+	add_child(sleep_pod_menu)
+
+
+func _close_sleep_pod_menu() -> void:
+	if sleep_pod_menu:
+		sleep_pod_menu.queue_free()
+		sleep_pod_menu = null
+
+
+func _open_dream_viewer() -> void:
+	_close_sleep_pod_menu()
+
+	dream_viewer = PanelContainer.new()
+	dream_viewer.name = "DreamViewer"
+
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.05, 0.05, 0.12, 0.98)
+	style.corner_radius_top_left = 15
+	style.corner_radius_top_right = 15
+	style.corner_radius_bottom_left = 15
+	style.corner_radius_bottom_right = 15
+	style.border_color = Color(0.4, 0.3, 0.7, 0.4)
+	style.border_width_left = 3
+	style.border_width_right = 3
+	style.border_width_top = 3
+	style.border_width_bottom = 3
+	dream_viewer.add_theme_stylebox_override("panel", style)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 30)
+	margin.add_theme_constant_override("margin_right", 30)
+	margin.add_theme_constant_override("margin_top", 25)
+	margin.add_theme_constant_override("margin_bottom", 25)
+	dream_viewer.add_child(margin)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 15)
+	margin.add_child(vbox)
+
+	# Title
+	var title = Label.new()
+	title.text = "Dream Memories"
+	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_color_override("font_color", Color(0.7, 0.6, 0.9))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(title)
+
+	var subtitle = Label.new()
+	subtitle.text = "Echoes of your journey through the mindscape"
+	subtitle.add_theme_font_size_override("font_size", 14)
+	subtitle.add_theme_color_override("font_color", Color(0.5, 0.5, 0.6))
+	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(subtitle)
+
+	var sep = HSeparator.new()
+	vbox.add_child(sep)
+
+	# Dream content area
+	var scroll = ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(500, 350)
+	vbox.add_child(scroll)
+
+	var dreams_vbox = VBoxContainer.new()
+	dreams_vbox.add_theme_constant_override("separation", 15)
+	dreams_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(dreams_vbox)
+
+	# Generate dreams based on player progress
+	var dreams = _generate_dream_memories()
+
+	if dreams.size() == 0:
+		var empty_label = Label.new()
+		empty_label.text = "No dream memories yet...\nComplete focus sessions and build habits to unlock dream sequences."
+		empty_label.add_theme_font_size_override("font_size", 16)
+		empty_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.55))
+		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		dreams_vbox.add_child(empty_label)
+	else:
+		for dream in dreams:
+			_add_dream_card(dreams_vbox, dream)
+
+	# Close button
+	var close_btn = Button.new()
+	close_btn.text = "Wake Up"
+	close_btn.custom_minimum_size = Vector2(200, 50)
+	close_btn.add_theme_font_size_override("font_size", 18)
+	close_btn.pressed.connect(_close_dream_viewer)
+	vbox.add_child(close_btn)
+
+	dream_viewer.set_anchors_preset(Control.PRESET_CENTER)
+	dream_viewer.position = Vector2(-300, -250)
+	dream_viewer.custom_minimum_size = Vector2(600, 0)
+
+	add_child(dream_viewer)
+
+
+func _generate_dream_memories() -> Array:
+	## Generate dream memories based on player's progress and activities
+	var dreams: Array = []
+
+	var total_sessions = GameManager.player_data.get("total_focus_sessions", 0)
+	var total_minutes = GameManager.player_data.get("total_focus_minutes", 0)
+	var streak = GameManager.player_data.get("current_streak", 0)
+	var evolution = GameManager.get_evolution_level() if GameManager else 1
+	var habits_completed = GameManager.player_data.get("total_habits_completed", 0)
+
+	# Dream about focus journey
+	if total_sessions >= 1:
+		dreams.append({
+			"title": "Echoes of Concentration",
+			"description": "You see yourself in a vast library of light. " + str(total_sessions) + " glowing orbs float around you - each one a moment of perfect focus.",
+			"color": Color(0.5, 0.7, 0.9),
+			"symbol": "orb"
+		})
+
+	# Dream about time invested
+	if total_minutes >= 60:
+		var hours = total_minutes / 60
+		dreams.append({
+			"title": "River of Hours",
+			"description": "A shimmering river flows through your dream, carrying " + str(hours) + " hours of dedicated work. Each ripple reflects a task completed.",
+			"color": Color(0.6, 0.8, 0.7),
+			"symbol": "wave"
+		})
+
+	# Dream about habits
+	if habits_completed >= 10:
+		dreams.append({
+			"title": "Garden of Patterns",
+			"description": "In your dream, a garden blooms with " + str(habits_completed) + " crystalline flowers. Each one pulses with the rhythm of your daily rituals.",
+			"color": Color(0.7, 0.5, 0.8),
+			"symbol": "flower"
+		})
+
+	# Dream about streaks
+	if streak >= 3:
+		dreams.append({
+			"title": "Chain of Stars",
+			"description": "A constellation of " + str(streak) + " connected stars burns above you. Their light grows stronger with each passing day.",
+			"color": Color(0.9, 0.7, 0.4),
+			"symbol": "star"
+		})
+
+	# Dream about evolution
+	if evolution >= 2:
+		dreams.append({
+			"title": "The Ascending Path",
+			"description": "You climb a spiraling staircase through clouds. At evolution level " + str(evolution) + ", the view becomes ever more magnificent.",
+			"color": Color(0.6, 0.5, 0.9),
+			"symbol": "stairs"
+		})
+
+	# Special dream for high achievers
+	if total_sessions >= 25 and streak >= 7:
+		dreams.append({
+			"title": "The Infinite Chamber",
+			"description": "You stand in an endless crystalline chamber. Reflections of your past self and future potential dance in the facets. You have become the journey.",
+			"color": Color(0.8, 0.6, 0.9),
+			"symbol": "crystal"
+		})
+
+	return dreams
+
+
+func _add_dream_card(container: VBoxContainer, dream: Dictionary) -> void:
+	var card = PanelContainer.new()
+
+	var card_style = StyleBoxFlat.new()
+	card_style.bg_color = Color(dream.color.r * 0.15, dream.color.g * 0.15, dream.color.b * 0.15, 0.6)
+	card_style.corner_radius_top_left = 8
+	card_style.corner_radius_top_right = 8
+	card_style.corner_radius_bottom_left = 8
+	card_style.corner_radius_bottom_right = 8
+	card_style.border_color = Color(dream.color.r, dream.color.g, dream.color.b, 0.4)
+	card_style.border_width_left = 1
+	card_style.border_width_right = 1
+	card_style.border_width_top = 1
+	card_style.border_width_bottom = 1
+	card.add_theme_stylebox_override("panel", card_style)
+
+	var card_margin = MarginContainer.new()
+	card_margin.add_theme_constant_override("margin_left", 15)
+	card_margin.add_theme_constant_override("margin_right", 15)
+	card_margin.add_theme_constant_override("margin_top", 12)
+	card_margin.add_theme_constant_override("margin_bottom", 12)
+	card.add_child(card_margin)
+
+	var card_vbox = VBoxContainer.new()
+	card_vbox.add_theme_constant_override("separation", 8)
+	card_margin.add_child(card_vbox)
+
+	var dream_title = Label.new()
+	dream_title.text = dream.title
+	dream_title.add_theme_font_size_override("font_size", 18)
+	dream_title.add_theme_color_override("font_color", dream.color)
+	card_vbox.add_child(dream_title)
+
+	var dream_desc = Label.new()
+	dream_desc.text = dream.description
+	dream_desc.add_theme_font_size_override("font_size", 14)
+	dream_desc.add_theme_color_override("font_color", Color(0.75, 0.75, 0.8))
+	dream_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	card_vbox.add_child(dream_desc)
+
+	container.add_child(card)
+
+
+func _close_dream_viewer() -> void:
+	if dream_viewer:
+		dream_viewer.queue_free()
+		dream_viewer = null
+
+
+func _start_rest_meditation() -> void:
+	_close_sleep_pod_menu()
+
+	# Create a simple meditation screen
+	var rest_panel = PanelContainer.new()
+	rest_panel.name = "RestMeditation"
+
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.03, 0.03, 0.08, 0.98)
+	rest_panel.add_theme_stylebox_override("panel", style)
+	rest_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+
+	var center = CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	rest_panel.add_child(center)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 30)
+	center.add_child(vbox)
+
+	var title = Label.new()
+	title.text = "Rest & Restore"
+	title.add_theme_font_size_override("font_size", 36)
+	title.add_theme_color_override("font_color", Color(0.5, 0.5, 0.7))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(title)
+
+	var instruction = Label.new()
+	instruction.text = "Close your eyes and breathe deeply...\n\n Inhale... Hold... Exhale..."
+	instruction.add_theme_font_size_override("font_size", 20)
+	instruction.add_theme_color_override("font_color", Color(0.4, 0.5, 0.6))
+	instruction.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(instruction)
+
+	# Breathing circle
+	var breath_circle = Polygon2D.new()
+	breath_circle.name = "BreathCircle"
+	var circle_points = PackedVector2Array()
+	for i in range(32):
+		var angle = (float(i) / 32) * TAU
+		circle_points.append(Vector2(cos(angle) * 60, sin(angle) * 60))
+	breath_circle.polygon = circle_points
+	breath_circle.color = Color(0.4, 0.5, 0.7, 0.3)
+
+	var breath_container = Control.new()
+	breath_container.custom_minimum_size = Vector2(200, 200)
+	breath_container.add_child(breath_circle)
+	breath_circle.position = Vector2(100, 100)
+	vbox.add_child(breath_container)
+
+	var wake_btn = Button.new()
+	wake_btn.text = "Wake Up"
+	wake_btn.custom_minimum_size = Vector2(200, 50)
+	wake_btn.add_theme_font_size_override("font_size", 18)
+	wake_btn.pressed.connect(func(): rest_panel.queue_free())
+	vbox.add_child(wake_btn)
+
+	add_child(rest_panel)
+
+	# Animate breathing circle
+	var tween = create_tween()
+	tween.set_loops()
+	tween.tween_property(breath_circle, "scale", Vector2(1.5, 1.5), 4.0).set_trans(Tween.TRANS_SINE)
+	tween.tween_property(breath_circle, "scale", Vector2(1.0, 1.0), 4.0).set_trans(Tween.TRANS_SINE)
 
 
 # =============================================================================

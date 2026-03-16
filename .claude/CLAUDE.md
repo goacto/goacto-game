@@ -38,7 +38,7 @@ Players assume the role of Agent Goacto, a young alien on the intergalactic crui
 ### Key Metrics
 - **45+ GDScript files** across managers, scenes, and utilities
 - **26 scene files** (.tscn) organized by feature area
-- **15 autoload singleton managers** for global systems
+- **16 autoload singleton managers** for global systems
 - **6 Aspects** (character development archetypes)
 - **6 life domain layers** in the Personal Operating System
 - **15 campaign chapters** with progressive unlocks
@@ -92,7 +92,7 @@ Audio Buses: Master, Music, Voice, Ambient, SFX
 
 | Pattern | Implementation | Purpose |
 |---------|---------------|---------|
-| **Singleton/Autoload** | 15 global managers | Cross-scene state management |
+| **Singleton/Autoload** | 16 global managers | Cross-scene state management |
 | **Signal/Observer** | Godot signals | Loose coupling between systems |
 | **Scene Base Classes** | `ship_scene_base.gd`, `mindscape_region_base.gd` | Code reuse via inheritance |
 | **State Machine** | `GameManager.GameState` enum | Game flow control |
@@ -115,6 +115,7 @@ Audio Buses: Master, Music, Voice, Ambient, SFX
 13. ShopManager        # Cosmetics economy
 14. CustomizationManager  # Avatar appearance
 15. MailManager        # Package delivery system
+16. RelationshipManager # Relationship health tracking
 ```
 
 ---
@@ -136,7 +137,7 @@ goacto-game/
 ├── godot/                        # Main Godot project
 │   ├── project.godot             # Project configuration
 │   │
-│   ├── autoload/                 # Global singleton managers (15 files)
+│   ├── autoload/                 # Global singleton managers (16 files)
 │   │   ├── GameManager.gd        # Core state, aspects, evolution
 │   │   ├── HabitManager.gd       # Habits, streaks, grace days
 │   │   ├── GoalManager.gd        # Goals with timeframes

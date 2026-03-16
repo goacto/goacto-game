@@ -34,7 +34,8 @@ func save_game() -> void:
 		"challenges": ChallengeManager.get_save_data() if ChallengeManager else {},
 		"achievements": AchievementManager.get_save_data() if AchievementManager else {},
 		"shop": ShopManager.get_save_data() if ShopManager else {},
-		"mail": MailManager.get_save_data() if MailManager else {}
+		"mail": MailManager.get_save_data() if MailManager else {},
+		"relationships": RelationshipManager.get_save_data() if RelationshipManager else {}
 	}
 
 	var json_string = JSON.stringify(save_data, "\t")
@@ -105,6 +106,10 @@ func load_game() -> bool:
 	# Restore mail data
 	if save_data.has("mail") and MailManager:
 		MailManager.load_save_data(save_data.mail)
+
+	# Restore relationship data
+	if save_data.has("relationships") and RelationshipManager:
+		RelationshipManager.load_save_data(save_data.relationships)
 
 	load_completed.emit()
 	print("[SaveManager] Game loaded successfully")
@@ -529,7 +534,8 @@ func _create_save_data() -> Dictionary:
 		"achievements": AchievementManager.get_save_data() if AchievementManager else {},
 		"campaign": CampaignManager.get_save_data(),
 		"shop": ShopManager.get_save_data() if ShopManager else {},
-		"mail": MailManager.get_save_data() if MailManager else {}
+		"mail": MailManager.get_save_data() if MailManager else {},
+		"relationships": RelationshipManager.get_save_data() if RelationshipManager else {}
 	}
 
 
@@ -570,5 +576,9 @@ func _apply_save_data(save_data: Dictionary) -> void:
 	# Restore mail data (pending orders, available mail)
 	if save_data.has("mail") and MailManager:
 		MailManager.load_save_data(save_data.mail)
+
+	# Restore relationship data
+	if save_data.has("relationships") and RelationshipManager:
+		RelationshipManager.load_save_data(save_data.relationships)
 
 	load_completed.emit()
