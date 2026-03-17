@@ -290,6 +290,130 @@ horizontal_alignment = 1
 [node name="CollisionShape" type="CollisionShape2D" parent="GameWorld/IsometricBase/Zones/AspectShrine/InteractionArea"]
 shape = SubResource("CircleShape2D_zone")
 
+[node name="HealingPool" type="Node2D" parent="GameWorld/IsometricBase/Zones"]
+position = Vector2(-380, 180)
+
+[node name="PoolBase" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/HealingPool"]
+color = Color(0.15, 0.12, 0.2, 1)
+polygon = PackedVector2Array(-100, 0, 0, -55, 100, 0, 0, 55)
+
+[node name="PoolWater" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/HealingPool"]
+position = Vector2(0, -5)
+color = Color(0.2, 0.35, 0.55, 0.8)
+polygon = PackedVector2Array(-80, 0, 0, -45, 80, 0, 0, 45)
+
+[node name="WaterGlow" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/HealingPool"]
+position = Vector2(0, -5)
+color = Color(0.3, 0.5, 0.7, 0.3)
+polygon = PackedVector2Array(-60, 0, 0, -35, 60, 0, 0, 35)
+
+[node name="HealingCrystal1" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/HealingPool"]
+position = Vector2(-65, 10)
+color = Color(0.4, 0.7, 0.8, 0.9)
+polygon = PackedVector2Array(-8, 25, -6, -15, 0, -35, 6, -15, 8, 25)
+
+[node name="HealingCrystal2" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/HealingPool"]
+position = Vector2(65, 10)
+color = Color(0.5, 0.6, 0.9, 0.9)
+polygon = PackedVector2Array(-8, 20, -5, -12, 0, -30, 5, -12, 8, 20)
+
+[node name="HealingCrystal3" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/HealingPool"]
+position = Vector2(0, -35)
+color = Color(0.45, 0.65, 0.85, 0.9)
+polygon = PackedVector2Array(-6, 18, -4, -10, 0, -25, 4, -10, 6, 18)
+
+[node name="LotusLeft" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/HealingPool"]
+position = Vector2(-30, 5)
+color = Color(0.8, 0.5, 0.7, 0.9)
+polygon = PackedVector2Array(-8, 0, -4, -12, 0, -15, 4, -12, 8, 0, 4, 4, -4, 4)
+
+[node name="LotusRight" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/HealingPool"]
+position = Vector2(30, 5)
+color = Color(0.7, 0.5, 0.8, 0.9)
+polygon = PackedVector2Array(-8, 0, -4, -10, 0, -13, 4, -10, 8, 0, 4, 3, -4, 3)
+
+[node name="Label" type="Label" parent="GameWorld/IsometricBase/Zones/HealingPool"]
+offset_left = -60.0
+offset_top = 45.0
+offset_right = 60.0
+offset_bottom = 65.0
+theme_override_colors/font_color = Color(0.5, 0.7, 0.8, 0.9)
+theme_override_font_sizes/font_size = 16
+text = "Healing Pool"
+horizontal_alignment = 1
+
+[node name="InteractionArea" type="Area2D" parent="GameWorld/IsometricBase/Zones/HealingPool"]
+
+[node name="CollisionShape" type="CollisionShape2D" parent="GameWorld/IsometricBase/Zones/HealingPool/InteractionArea"]
+shape = SubResource("CircleShape2D_zone")
+
+[node name="MemoryCave" type="Node2D" parent="GameWorld/IsometricBase/Zones"]
+position = Vector2(380, 180)
+
+[node name="CaveBase" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/MemoryCave"]
+color = Color(0.12, 0.1, 0.15, 1)
+polygon = PackedVector2Array(-90, 0, 0, -50, 90, 0, 0, 50)
+
+[node name="CaveEntrance" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/MemoryCave"]
+position = Vector2(0, -30)
+color = Color(0.08, 0.06, 0.12, 1)
+polygon = PackedVector2Array(-55, 40, -55, -10, -40, -50, 0, -65, 40, -50, 55, -10, 55, 40)
+
+[node name="CaveInterior" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/MemoryCave"]
+position = Vector2(0, -30)
+color = Color(0.05, 0.04, 0.08, 1)
+polygon = PackedVector2Array(-40, 30, -40, -5, -30, -35, 0, -50, 30, -35, 40, -5, 40, 30)
+
+[node name="Stalactite1" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/MemoryCave"]
+position = Vector2(-30, -65)
+color = Color(0.2, 0.18, 0.25, 1)
+polygon = PackedVector2Array(-6, 0, 0, 25, 6, 0)
+
+[node name="Stalactite2" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/MemoryCave"]
+position = Vector2(30, -60)
+color = Color(0.18, 0.16, 0.22, 1)
+polygon = PackedVector2Array(-5, 0, 0, 20, 5, 0)
+
+[node name="Stalactite3" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/MemoryCave"]
+position = Vector2(0, -70)
+color = Color(0.22, 0.2, 0.28, 1)
+polygon = PackedVector2Array(-4, 0, 0, 15, 4, 0)
+
+[node name="GlowingOrb1" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/MemoryCave"]
+position = Vector2(-25, -20)
+color = Color(0.6, 0.4, 0.8, 0.6)
+polygon = PackedVector2Array(-8, 0, 0, -8, 8, 0, 0, 8)
+
+[node name="GlowingOrb2" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/MemoryCave"]
+position = Vector2(25, -25)
+color = Color(0.5, 0.5, 0.9, 0.6)
+polygon = PackedVector2Array(-6, 0, 0, -6, 6, 0, 0, 6)
+
+[node name="GlowingOrb3" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/MemoryCave"]
+position = Vector2(0, -40)
+color = Color(0.7, 0.3, 0.7, 0.6)
+polygon = PackedVector2Array(-5, 0, 0, -5, 5, 0, 0, 5)
+
+[node name="MemoryCrystal" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/MemoryCave"]
+position = Vector2(0, -10)
+color = Color(0.5, 0.4, 0.7, 0.8)
+polygon = PackedVector2Array(-12, 15, -8, -10, 0, -25, 8, -10, 12, 15)
+
+[node name="Label" type="Label" parent="GameWorld/IsometricBase/Zones/MemoryCave"]
+offset_left = -60.0
+offset_top = 45.0
+offset_right = 60.0
+offset_bottom = 65.0
+theme_override_colors/font_color = Color(0.6, 0.4, 0.7, 0.9)
+theme_override_font_sizes/font_size = 16
+text = "Memory Cave"
+horizontal_alignment = 1
+
+[node name="InteractionArea" type="Area2D" parent="GameWorld/IsometricBase/Zones/MemoryCave"]
+
+[node name="CollisionShape" type="CollisionShape2D" parent="GameWorld/IsometricBase/Zones/MemoryCave/InteractionArea"]
+shape = SubResource("CircleShape2D_zone")
+
 [node name="Player" type="Node2D" parent="GameWorld/IsometricBase"]
 position = Vector2(200, 50)
 

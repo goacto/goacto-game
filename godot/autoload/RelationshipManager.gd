@@ -247,6 +247,12 @@ func log_interaction(relationship_id: String, interaction_type: String, note: St
 
 	interaction.xp_earned = xp
 
+	# Track for aspect quests
+	if GameManager:
+		GameManager.check_quests_for_trigger("relationship_interaction", {
+			"relationship_id": relationship_id
+		})
+
 	interaction_logged.emit(relationship_id, interaction)
 	SaveManager.save_game()
 

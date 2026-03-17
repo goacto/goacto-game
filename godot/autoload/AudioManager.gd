@@ -415,7 +415,8 @@ func play_sfx(stream: AudioStream, pitch_variation: float = 0.0) -> void:
 		return
 
 	player.stream = stream
-	player.volume_db = linear_to_db(sfx_volume * master_volume)
+	# Apply state-based SFX multiplier for dynamic mixing
+	player.volume_db = linear_to_db(sfx_volume * master_volume * _current_sfx_multiplier)
 
 	if pitch_variation > 0:
 		player.pitch_scale = 1.0 + randf_range(-pitch_variation, pitch_variation)
@@ -901,3 +902,386 @@ func play_achievement_unlock() -> void:
 ## Play companion tip sound
 func play_companion_tip() -> void:
 	play_sfx_from_path("res://audio/sfx/companion_tip.wav")
+
+
+# =============================================================================
+# DYNAMIC AUDIO MIXING SYSTEM
+# =============================================================================
+
+## Audio states for different game contexts
+enum AudioState {
+	EXPLORATION,     # Ship exploration, mindscape wandering
+	FOCUS,           # Active focus session
+	MEDITATION,      # Meditation exercises (breathing, reflection)
+	MENU,            # Pause menu, settings
+	CUTSCENE,        # Watching cutscenes
+	ACHIEVEMENT,     # Achievement unlock moment
+	INTENSE,         # Important moments, ceremonies
+	CALM             # Relaxed moments, post-session
+}
+
+# Current audio state
+var current_audio_state: AudioState = AudioState.EXPLORATION
+var previous_audio_state: AudioState = AudioState.EXPLORATION
+var state_transition_tween: Tween = null
+
+# Mixing profiles for each audio state
+# Each profile defines volume multipliers for different audio channels
+const AUDIO_MIXING_PROFILES = {
+	AudioState.EXPLORATION: {
+		"music_mult": 1.0,
+		"ambient_mult": 1.0,
+		"sfx_mult": 1.0,
+		"low_pass_freq": 20000,  # No filtering
+		"reverb": 0.0
+	},
+	AudioState.FOCUS: {
+		"music_mult": 0.6,       # Lower music during focus
+		"ambient_mult": 1.3,     # Louder ambient for immersion
+		"sfx_mult": 0.7,         # Quieter UI sounds
+		"low_pass_freq": 20000,
+		"reverb": 0.1
+	},
+	AudioState.MEDITATION: {
+		"music_mult": 0.4,       # Very quiet music
+		"ambient_mult": 1.5,     # Enhanced ambient
+		"sfx_mult": 0.5,         # Minimal UI sounds
+		"low_pass_freq": 8000,   # Subtle warmth filter
+		"reverb": 0.3            # Spacious reverb
+	},
+	AudioState.MENU: {
+		"music_mult": 0.8,
+		"ambient_mult": 0.3,     # Reduced ambient in menus
+		"sfx_mult": 1.2,         # Clearer UI sounds
+		"low_pass_freq": 20000,
+		"reverb": 0.0
+	},
+	AudioState.CUTSCENE: {
+		"music_mult": 0.35,      # Very low for voice clarity
+		"ambient_mult": 0.2,
+		"sfx_mult": 0.6,
+		"low_pass_freq": 20000,
+		"reverb": 0.1
+	},
+	AudioState.ACHIEVEMENT: {
+		"music_mult": 0.5,       # Duck music for achievement fanfare
+		"ambient_mult": 0.3,
+		"sfx_mult": 1.5,         # Louder achievement sounds
+		"low_pass_freq": 20000,
+		"reverb": 0.2
+	},
+	AudioState.INTENSE: {
+		"music_mult": 1.2,       # Slightly louder music
+		"ambient_mult": 0.8,
+		"sfx_mult": 1.1,
+		"low_pass_freq": 20000,
+		"reverb": 0.15
+	},
+	AudioState.CALM: {
+		"music_mult": 0.7,
+		"ambient_mult": 1.2,
+		"sfx_mult": 0.8,
+		"low_pass_freq": 12000,  # Warmer sound
+		"reverb": 0.2
+	}
+}
+
+# Mood-based volume adjustments (based on player progress)
+var mood_music_modifier: float = 1.0    # 0.8 to 1.2 based on mood
+var mood_ambient_modifier: float = 1.0
+
+# Transition timing
+const STATE_TRANSITION_TIME: float = 1.5
+const MOOD_TRANSITION_TIME: float = 3.0
+
+# Signals for state changes
+signal audio_state_changed(new_state: AudioState, old_state: AudioState)
+
+
+## Set the current audio state with smooth transition
+func set_audio_state(new_state: AudioState, transition_time: float = STATE_TRANSITION_TIME) -> void:
+	if new_state == current_audio_state:
+		return
+
+	previous_audio_state = current_audio_state
+	current_audio_state = new_state
+
+	print("[AudioManager] Audio state: %s -> %s" % [AudioState.keys()[previous_audio_state], AudioState.keys()[new_state]])
+
+	# Cancel any existing transition
+	if state_transition_tween and state_transition_tween.is_valid():
+		state_transition_tween.kill()
+
+	# Apply new mixing profile with transition
+	_apply_mixing_profile(new_state, transition_time)
+
+	audio_state_changed.emit(new_state, previous_audio_state)
+
+
+## Get the current audio state
+func get_audio_state() -> AudioState:
+	return current_audio_state
+
+
+## Apply a mixing profile with smooth transition
+func _apply_mixing_profile(state: AudioState, transition_time: float) -> void:
+	var profile = AUDIO_MIXING_PROFILES.get(state, AUDIO_MIXING_PROFILES[AudioState.EXPLORATION])
+
+	# Calculate target volumes with mood modifiers
+	var target_music_vol = music_volume * master_volume * profile["music_mult"] * mood_music_modifier
+	var target_ambient_vol = ambient_volume * master_volume * profile["ambient_mult"] * mood_ambient_modifier
+
+	var target_music_db = linear_to_db(target_music_vol)
+	var target_ambient_db = linear_to_db(target_ambient_vol)
+
+	# Store SFX multiplier for future SFX calls
+	_current_sfx_multiplier = profile["sfx_mult"]
+
+	if transition_time <= 0:
+		# Instant transition
+		if music_player.playing:
+			music_player.volume_db = target_music_db
+		if music_player_secondary.playing:
+			music_player_secondary.volume_db = target_music_db
+		if ambient_player.playing:
+			ambient_player.volume_db = target_ambient_db
+		if ambient_player_secondary.playing:
+			ambient_player_secondary.volume_db = target_ambient_db
+	else:
+		# Smooth transition
+		state_transition_tween = create_tween()
+		state_transition_tween.set_parallel(true)
+
+		if music_player.playing:
+			state_transition_tween.tween_property(music_player, "volume_db", target_music_db, transition_time).set_ease(Tween.EASE_IN_OUT)
+		if music_player_secondary.playing:
+			state_transition_tween.tween_property(music_player_secondary, "volume_db", target_music_db, transition_time).set_ease(Tween.EASE_IN_OUT)
+		if ambient_player.playing:
+			state_transition_tween.tween_property(ambient_player, "volume_db", target_ambient_db, transition_time).set_ease(Tween.EASE_IN_OUT)
+		if ambient_player_secondary.playing:
+			state_transition_tween.tween_property(ambient_player_secondary, "volume_db", target_ambient_db, transition_time).set_ease(Tween.EASE_IN_OUT)
+
+
+## Current SFX volume multiplier based on audio state
+var _current_sfx_multiplier: float = 1.0
+
+
+## Update mood-based audio modifiers based on player progress
+func update_mood_from_progress(mood_data: Dictionary = {}) -> void:
+	## mood_data can include:
+	## - streak: int (current habit streak)
+	## - mood_score: float (from daily check-in, 1-10)
+	## - energy_level: float (from daily check-in, 1-10)
+	## - focus_minutes_today: int
+	## - achievements_recent: int
+
+	var base_music_mod = 1.0
+	var base_ambient_mod = 1.0
+
+	# Adjust based on streak (higher streak = slightly more upbeat)
+	var streak = mood_data.get("streak", 0)
+	if streak >= 7:
+		base_music_mod += 0.1
+	elif streak >= 3:
+		base_music_mod += 0.05
+
+	# Adjust based on mood score (from daily check-in)
+	var mood_score = mood_data.get("mood_score", 5.0)
+	if mood_score >= 8:
+		base_music_mod += 0.1
+		base_ambient_mod += 0.05
+	elif mood_score <= 3:
+		base_music_mod -= 0.1
+		base_ambient_mod += 0.1  # More ambient for calming
+
+	# Adjust based on energy level
+	var energy = mood_data.get("energy_level", 5.0)
+	if energy >= 8:
+		base_music_mod += 0.05
+	elif energy <= 3:
+		base_ambient_mod += 0.1  # More ambient for low energy
+
+	# Adjust based on recent achievements
+	var achievements = mood_data.get("achievements_recent", 0)
+	if achievements >= 3:
+		base_music_mod += 0.1
+
+	# Clamp values
+	base_music_mod = clamp(base_music_mod, 0.8, 1.2)
+	base_ambient_mod = clamp(base_ambient_mod, 0.8, 1.3)
+
+	# Smooth transition to new mood values
+	_transition_mood_modifiers(base_music_mod, base_ambient_mod)
+
+
+## Smoothly transition mood modifiers
+func _transition_mood_modifiers(target_music: float, target_ambient: float) -> void:
+	var tween = create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(self, "mood_music_modifier", target_music, MOOD_TRANSITION_TIME)
+	tween.tween_property(self, "mood_ambient_modifier", target_ambient, MOOD_TRANSITION_TIME)
+
+	# Re-apply current profile with new mood modifiers
+	tween.set_parallel(false)
+	tween.tween_callback(func(): _apply_mixing_profile(current_audio_state, 0.5))
+
+
+## Convenience methods for common state transitions
+
+func enter_focus_mode() -> void:
+	set_audio_state(AudioState.FOCUS)
+
+
+func exit_focus_mode() -> void:
+	set_audio_state(AudioState.EXPLORATION)
+
+
+func enter_meditation_mode() -> void:
+	set_audio_state(AudioState.MEDITATION)
+
+
+func exit_meditation_mode() -> void:
+	set_audio_state(AudioState.CALM, 2.0)  # Gentle transition to calm
+
+
+func enter_menu() -> void:
+	set_audio_state(AudioState.MENU, 0.5)  # Quick transition
+
+
+func exit_menu() -> void:
+	set_audio_state(previous_audio_state, 0.5)
+
+
+func enter_cutscene() -> void:
+	set_audio_state(AudioState.CUTSCENE)
+
+
+func exit_cutscene() -> void:
+	set_audio_state(AudioState.EXPLORATION)
+
+
+func trigger_achievement_moment(duration: float = 3.0) -> void:
+	## Temporarily switch to achievement state, then return
+	var return_state = current_audio_state
+	set_audio_state(AudioState.ACHIEVEMENT, 0.3)
+
+	# Schedule return to previous state
+	await get_tree().create_timer(duration).timeout
+	if current_audio_state == AudioState.ACHIEVEMENT:
+		set_audio_state(return_state, 1.0)
+
+
+func enter_intense_moment() -> void:
+	set_audio_state(AudioState.INTENSE, 0.5)
+
+
+func exit_intense_moment() -> void:
+	set_audio_state(AudioState.EXPLORATION)
+
+
+## Temporary audio adjustments (for specific moments)
+
+var _temporary_volume_tween: Tween = null
+
+func temporarily_duck_all(duck_amount: float = 0.3, duration: float = 2.0, fade_time: float = 0.3) -> void:
+	## Temporarily lower all audio volumes
+	if _temporary_volume_tween and _temporary_volume_tween.is_valid():
+		_temporary_volume_tween.kill()
+
+	var original_music_db = music_player.volume_db if music_player.playing else -40.0
+	var original_ambient_db = ambient_player.volume_db if ambient_player.playing else -40.0
+
+	var ducked_music_db = original_music_db + linear_to_db(duck_amount)
+	var ducked_ambient_db = original_ambient_db + linear_to_db(duck_amount)
+
+	_temporary_volume_tween = create_tween()
+
+	# Duck down
+	_temporary_volume_tween.set_parallel(true)
+	if music_player.playing:
+		_temporary_volume_tween.tween_property(music_player, "volume_db", ducked_music_db, fade_time)
+	if music_player_secondary.playing:
+		_temporary_volume_tween.tween_property(music_player_secondary, "volume_db", ducked_music_db, fade_time)
+	if ambient_player.playing:
+		_temporary_volume_tween.tween_property(ambient_player, "volume_db", ducked_ambient_db, fade_time)
+	if ambient_player_secondary.playing:
+		_temporary_volume_tween.tween_property(ambient_player_secondary, "volume_db", ducked_ambient_db, fade_time)
+
+	# Wait
+	_temporary_volume_tween.set_parallel(false)
+	_temporary_volume_tween.tween_interval(duration)
+
+	# Restore
+	_temporary_volume_tween.set_parallel(true)
+	if music_player.playing:
+		_temporary_volume_tween.tween_property(music_player, "volume_db", original_music_db, fade_time)
+	if music_player_secondary.playing:
+		_temporary_volume_tween.tween_property(music_player_secondary, "volume_db", original_music_db, fade_time)
+	if ambient_player.playing:
+		_temporary_volume_tween.tween_property(ambient_player, "volume_db", original_ambient_db, fade_time)
+	if ambient_player_secondary.playing:
+		_temporary_volume_tween.tween_property(ambient_player_secondary, "volume_db", original_ambient_db, fade_time)
+
+
+func temporarily_boost_music(boost_amount: float = 1.3, duration: float = 5.0, fade_time: float = 0.5) -> void:
+	## Temporarily boost music volume (for impactful moments)
+	if _temporary_volume_tween and _temporary_volume_tween.is_valid():
+		_temporary_volume_tween.kill()
+
+	var active_player = _get_active_music_player()
+	if not active_player.playing:
+		return
+
+	var original_db = active_player.volume_db
+	var boosted_db = original_db + linear_to_db(boost_amount)
+
+	_temporary_volume_tween = create_tween()
+
+	# Boost up
+	_temporary_volume_tween.tween_property(active_player, "volume_db", boosted_db, fade_time)
+
+	# Wait
+	_temporary_volume_tween.tween_interval(duration)
+
+	# Restore
+	_temporary_volume_tween.tween_property(active_player, "volume_db", original_db, fade_time)
+
+
+## Auto-update mood from GameManager data
+func refresh_mood_from_game_state() -> void:
+	var mood_data = {}
+
+	# Get streak
+	var habit_manager = get_node_or_null("/root/HabitManager")
+	if habit_manager and habit_manager.has_method("get_current_streak"):
+		mood_data["streak"] = habit_manager.get_current_streak()
+	else:
+		mood_data["streak"] = GameManager.player_data.get("current_streak", 0)
+
+	# Get mood/energy from daily check-in
+	var today = Time.get_date_string_from_system()
+	var checkins = GameManager.player_data.get("daily_checkins", {})
+	if checkins.has(today):
+		var today_checkin = checkins[today]
+		mood_data["mood_score"] = today_checkin.get("mood", 5.0)
+		mood_data["energy_level"] = today_checkin.get("energy", 5.0)
+
+	# Get focus minutes today
+	var focus_sessions = GameManager.player_data.get("focus_sessions", [])
+	var focus_today = 0
+	for session in focus_sessions:
+		if session.get("date", "") == today:
+			focus_today += session.get("duration", 0)
+	mood_data["focus_minutes_today"] = focus_today
+
+	# Get recent achievements (last 24 hours)
+	var recent_achievements = 0
+	var achievements = GameManager.player_data.get("achievements_unlocked", [])
+	var now = Time.get_unix_time_from_system()
+	for achievement in achievements:
+		if achievement is Dictionary and achievement.has("timestamp"):
+			if now - achievement["timestamp"] < 86400:  # 24 hours
+				recent_achievements += 1
+	mood_data["achievements_recent"] = recent_achievements
+
+	update_mood_from_progress(mood_data)

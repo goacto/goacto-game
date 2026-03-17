@@ -175,6 +175,10 @@ func create_script(data: Dictionary) -> String:
 	if AchievementManager:
 		AchievementManager.record_script_created()
 
+	# Track for aspect quests
+	if GameManager:
+		GameManager.check_quests_for_trigger("script_created", {})
+
 	print("[ScriptManager] Script created: ", script.name, ".psa")
 	return script_id
 

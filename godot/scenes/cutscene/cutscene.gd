@@ -865,6 +865,9 @@ func _show_dialogue(index: int) -> void:
 	var dialogue = scene.dialogues[index]
 	current_dialogue_index = index
 
+	# Track character bond when they speak in cutscenes
+	_track_character_bond(dialogue.speaker)
+
 	# Make sure dialogue panel is visible
 	dialogue_panel.visible = true
 
@@ -894,6 +897,19 @@ func _show_dialogue(index: int) -> void:
 
 	# Play voice clip if available
 	_play_voice_for_dialogue(current_scene_index, index)
+
+
+func _track_character_bond(speaker: String) -> void:
+	if not GameManager:
+		return
+
+	# Map speaker IDs to character bond IDs
+	match speaker:
+		"lumina":  # Mom
+			GameManager.record_mom_interaction("cutscene")
+		"discipline", "courage", "creativity", "compassion", "wisdom", "vitality":
+			GameManager.record_aspect_interaction(speaker, "dialogue")
+		# goacto, narrator, system don't increase bonds
 
 
 func _update_character_display(speaker: String) -> void:

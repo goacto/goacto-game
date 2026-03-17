@@ -949,6 +949,11 @@ func _start_breathing_cycle() -> void:
 
 
 func _start_timed_meditation(seconds: int) -> void:
+	# Enter meditation audio state
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("enter_meditation_mode"):
+		audio.enter_meditation_mode()
+
 	# Show countdown timer
 	var timer_label = Label.new()
 	timer_label.name = "TimerLabel"
@@ -989,6 +994,12 @@ func _start_timed_meditation(seconds: int) -> void:
 func _close_meditation_panel() -> void:
 	meditation_active = false
 	in_dialogue = false
+
+	# Exit meditation audio state
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("exit_meditation_mode"):
+		audio.exit_meditation_mode()
+
 	if meditation_panel:
 		meditation_panel.queue_free()
 		meditation_panel = null

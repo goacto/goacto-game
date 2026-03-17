@@ -50,6 +50,10 @@ func _ready() -> void:
 	_create_shrine_visuals()
 	_load_habits()
 
+	# Connect to reminder notifications
+	if HabitManager and not HabitManager.habit_reminder_triggered.is_connected(_on_habit_reminder):
+		HabitManager.habit_reminder_triggered.connect(_on_habit_reminder)
+
 	print("[DailyRituals] Ready")
 
 
@@ -231,6 +235,23 @@ func _add_habit_row(habit: Dictionary) -> void:
 		streak_label.add_theme_color_override("font_color", _get_streak_color(streak))
 		streak_label.tooltip_text = "Best: %d days" % int(habit.get("best_streak", 0))
 		row.add_child(streak_label)
+
+	# Reminder indicator/button
+	var reminder_btn = Button.new()
+	reminder_btn.flat = true
+	reminder_btn.custom_minimum_size = Vector2(30, 30)
+	var reminder_data = HabitManager.get_habit_reminder(habit.id)
+	if reminder_data.get("enabled", false):
+		reminder_btn.text = "⏰"
+		reminder_btn.tooltip_text = "Reminder: %s\nClick to edit" % reminder_data.get("time", "09:00")
+		reminder_btn.add_theme_color_override("font_color", Color(0.9, 0.7, 0.3))
+	else:
+		reminder_btn.text = "🔔"
+		reminder_btn.tooltip_text = "Set reminder"
+		reminder_btn.add_theme_color_override("font_color", Color(0.5, 0.5, 0.55))
+	reminder_btn.add_theme_font_size_override("font_size", 16)
+	reminder_btn.pressed.connect(_show_reminder_dialog.bind(habit.id))
+	row.add_child(reminder_btn)
 
 	habits_container.add_child(row)
 	habit_row_nodes[habit.id] = row
@@ -725,6 +746,272 @@ func _show_create_habit_form() -> void:
 
 	add_child(dialog)
 	name_input.grab_focus()
+
+
+func _show_reminder_dialog(habit_id: String) -> void:
+	## Show dialog to set/edit reminder for a habit
+	var habit = HabitManager.habits.get(habit_id, {})
+	if habit.is_empty():
+		return
+
+	var current_reminder = HabitManager.get_habit_reminder(habit_id)
+
+	var dialog = PanelContainer.new()
+	dialog.name = "ReminderDialog"
+	dialog.set_anchors_preset(Control.PRESET_CENTER)
+	dialog.custom_minimum_size = Vector2(380, 340)
+	dialog.position = Vector2(-190, -170)
+
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.1, 0.12, 0.18, 0.98)
+	style.set_corner_radius_all(16)
+	style.border_color = Color(0.5, 0.45, 0.6)
+	style.set_border_width_all(2)
+	dialog.add_theme_stylebox_override("panel", style)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 25)
+	margin.add_theme_constant_override("margin_top", 20)
+	margin.add_theme_constant_override("margin_right", 25)
+	margin.add_theme_constant_override("margin_bottom", 20)
+	dialog.add_child(margin)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 14)
+	margin.add_child(vbox)
+
+	# Header
+	var header = HBoxContainer.new()
+	vbox.add_child(header)
+
+	var title = Label.new()
+	title.text = "⏰ Set Reminder"
+	title.add_theme_font_size_override("font_size", 22)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(title)
+
+	var close_btn = Button.new()
+	close_btn.text = "×"
+	close_btn.flat = true
+	close_btn.custom_minimum_size = Vector2(32, 32)
+	close_btn.add_theme_font_size_override("font_size", 20)
+	close_btn.pressed.connect(func(): dialog.queue_free())
+	header.add_child(close_btn)
+
+	# Habit name
+	var habit_label = Label.new()
+	habit_label.text = habit.get("name", "Habit")
+	habit_label.add_theme_font_size_override("font_size", 16)
+	habit_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.75))
+	vbox.add_child(habit_label)
+
+	# Enable toggle
+	var enable_row = HBoxContainer.new()
+	enable_row.add_theme_constant_override("separation", 12)
+	vbox.add_child(enable_row)
+
+	var enable_label = Label.new()
+	enable_label.text = "Reminder enabled"
+	enable_label.add_theme_font_size_override("font_size", 15)
+	enable_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	enable_row.add_child(enable_label)
+
+	var enable_toggle = CheckButton.new()
+	enable_toggle.button_pressed = current_reminder.get("enabled", false)
+	enable_row.add_child(enable_toggle)
+
+	# Time picker row
+	var time_row = HBoxContainer.new()
+	time_row.add_theme_constant_override("separation", 10)
+	vbox.add_child(time_row)
+
+	var time_label = Label.new()
+	time_label.text = "Reminder time:"
+	time_label.add_theme_font_size_override("font_size", 15)
+	time_row.add_child(time_label)
+
+	var time_parts = current_reminder.get("time", "09:00").split(":")
+	var current_hour = int(time_parts[0]) if time_parts.size() > 0 else 9
+	var current_minute = int(time_parts[1]) if time_parts.size() > 1 else 0
+
+	var hour_spin = SpinBox.new()
+	hour_spin.min_value = 0
+	hour_spin.max_value = 23
+	hour_spin.value = current_hour
+	hour_spin.custom_minimum_size = Vector2(70, 35)
+	hour_spin.suffix = "h"
+	time_row.add_child(hour_spin)
+
+	var colon = Label.new()
+	colon.text = ":"
+	colon.add_theme_font_size_override("font_size", 18)
+	time_row.add_child(colon)
+
+	var minute_spin = SpinBox.new()
+	minute_spin.min_value = 0
+	minute_spin.max_value = 59
+	minute_spin.step = 5
+	minute_spin.value = current_minute
+	minute_spin.custom_minimum_size = Vector2(70, 35)
+	minute_spin.suffix = "m"
+	time_row.add_child(minute_spin)
+
+	# Days selection
+	var days_label = Label.new()
+	days_label.text = "Repeat on:"
+	days_label.add_theme_font_size_override("font_size", 15)
+	vbox.add_child(days_label)
+
+	var days_row = HBoxContainer.new()
+	days_row.add_theme_constant_override("separation", 6)
+	vbox.add_child(days_row)
+
+	var day_names = ["S", "M", "T", "W", "T", "F", "S"]
+	var current_days = current_reminder.get("days", [0, 1, 2, 3, 4, 5, 6])
+	var day_buttons = []
+
+	for i in range(7):
+		var day_btn = Button.new()
+		day_btn.text = day_names[i]
+		day_btn.custom_minimum_size = Vector2(38, 38)
+		day_btn.toggle_mode = true
+		day_btn.button_pressed = i in current_days
+		day_btn.add_theme_font_size_override("font_size", 14)
+		if day_btn.button_pressed:
+			day_btn.add_theme_color_override("font_color", Color(0.5, 0.8, 0.6))
+		day_btn.toggled.connect(func(pressed):
+			day_btn.add_theme_color_override("font_color", Color(0.5, 0.8, 0.6) if pressed else Color(0.7, 0.7, 0.75))
+		)
+		days_row.add_child(day_btn)
+		day_buttons.append(day_btn)
+
+	# Buttons
+	var btn_row = HBoxContainer.new()
+	btn_row.add_theme_constant_override("separation", 12)
+	vbox.add_child(btn_row)
+
+	var clear_btn = Button.new()
+	clear_btn.text = "Clear"
+	clear_btn.custom_minimum_size = Vector2(0, 40)
+	clear_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	clear_btn.add_theme_color_override("font_color", Color(0.8, 0.5, 0.5))
+	clear_btn.pressed.connect(func():
+		HabitManager.clear_habit_reminder(habit_id)
+		dialog.queue_free()
+		_load_habits()
+	)
+	btn_row.add_child(clear_btn)
+
+	var save_btn = Button.new()
+	save_btn.text = "Save"
+	save_btn.custom_minimum_size = Vector2(0, 40)
+	save_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	save_btn.add_theme_color_override("font_color", Color(0.5, 0.8, 0.6))
+	save_btn.pressed.connect(func():
+		var time_str = "%02d:%02d" % [int(hour_spin.value), int(minute_spin.value)]
+		var selected_days = []
+		for i in range(7):
+			if day_buttons[i].button_pressed:
+				selected_days.append(i)
+		if selected_days.is_empty():
+			selected_days = [0, 1, 2, 3, 4, 5, 6]  # Default to all days
+		HabitManager.set_habit_reminder(habit_id, time_str, enable_toggle.button_pressed, selected_days)
+		dialog.queue_free()
+		_load_habits()
+	)
+	btn_row.add_child(save_btn)
+
+	add_child(dialog)
+
+
+func _on_habit_reminder(habit_id: String, habit_name: String) -> void:
+	## Handle habit reminder notification
+	_show_reminder_notification(habit_id, habit_name)
+
+
+func _show_reminder_notification(habit_id: String, habit_name: String) -> void:
+	## Show a reminder notification popup
+	var habit = HabitManager.habits.get(habit_id, {})
+	var icon_key = habit.get("icon", "custom")
+	var icon_info = HabitManager.HABIT_ICONS.get(icon_key, HabitManager.HABIT_ICONS["custom"])
+
+	var notif = PanelContainer.new()
+	notif.name = "ReminderNotification"
+	notif.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	notif.position = Vector2(-180, 20)
+	notif.custom_minimum_size = Vector2(360, 0)
+
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.15, 0.12, 0.2, 0.98)
+	style.set_corner_radius_all(12)
+	style.border_color = Color(0.9, 0.7, 0.3, 0.8)
+	style.set_border_width_all(2)
+	notif.add_theme_stylebox_override("panel", style)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 20)
+	margin.add_theme_constant_override("margin_top", 15)
+	margin.add_theme_constant_override("margin_right", 20)
+	margin.add_theme_constant_override("margin_bottom", 15)
+	notif.add_child(margin)
+
+	var hbox = HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 15)
+	margin.add_child(hbox)
+
+	# Icon
+	var icon_label = Label.new()
+	icon_label.text = icon_info.get("emoji", "⭐")
+	icon_label.add_theme_font_size_override("font_size", 28)
+	hbox.add_child(icon_label)
+
+	# Text content
+	var text_vbox = VBoxContainer.new()
+	text_vbox.add_theme_constant_override("separation", 4)
+	text_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hbox.add_child(text_vbox)
+
+	var title = Label.new()
+	title.text = "⏰ Reminder"
+	title.add_theme_font_size_override("font_size", 14)
+	title.add_theme_color_override("font_color", Color(0.9, 0.7, 0.3))
+	text_vbox.add_child(title)
+
+	var name_label = Label.new()
+	name_label.text = habit_name
+	name_label.add_theme_font_size_override("font_size", 18)
+	name_label.add_theme_color_override("font_color", Color(0.95, 0.95, 1.0))
+	text_vbox.add_child(name_label)
+
+	# Dismiss button
+	var dismiss_btn = Button.new()
+	dismiss_btn.text = "✓"
+	dismiss_btn.custom_minimum_size = Vector2(40, 40)
+	dismiss_btn.add_theme_font_size_override("font_size", 20)
+	dismiss_btn.tooltip_text = "Dismiss"
+	dismiss_btn.pressed.connect(func(): notif.queue_free())
+	hbox.add_child(dismiss_btn)
+
+	add_child(notif)
+
+	# Play notification sound
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("play_ui_click"):
+		audio.play_ui_click()
+
+	# Slide in animation
+	notif.modulate.a = 0
+	notif.position.y = -50
+	var tween = notif.create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(notif, "modulate:a", 1.0, 0.3)
+	tween.tween_property(notif, "position:y", 20, 0.3).set_trans(Tween.TRANS_BACK)
+
+	# Auto-dismiss after 10 seconds
+	var dismiss_tween = notif.create_tween()
+	dismiss_tween.tween_interval(10.0)
+	dismiss_tween.tween_property(notif, "modulate:a", 0.0, 0.5)
+	dismiss_tween.tween_callback(notif.queue_free)
 
 
 func _show_stats_panel() -> void:

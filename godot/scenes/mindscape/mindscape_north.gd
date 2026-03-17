@@ -58,6 +58,11 @@ func _ready() -> void:
 	resume_button.pressed.connect(_close_pause_menu)
 	exit_button.pressed.connect(_travel_to_hub)
 
+	# Play mindscape music
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("play_music_mindscape"):
+		audio.play_music_mindscape()
+
 	# Setup region config
 	setup_region({
 		"region_id": "north",
@@ -65,7 +70,9 @@ func _ready() -> void:
 		"theme_color": Color(0.4, 0.7, 0.5),
 		"zone_names": {
 			"DreamGarden": "Dream Garden",
-			"MemoryArchive": "Memory Archive"
+			"MemoryArchive": "Memory Archive",
+			"SeedGarden": "Seed Garden",
+			"WishingFountain": "Wishing Fountain"
 		},
 		"player_bounds": Rect2(-900, -700, 1800, 1400)  # Expanded bounds
 	})
@@ -725,6 +732,10 @@ func _setup_zone_graphic(zone_id: String) -> void:
 			_create_dream_garden_graphic()
 		"MemoryArchive":
 			_create_memory_archive_graphic()
+		"SeedGarden":
+			_create_seed_garden_graphic()
+		"WishingFountain":
+			_create_wishing_fountain_graphic()
 
 
 func _create_dream_garden_graphic() -> void:
@@ -902,6 +913,10 @@ func _open_zone(zone_id: String) -> void:
 			_open_dream_garden()
 		"MemoryArchive":
 			_open_memory_archive()
+		"SeedGarden":
+			_open_seed_garden()
+		"WishingFountain":
+			_open_wishing_fountain()
 		_:
 			super._open_zone(zone_id)
 
@@ -1188,6 +1203,10 @@ func _save_dream() -> void:
 
 	# Award XP for recording a dream
 	GameManager.add_aspect_experience("wisdom", 15)
+
+	# Track for aspect quests
+	if GameManager:
+		GameManager.check_quests_for_trigger("journal_entry", {"type": "dream"})
 
 	_close_zone()
 	_show_dialogue("Dream Recorded", "Your dream has been saved to the archive.\n\n+15 Wisdom XP\n\nRecording dreams helps you understand your subconscious mind.", _open_dream_garden)
@@ -1609,6 +1628,909 @@ func _add_milestone_entry(milestone: Dictionary) -> void:
 	zone_body.add_child(row)
 
 	_add_spacer(6)
+
+
+# ============ SEED GARDEN FEATURES ============
+
+func _open_seed_garden() -> void:
+	zone_title.text = "Seed Garden"
+	_clear_zone_body()
+	_setup_zone_graphic("SeedGarden")
+
+	_add_spacer(10)
+
+	var intro = Label.new()
+	intro.text = "Plant seeds of intention and nurture them with daily care. Watch your garden grow as you build positive habits."
+	intro.autowrap_mode = TextServer.AUTOWRAP_WORD
+	intro.add_theme_font_size_override("font_size", 18)
+	intro.add_theme_color_override("font_color", Color(0.7, 0.75, 0.8))
+	zone_body.add_child(intro)
+
+	_add_spacer(15)
+
+	var plant_btn = Button.new()
+	plant_btn.text = "Plant New Seed"
+	plant_btn.custom_minimum_size = Vector2(0, 50)
+	plant_btn.add_theme_font_size_override("font_size", 18)
+	plant_btn.pressed.connect(_plant_new_seed)
+	zone_body.add_child(plant_btn)
+
+	_add_spacer(8)
+
+	var water_btn = Button.new()
+	water_btn.text = "Water Your Garden"
+	water_btn.custom_minimum_size = Vector2(0, 50)
+	water_btn.add_theme_font_size_override("font_size", 18)
+	water_btn.pressed.connect(_water_garden)
+	zone_body.add_child(water_btn)
+
+	_add_spacer(8)
+
+	var view_btn = Button.new()
+	view_btn.text = "View Growing Plants"
+	view_btn.custom_minimum_size = Vector2(0, 50)
+	view_btn.add_theme_font_size_override("font_size", 18)
+	view_btn.pressed.connect(_view_plants)
+	zone_body.add_child(view_btn)
+
+	# Show garden stats
+	_add_spacer(15)
+	var plants = _load_plants()
+	var stats_label = Label.new()
+	stats_label.text = "Your garden: " + str(plants.size()) + " plants growing"
+	stats_label.add_theme_font_size_override("font_size", 14)
+	stats_label.add_theme_color_override("font_color", Color(0.5, 0.65, 0.5))
+	stats_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	zone_body.add_child(stats_label)
+
+	zone_panel.visible = true
+	in_zone_panel = true
+
+
+func _create_seed_garden_graphic() -> void:
+	var scale_factor = 2.5
+
+	# Garden plot base
+	var plot = Polygon2D.new()
+	plot.polygon = PackedVector2Array([
+		Vector2(-70, 0), Vector2(0, -40), Vector2(70, 0), Vector2(0, 40)
+	])
+	plot.scale = Vector2(scale_factor, scale_factor)
+	plot.color = Color(0.2, 0.28, 0.18)
+	zone_graphic_container.add_child(plot)
+
+	# Rich soil beds
+	var beds = [Vector2(-30, -10), Vector2(30, -10), Vector2(0, 15)]
+	for pos in beds:
+		var bed = Polygon2D.new()
+		bed.position = pos * scale_factor
+		bed.polygon = PackedVector2Array([
+			Vector2(-20, 0), Vector2(0, -12), Vector2(20, 0), Vector2(0, 12)
+		])
+		bed.scale = Vector2(scale_factor, scale_factor)
+		bed.color = Color(0.28, 0.2, 0.14)
+		zone_graphic_container.add_child(bed)
+
+	# Growing plants
+	var plant_positions = [Vector2(-30, -25), Vector2(30, -22), Vector2(0, 0)]
+	var plant_colors = [Color(0.4, 0.75, 0.45), Color(0.35, 0.7, 0.4), Color(0.45, 0.8, 0.5)]
+	for i in range(plant_positions.size()):
+		var plant = Polygon2D.new()
+		plant.position = plant_positions[i] * scale_factor
+		var height = (i + 2) * 8
+		plant.polygon = PackedVector2Array([
+			Vector2(-4, height), Vector2(-5, 0), Vector2(0, -height),
+			Vector2(5, 0), Vector2(4, height)
+		])
+		plant.scale = Vector2(scale_factor, scale_factor)
+		plant.color = plant_colors[i]
+		zone_graphic_container.add_child(plant)
+
+		# Leaves
+		var leaf1 = Polygon2D.new()
+		leaf1.position = (plant_positions[i] + Vector2(-10, -height * 0.5)) * scale_factor
+		leaf1.polygon = PackedVector2Array([
+			Vector2(0, 0), Vector2(-12, -5), Vector2(-15, 0), Vector2(-8, 5)
+		])
+		leaf1.scale = Vector2(scale_factor, scale_factor)
+		leaf1.color = plant_colors[i].lightened(0.1)
+		zone_graphic_container.add_child(leaf1)
+
+		var leaf2 = Polygon2D.new()
+		leaf2.position = (plant_positions[i] + Vector2(10, -height * 0.6)) * scale_factor
+		leaf2.polygon = PackedVector2Array([
+			Vector2(0, 0), Vector2(12, -5), Vector2(15, 0), Vector2(8, 5)
+		])
+		leaf2.scale = Vector2(scale_factor, scale_factor)
+		leaf2.color = plant_colors[i].lightened(0.1)
+		zone_graphic_container.add_child(leaf2)
+
+	# Watering can
+	var can = Polygon2D.new()
+	can.position = Vector2(55, 25) * scale_factor
+	can.polygon = PackedVector2Array([
+		Vector2(-12, 8), Vector2(-12, -10), Vector2(12, -10), Vector2(12, 8),
+		Vector2(6, 12), Vector2(-6, 12)
+	])
+	can.scale = Vector2(scale_factor, scale_factor)
+	can.color = Color(0.5, 0.6, 0.75)
+	zone_graphic_container.add_child(can)
+
+	# Glow
+	var glow = Polygon2D.new()
+	glow.position = Vector2(0, -10 * scale_factor)
+	glow.polygon = PackedVector2Array([
+		Vector2(-55, 35), Vector2(-60, -15), Vector2(0, -45),
+		Vector2(60, -15), Vector2(55, 35), Vector2(0, 50)
+	])
+	glow.scale = Vector2(scale_factor, scale_factor)
+	glow.color = Color(0.5, 0.75, 0.5, 0.2)
+	zone_graphic_container.add_child(glow)
+
+
+func _plant_new_seed() -> void:
+	zone_title.text = "Plant a Seed"
+	_clear_zone_body()
+	_setup_zone_graphic("SeedGarden")
+
+	_add_spacer(10)
+
+	var intro = Label.new()
+	intro.text = "Choose what kind of intention seed to plant:"
+	intro.autowrap_mode = TextServer.AUTOWRAP_WORD
+	intro.add_theme_font_size_override("font_size", 18)
+	zone_body.add_child(intro)
+
+	_add_spacer(12)
+
+	var seed_types = [
+		{"name": "Discipline Seed", "desc": "Grows when you complete habits consistently", "aspect": "discipline", "icon": "sprout", "color": Color(0.7, 0.5, 0.3)},
+		{"name": "Courage Seed", "desc": "Grows when you face challenges bravely", "aspect": "courage", "icon": "flame", "color": Color(0.9, 0.5, 0.3)},
+		{"name": "Creativity Seed", "desc": "Grows when you express yourself creatively", "aspect": "creativity", "icon": "star", "color": Color(0.7, 0.5, 0.9)},
+		{"name": "Compassion Seed", "desc": "Grows when you practice kindness", "aspect": "compassion", "icon": "heart", "color": Color(0.9, 0.5, 0.6)},
+		{"name": "Wisdom Seed", "desc": "Grows when you reflect and learn", "aspect": "wisdom", "icon": "book", "color": Color(0.5, 0.6, 0.9)},
+		{"name": "Vitality Seed", "desc": "Grows when you care for your body", "aspect": "vitality", "icon": "leaf", "color": Color(0.4, 0.8, 0.5)},
+	]
+
+	for seed in seed_types:
+		var btn = Button.new()
+		btn.text = seed.name
+		btn.custom_minimum_size = Vector2(0, 42)
+		btn.add_theme_font_size_override("font_size", 16)
+		btn.pressed.connect(_confirm_plant_seed.bind(seed))
+		zone_body.add_child(btn)
+
+		var desc = Label.new()
+		desc.text = seed.desc
+		desc.add_theme_font_size_override("font_size", 13)
+		desc.add_theme_color_override("font_color", Color(0.5, 0.55, 0.5))
+		zone_body.add_child(desc)
+
+		_add_spacer(6)
+
+	_add_spacer(10)
+
+	var back_btn = Button.new()
+	back_btn.text = "Back"
+	back_btn.custom_minimum_size = Vector2(0, 45)
+	back_btn.add_theme_font_size_override("font_size", 18)
+	back_btn.pressed.connect(_open_seed_garden)
+	zone_body.add_child(back_btn)
+
+
+func _confirm_plant_seed(seed: Dictionary) -> void:
+	zone_title.text = "Name Your Plant"
+	_clear_zone_body()
+	_setup_zone_graphic("SeedGarden")
+
+	_add_spacer(10)
+
+	var intro = Label.new()
+	intro.text = "Give your " + seed.name + " a personal name:"
+	intro.autowrap_mode = TextServer.AUTOWRAP_WORD
+	intro.add_theme_font_size_override("font_size", 18)
+	zone_body.add_child(intro)
+
+	_add_spacer(12)
+
+	var name_input = LineEdit.new()
+	name_input.name = "PlantNameInput"
+	name_input.placeholder_text = "e.g., My Morning Discipline"
+	name_input.custom_minimum_size = Vector2(0, 45)
+	name_input.add_theme_font_size_override("font_size", 16)
+	zone_body.add_child(name_input)
+
+	_add_spacer(10)
+
+	var intention_label = Label.new()
+	intention_label.text = "Set an intention for this plant:"
+	intention_label.add_theme_font_size_override("font_size", 16)
+	zone_body.add_child(intention_label)
+
+	var intention_input = TextEdit.new()
+	intention_input.name = "PlantIntentionInput"
+	intention_input.placeholder_text = "What do you want to grow and nurture?"
+	intention_input.custom_minimum_size = Vector2(0, 80)
+	intention_input.add_theme_font_size_override("font_size", 15)
+	intention_input.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+	zone_body.add_child(intention_input)
+
+	_add_spacer(15)
+
+	var button_row = HBoxContainer.new()
+	button_row.add_theme_constant_override("separation", 12)
+
+	var back_btn = Button.new()
+	back_btn.text = "Back"
+	back_btn.custom_minimum_size = Vector2(0, 45)
+	back_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	back_btn.add_theme_font_size_override("font_size", 16)
+	back_btn.pressed.connect(_plant_new_seed)
+	button_row.add_child(back_btn)
+
+	var plant_btn = Button.new()
+	plant_btn.text = "Plant Seed"
+	plant_btn.custom_minimum_size = Vector2(0, 45)
+	plant_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	plant_btn.add_theme_font_size_override("font_size", 16)
+	plant_btn.add_theme_color_override("font_color", Color(0.5, 0.8, 0.55))
+	plant_btn.pressed.connect(_do_plant_seed.bind(seed))
+	button_row.add_child(plant_btn)
+
+	zone_body.add_child(button_row)
+
+
+func _do_plant_seed(seed: Dictionary) -> void:
+	var name_input = zone_body.find_child("PlantNameInput", true, false) as LineEdit
+	var intention_input = zone_body.find_child("PlantIntentionInput", true, false) as TextEdit
+
+	var plant_name = name_input.text.strip_edges() if name_input else ""
+	if plant_name == "":
+		plant_name = seed.name
+
+	var plant = {
+		"id": str(Time.get_unix_time_from_system()),
+		"name": plant_name,
+		"seed_type": seed.name,
+		"aspect": seed.aspect,
+		"intention": intention_input.text.strip_edges() if intention_input else "",
+		"planted_date": Time.get_date_string_from_system(),
+		"growth_level": 0,
+		"times_watered": 0,
+		"last_watered": ""
+	}
+
+	_save_plant(plant)
+
+	# Award XP for planting
+	GameManager.add_aspect_experience(seed.aspect, 10)
+
+	_close_zone()
+	_show_dialogue("Seed Planted!", "You planted a " + seed.name + " named \"" + plant_name + "\"!\n\n+10 " + seed.aspect.capitalize() + " XP\n\nWater it daily to help it grow. Completing habits related to " + seed.aspect + " will accelerate its growth.", _open_seed_garden)
+
+
+func _water_garden() -> void:
+	var plants = _load_plants()
+	var today = Time.get_date_string_from_system()
+	var watered_count = 0
+	var already_watered_count = 0
+
+	for plant in plants:
+		if plant.get("last_watered", "") != today:
+			plant["times_watered"] = plant.get("times_watered", 0) + 1
+			plant["last_watered"] = today
+
+			# Check for growth level up (every 3 waterings)
+			if plant["times_watered"] % 3 == 0 and plant.get("growth_level", 0) < 5:
+				plant["growth_level"] = plant.get("growth_level", 0) + 1
+
+			watered_count += 1
+		else:
+			already_watered_count += 1
+
+	if watered_count > 0:
+		_save_all_plants(plants)
+
+		# Award XP for watering
+		var xp = watered_count * 5
+		GameManager.add_aspect_experience("vitality", xp)
+		GameManager.evolve_world(0.05 * watered_count)
+
+		_close_zone()
+		_show_dialogue("Garden Watered!", "You watered " + str(watered_count) + " plant(s)!\n\n+" + str(xp) + " Vitality XP\n+0." + str(watered_count * 5) + "% World Evolution\n\nConsistent care helps your garden flourish.", _open_seed_garden)
+	elif already_watered_count > 0:
+		_show_dialogue("Already Watered", "You've already watered your garden today. Come back tomorrow!\n\nYour plants are happy and growing.")
+	else:
+		_show_dialogue("No Plants", "You don't have any plants yet. Plant a seed first to start your garden!")
+
+
+func _view_plants() -> void:
+	zone_title.text = "Your Garden"
+	_clear_zone_body()
+	_setup_zone_graphic("SeedGarden")
+
+	_add_spacer(10)
+
+	var plants = _load_plants()
+
+	if plants.is_empty():
+		var empty = Label.new()
+		empty.text = "Your garden is empty.\n\nPlant some intention seeds to start growing!"
+		empty.autowrap_mode = TextServer.AUTOWRAP_WORD
+		empty.add_theme_font_size_override("font_size", 18)
+		empty.add_theme_color_override("font_color", Color(0.5, 0.6, 0.55))
+		zone_body.add_child(empty)
+	else:
+		var header = Label.new()
+		header.text = "Your growing plants (" + str(plants.size()) + "):"
+		header.add_theme_font_size_override("font_size", 18)
+		zone_body.add_child(header)
+
+		_add_spacer(10)
+
+		for plant in plants:
+			_add_plant_entry(plant)
+
+	_add_spacer(12)
+
+	var back_btn = Button.new()
+	back_btn.text = "Back"
+	back_btn.custom_minimum_size = Vector2(0, 45)
+	back_btn.add_theme_font_size_override("font_size", 18)
+	back_btn.pressed.connect(_open_seed_garden)
+	zone_body.add_child(back_btn)
+
+
+func _add_plant_entry(plant: Dictionary) -> void:
+	var container = VBoxContainer.new()
+	container.add_theme_constant_override("separation", 3)
+
+	var title_row = HBoxContainer.new()
+
+	# Growth indicator
+	var growth = plant.get("growth_level", 0)
+	var growth_icons = [".", "~", "*", "^", "#", "@"]
+	var growth_icon = Label.new()
+	growth_icon.text = growth_icons[min(growth, 5)]
+	growth_icon.add_theme_font_size_override("font_size", 20)
+	growth_icon.add_theme_color_override("font_color", Color(0.4, 0.7, 0.45))
+	title_row.add_child(growth_icon)
+
+	var spacer = Control.new()
+	spacer.custom_minimum_size = Vector2(8, 0)
+	title_row.add_child(spacer)
+
+	var name_label = Label.new()
+	name_label.text = plant.get("name", "Unknown Plant")
+	name_label.add_theme_font_size_override("font_size", 17)
+	name_label.add_theme_color_override("font_color", Color(0.5, 0.8, 0.55))
+	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_row.add_child(name_label)
+
+	var type_label = Label.new()
+	type_label.text = plant.get("seed_type", "")
+	type_label.add_theme_font_size_override("font_size", 12)
+	type_label.add_theme_color_override("font_color", Color(0.5, 0.55, 0.5))
+	title_row.add_child(type_label)
+
+	container.add_child(title_row)
+
+	# Growth progress
+	var growth_label = Label.new()
+	var growth_names = ["Seed", "Sprout", "Seedling", "Young Plant", "Growing", "Blooming"]
+	growth_label.text = "Stage: " + growth_names[min(growth, 5)] + " (Lv " + str(growth) + "/5) - Watered " + str(plant.get("times_watered", 0)) + " times"
+	growth_label.add_theme_font_size_override("font_size", 13)
+	growth_label.add_theme_color_override("font_color", Color(0.5, 0.55, 0.5))
+	container.add_child(growth_label)
+
+	# Intention
+	var intention = plant.get("intention", "")
+	if intention != "":
+		var intention_label = Label.new()
+		intention_label.text = "\"" + intention + "\""
+		intention_label.add_theme_font_size_override("font_size", 13)
+		intention_label.add_theme_color_override("font_color", Color(0.45, 0.5, 0.45))
+		intention_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+		container.add_child(intention_label)
+
+	zone_body.add_child(container)
+	_add_spacer(10)
+
+
+func _save_plant(plant: Dictionary) -> void:
+	var plants = _load_plants()
+	plants.append(plant)
+	_save_all_plants(plants)
+
+
+func _save_all_plants(plants: Array) -> void:
+	var json_string = JSON.stringify(plants, "\t")
+	var path = SaveManager.get_plants_path()
+	var file = FileAccess.open(path, FileAccess.WRITE)
+	if file:
+		file.store_string(json_string)
+		file.close()
+
+
+func _load_plants() -> Array:
+	var path = SaveManager.get_plants_path()
+	if not FileAccess.file_exists(path):
+		return []
+
+	var file = FileAccess.open(path, FileAccess.READ)
+	if not file:
+		return []
+
+	var json_string = file.get_as_text()
+	file.close()
+
+	var json = JSON.new()
+	if json.parse(json_string) != OK:
+		return []
+
+	var data = json.get_data()
+	if data is Array:
+		return data
+	return []
+
+
+# ============ WISHING FOUNTAIN FEATURES ============
+
+func _open_wishing_fountain() -> void:
+	zone_title.text = "Wishing Fountain"
+	_clear_zone_body()
+	_setup_zone_graphic("WishingFountain")
+
+	_add_spacer(10)
+
+	var intro = Label.new()
+	intro.text = "Cast your hopes into the cosmic waters. Wishes carry intentions across time."
+	intro.autowrap_mode = TextServer.AUTOWRAP_WORD
+	intro.add_theme_font_size_override("font_size", 18)
+	intro.add_theme_color_override("font_color", Color(0.7, 0.75, 0.85))
+	zone_body.add_child(intro)
+
+	_add_spacer(15)
+
+	var wish_btn = Button.new()
+	wish_btn.text = "Make a Wish"
+	wish_btn.custom_minimum_size = Vector2(0, 50)
+	wish_btn.add_theme_font_size_override("font_size", 18)
+	wish_btn.pressed.connect(_make_wish)
+	zone_body.add_child(wish_btn)
+
+	_add_spacer(8)
+
+	var view_btn = Button.new()
+	view_btn.text = "View Past Wishes"
+	view_btn.custom_minimum_size = Vector2(0, 50)
+	view_btn.add_theme_font_size_override("font_size", 18)
+	view_btn.pressed.connect(_view_wishes)
+	zone_body.add_child(view_btn)
+
+	_add_spacer(8)
+
+	var reflect_btn = Button.new()
+	reflect_btn.text = "Reflect on a Fulfilled Wish"
+	reflect_btn.custom_minimum_size = Vector2(0, 50)
+	reflect_btn.add_theme_font_size_override("font_size", 18)
+	reflect_btn.pressed.connect(_reflect_on_wishes)
+	zone_body.add_child(reflect_btn)
+
+	# Show wish count
+	_add_spacer(15)
+	var wishes = _load_wishes()
+	var active = wishes.filter(func(w): return not w.get("fulfilled", false))
+	var stats = Label.new()
+	stats.text = str(active.size()) + " active wishes in the fountain"
+	stats.add_theme_font_size_override("font_size", 14)
+	stats.add_theme_color_override("font_color", Color(0.5, 0.55, 0.7))
+	stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	zone_body.add_child(stats)
+
+	zone_panel.visible = true
+	in_zone_panel = true
+
+
+func _create_wishing_fountain_graphic() -> void:
+	var scale_factor = 2.5
+
+	# Base platform
+	var base = Polygon2D.new()
+	base.polygon = PackedVector2Array([
+		Vector2(-70, 0), Vector2(0, -40), Vector2(70, 0), Vector2(0, 40)
+	])
+	base.scale = Vector2(scale_factor, scale_factor)
+	base.color = Color(0.2, 0.22, 0.28)
+	zone_graphic_container.add_child(base)
+
+	# Fountain basin
+	var basin = Polygon2D.new()
+	basin.position = Vector2(0, -8 * scale_factor)
+	basin.polygon = PackedVector2Array([
+		Vector2(-50, 0), Vector2(-45, -12), Vector2(45, -12),
+		Vector2(50, 0), Vector2(45, 12), Vector2(-45, 12)
+	])
+	basin.scale = Vector2(scale_factor, scale_factor)
+	basin.color = Color(0.3, 0.32, 0.38)
+	zone_graphic_container.add_child(basin)
+
+	# Water
+	var water = Polygon2D.new()
+	water.position = Vector2(0, -10 * scale_factor)
+	water.polygon = PackedVector2Array([
+		Vector2(-42, 0), Vector2(-38, -8), Vector2(38, -8),
+		Vector2(42, 0), Vector2(38, 8), Vector2(-38, 8)
+	])
+	water.scale = Vector2(scale_factor, scale_factor)
+	water.color = Color(0.3, 0.45, 0.65, 0.9)
+	zone_graphic_container.add_child(water)
+
+	# Center pillar
+	var pillar = Polygon2D.new()
+	pillar.position = Vector2(0, -30 * scale_factor)
+	pillar.polygon = PackedVector2Array([
+		Vector2(-10, 22), Vector2(-10, -18), Vector2(10, -18), Vector2(10, 22)
+	])
+	pillar.scale = Vector2(scale_factor, scale_factor)
+	pillar.color = Color(0.38, 0.4, 0.45)
+	zone_graphic_container.add_child(pillar)
+
+	# Water spout
+	var spout = Polygon2D.new()
+	spout.position = Vector2(0, -55 * scale_factor)
+	spout.polygon = PackedVector2Array([
+		Vector2(-5, 0), Vector2(0, -25), Vector2(5, 0)
+	])
+	spout.scale = Vector2(scale_factor, scale_factor)
+	spout.color = Color(0.45, 0.6, 0.85, 0.8)
+	zone_graphic_container.add_child(spout)
+
+	# Water cascade
+	var cascade = Polygon2D.new()
+	cascade.position = Vector2(0, -70 * scale_factor)
+	cascade.polygon = PackedVector2Array([
+		Vector2(-20, 12), Vector2(-10, 0), Vector2(0, -8),
+		Vector2(10, 0), Vector2(20, 12)
+	])
+	cascade.scale = Vector2(scale_factor, scale_factor)
+	cascade.color = Color(0.5, 0.7, 0.95, 0.5)
+	zone_graphic_container.add_child(cascade)
+
+	# Coins in water
+	var coin_positions = [
+		Vector2(-25, -5), Vector2(15, 2), Vector2(-8, 8), Vector2(28, -3)
+	]
+	for pos in coin_positions:
+		var coin = Polygon2D.new()
+		coin.position = pos * scale_factor
+		coin.polygon = PackedVector2Array([
+			Vector2(-5, 0), Vector2(0, -4), Vector2(5, 0), Vector2(0, 4)
+		])
+		coin.scale = Vector2(scale_factor, scale_factor)
+		coin.color = Color(0.9, 0.8, 0.4, 0.75)
+		zone_graphic_container.add_child(coin)
+
+	# Glow
+	var glow = Polygon2D.new()
+	glow.position = Vector2(0, -35 * scale_factor)
+	glow.polygon = PackedVector2Array([
+		Vector2(-55, 35), Vector2(-60, -20), Vector2(0, -50),
+		Vector2(60, -20), Vector2(55, 35), Vector2(0, 50)
+	])
+	glow.scale = Vector2(scale_factor, scale_factor)
+	glow.color = Color(0.4, 0.55, 0.8, 0.2)
+	zone_graphic_container.add_child(glow)
+
+
+func _make_wish() -> void:
+	zone_title.text = "Make a Wish"
+	_clear_zone_body()
+	_setup_zone_graphic("WishingFountain")
+
+	_add_spacer(10)
+
+	var intro = Label.new()
+	intro.text = "Close your eyes, take a breath, and make your wish:"
+	intro.autowrap_mode = TextServer.AUTOWRAP_WORD
+	intro.add_theme_font_size_override("font_size", 18)
+	zone_body.add_child(intro)
+
+	_add_spacer(12)
+
+	var wish_input = TextEdit.new()
+	wish_input.name = "WishInput"
+	wish_input.placeholder_text = "I wish..."
+	wish_input.custom_minimum_size = Vector2(0, 100)
+	wish_input.add_theme_font_size_override("font_size", 16)
+	wish_input.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+	zone_body.add_child(wish_input)
+
+	_add_spacer(12)
+
+	# Category selection
+	var cat_label = Label.new()
+	cat_label.text = "What kind of wish is this?"
+	cat_label.add_theme_font_size_override("font_size", 16)
+	zone_body.add_child(cat_label)
+
+	var cat_container = HBoxContainer.new()
+	cat_container.name = "CategoryContainer"
+	cat_container.add_theme_constant_override("separation", 6)
+
+	var categories = ["Personal", "Career", "Relationships", "Health", "Creative", "Spiritual"]
+	for cat in categories:
+		var btn = Button.new()
+		btn.name = "Cat_" + cat
+		btn.text = cat
+		btn.toggle_mode = true
+		btn.add_theme_font_size_override("font_size", 13)
+		btn.pressed.connect(_select_wish_category.bind(cat))
+		cat_container.add_child(btn)
+
+	zone_body.add_child(cat_container)
+
+	_add_spacer(15)
+
+	var button_row = HBoxContainer.new()
+	button_row.add_theme_constant_override("separation", 12)
+
+	var back_btn = Button.new()
+	back_btn.text = "Back"
+	back_btn.custom_minimum_size = Vector2(0, 45)
+	back_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	back_btn.add_theme_font_size_override("font_size", 16)
+	back_btn.pressed.connect(_open_wishing_fountain)
+	button_row.add_child(back_btn)
+
+	var cast_btn = Button.new()
+	cast_btn.text = "Cast Wish"
+	cast_btn.custom_minimum_size = Vector2(0, 45)
+	cast_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cast_btn.add_theme_font_size_override("font_size", 16)
+	cast_btn.add_theme_color_override("font_color", Color(0.5, 0.7, 0.9))
+	cast_btn.pressed.connect(_cast_wish)
+	button_row.add_child(cast_btn)
+
+	zone_body.add_child(button_row)
+
+
+var _selected_wish_category: String = "Personal"
+
+func _select_wish_category(category: String) -> void:
+	_selected_wish_category = category
+	var container = zone_body.find_child("CategoryContainer", true, false)
+	if container:
+		for child in container.get_children():
+			if child is Button:
+				child.button_pressed = (child.name == "Cat_" + category)
+
+
+func _cast_wish() -> void:
+	var wish_input = zone_body.find_child("WishInput", true, false) as TextEdit
+	if not wish_input or wish_input.text.strip_edges() == "":
+		_show_dialogue("Empty Wish", "Please write your wish before casting it into the fountain.")
+		return
+
+	var wish = {
+		"id": str(Time.get_unix_time_from_system()),
+		"wish": wish_input.text.strip_edges(),
+		"category": _selected_wish_category,
+		"date": Time.get_date_string_from_system(),
+		"fulfilled": false,
+		"fulfilled_date": "",
+		"reflection": ""
+	}
+
+	_save_wish(wish)
+
+	# Award XP for making a wish
+	GameManager.add_aspect_experience("wisdom", 8)
+
+	_close_zone()
+	_show_dialogue("Wish Cast!", "Your wish has been cast into the cosmic waters.\n\n+8 Wisdom XP\n\nThe universe has heard your intention. Work toward it, and return to mark it fulfilled when it comes true.", _open_wishing_fountain)
+
+
+func _view_wishes() -> void:
+	zone_title.text = "Your Wishes"
+	_clear_zone_body()
+	_setup_zone_graphic("WishingFountain")
+
+	_add_spacer(10)
+
+	var wishes = _load_wishes()
+	var active_wishes = wishes.filter(func(w): return not w.get("fulfilled", false))
+
+	if active_wishes.is_empty():
+		var empty = Label.new()
+		empty.text = "No active wishes in the fountain.\n\nMake a wish to plant seeds of intention in the cosmic waters."
+		empty.autowrap_mode = TextServer.AUTOWRAP_WORD
+		empty.add_theme_font_size_override("font_size", 18)
+		empty.add_theme_color_override("font_color", Color(0.5, 0.6, 0.7))
+		zone_body.add_child(empty)
+	else:
+		var header = Label.new()
+		header.text = "Active wishes (" + str(active_wishes.size()) + "):"
+		header.add_theme_font_size_override("font_size", 18)
+		zone_body.add_child(header)
+
+		_add_spacer(10)
+
+		for wish in active_wishes:
+			_add_wish_entry(wish)
+
+	# Show fulfilled wishes summary
+	var fulfilled = wishes.filter(func(w): return w.get("fulfilled", false))
+	if fulfilled.size() > 0:
+		_add_spacer(12)
+		var fulfilled_label = Label.new()
+		fulfilled_label.text = str(fulfilled.size()) + " wishes have come true!"
+		fulfilled_label.add_theme_font_size_override("font_size", 14)
+		fulfilled_label.add_theme_color_override("font_color", Color(0.7, 0.8, 0.5))
+		fulfilled_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		zone_body.add_child(fulfilled_label)
+
+	_add_spacer(12)
+
+	var back_btn = Button.new()
+	back_btn.text = "Back"
+	back_btn.custom_minimum_size = Vector2(0, 45)
+	back_btn.add_theme_font_size_override("font_size", 18)
+	back_btn.pressed.connect(_open_wishing_fountain)
+	zone_body.add_child(back_btn)
+
+
+func _add_wish_entry(wish: Dictionary) -> void:
+	var container = VBoxContainer.new()
+	container.add_theme_constant_override("separation", 3)
+
+	var title_row = HBoxContainer.new()
+
+	var star = Label.new()
+	star.text = "*"
+	star.add_theme_font_size_override("font_size", 18)
+	star.add_theme_color_override("font_color", Color(0.5, 0.6, 0.9))
+	title_row.add_child(star)
+
+	var spacer = Control.new()
+	spacer.custom_minimum_size = Vector2(8, 0)
+	title_row.add_child(spacer)
+
+	var category = Label.new()
+	category.text = "[" + wish.get("category", "Personal") + "]"
+	category.add_theme_font_size_override("font_size", 12)
+	category.add_theme_color_override("font_color", Color(0.5, 0.55, 0.7))
+	title_row.add_child(category)
+
+	var spacer2 = Control.new()
+	spacer2.custom_minimum_size = Vector2(8, 0)
+	title_row.add_child(spacer2)
+
+	var date = Label.new()
+	date.text = wish.get("date", "")
+	date.add_theme_font_size_override("font_size", 12)
+	date.add_theme_color_override("font_color", Color(0.45, 0.5, 0.55))
+	title_row.add_child(date)
+
+	container.add_child(title_row)
+
+	var wish_text = Label.new()
+	wish_text.text = wish.get("wish", "")
+	wish_text.add_theme_font_size_override("font_size", 15)
+	wish_text.autowrap_mode = TextServer.AUTOWRAP_WORD
+	container.add_child(wish_text)
+
+	zone_body.add_child(container)
+	_add_spacer(10)
+
+
+func _reflect_on_wishes() -> void:
+	zone_title.text = "Fulfill a Wish"
+	_clear_zone_body()
+	_setup_zone_graphic("WishingFountain")
+
+	_add_spacer(10)
+
+	var wishes = _load_wishes()
+	var active_wishes = wishes.filter(func(w): return not w.get("fulfilled", false))
+
+	if active_wishes.is_empty():
+		var empty = Label.new()
+		empty.text = "No active wishes to fulfill.\n\nMake some wishes first, then return when they come true!"
+		empty.autowrap_mode = TextServer.AUTOWRAP_WORD
+		empty.add_theme_font_size_override("font_size", 18)
+		empty.add_theme_color_override("font_color", Color(0.5, 0.6, 0.7))
+		zone_body.add_child(empty)
+	else:
+		var intro = Label.new()
+		intro.text = "Has one of your wishes come true? Select it to mark as fulfilled:"
+		intro.autowrap_mode = TextServer.AUTOWRAP_WORD
+		intro.add_theme_font_size_override("font_size", 18)
+		zone_body.add_child(intro)
+
+		_add_spacer(12)
+
+		for wish in active_wishes:
+			var btn = Button.new()
+			var wish_text = wish.get("wish", "")
+			btn.text = wish_text.substr(0, 50) + ("..." if wish_text.length() > 50 else "")
+			btn.custom_minimum_size = Vector2(0, 45)
+			btn.add_theme_font_size_override("font_size", 15)
+			btn.pressed.connect(_fulfill_wish.bind(wish))
+			zone_body.add_child(btn)
+
+			var meta = Label.new()
+			meta.text = "[" + wish.get("category", "") + "] - " + wish.get("date", "")
+			meta.add_theme_font_size_override("font_size", 12)
+			meta.add_theme_color_override("font_color", Color(0.5, 0.55, 0.6))
+			zone_body.add_child(meta)
+
+			_add_spacer(6)
+
+	_add_spacer(12)
+
+	var back_btn = Button.new()
+	back_btn.text = "Back"
+	back_btn.custom_minimum_size = Vector2(0, 45)
+	back_btn.add_theme_font_size_override("font_size", 18)
+	back_btn.pressed.connect(_open_wishing_fountain)
+	zone_body.add_child(back_btn)
+
+
+func _fulfill_wish(wish: Dictionary) -> void:
+	var wishes = _load_wishes()
+	for w in wishes:
+		if w.get("id", "") == wish.get("id", ""):
+			w["fulfilled"] = true
+			w["fulfilled_date"] = Time.get_date_string_from_system()
+			break
+
+	_save_all_wishes(wishes)
+
+	# Award XP for fulfilling a wish
+	GameManager.add_aspect_experience("wisdom", 25)
+	GameManager.add_aspect_experience("courage", 15)
+	GameManager.evolve_world(0.5)
+
+	_close_zone()
+	_show_dialogue("Wish Fulfilled!", "Congratulations! Your wish has come true!\n\n+25 Wisdom XP\n+15 Courage XP\n+0.5% World Evolution\n\nYour intentions manifest when you believe and work toward them.", _open_wishing_fountain)
+
+
+func _save_wish(wish: Dictionary) -> void:
+	var wishes = _load_wishes()
+	wishes.append(wish)
+	_save_all_wishes(wishes)
+
+
+func _save_all_wishes(wishes: Array) -> void:
+	var json_string = JSON.stringify(wishes, "\t")
+	var path = SaveManager.get_wishes_path()
+	var file = FileAccess.open(path, FileAccess.WRITE)
+	if file:
+		file.store_string(json_string)
+		file.close()
+
+
+func _load_wishes() -> Array:
+	var path = SaveManager.get_wishes_path()
+	if not FileAccess.file_exists(path):
+		return []
+
+	var file = FileAccess.open(path, FileAccess.READ)
+	if not file:
+		return []
+
+	var json_string = file.get_as_text()
+	file.close()
+
+	var json = JSON.new()
+	if json.parse(json_string) != OK:
+		return []
+
+	var data = json.get_data()
+	if data is Array:
+		return data
+	return []
 
 
 func _add_spacer(height: int) -> void:

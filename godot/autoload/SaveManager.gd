@@ -172,7 +172,12 @@ func _get_default_settings() -> Dictionary:
 		"music_volume": 0.8,
 		"sfx_volume": 1.0,
 		"notifications_enabled": true,
-		"haptic_feedback": true
+		"haptic_feedback": true,
+		# Accessibility options
+		"font_size": "medium",  # "small", "medium", "large"
+		"high_contrast": false,
+		"reduced_motion": false,
+		"colorblind_mode": "none"  # "none", "deuteranopia", "protanopia", "tritanopia"
 	}
 
 
@@ -215,6 +220,38 @@ func get_shadow_path() -> String:
 		return "user://shadow_journal.json"
 	else:
 		return "user://shadow_journal_slot_" + str(current_slot) + ".json"
+
+
+## Get the seed garden plants path for the current slot
+func get_plants_path() -> String:
+	if current_slot == 0:
+		return "user://seed_garden_plants.json"
+	else:
+		return "user://seed_garden_plants_slot_" + str(current_slot) + ".json"
+
+
+## Get the wishing fountain wishes path for the current slot
+func get_wishes_path() -> String:
+	if current_slot == 0:
+		return "user://wishing_fountain.json"
+	else:
+		return "user://wishing_fountain_slot_" + str(current_slot) + ".json"
+
+
+## Get the tide pool creatures path for the current slot
+func get_creatures_path() -> String:
+	if current_slot == 0:
+		return "user://tide_pool_creatures.json"
+	else:
+		return "user://tide_pool_creatures_slot_" + str(current_slot) + ".json"
+
+
+## Get the message bottles path for the current slot
+func get_bottles_path() -> String:
+	if current_slot == 0:
+		return "user://message_bottles.json"
+	else:
+		return "user://message_bottles_slot_" + str(current_slot) + ".json"
 
 
 ## Save to a specific slot (1-3) with optional custom name

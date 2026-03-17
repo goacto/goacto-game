@@ -279,6 +279,132 @@ horizontal_alignment = 1
 [node name="CollisionShape" type="CollisionShape2D" parent="GameWorld/IsometricBase/Zones/MemoryArchive/InteractionArea"]
 shape = SubResource("CircleShape2D_zone")
 
+[node name="SeedGarden" type="Node2D" parent="GameWorld/IsometricBase/Zones"]
+position = Vector2(0, -280)
+
+[node name="BasePlatform" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/SeedGarden"]
+color = Color(0.12, 0.18, 0.12, 1)
+polygon = PackedVector2Array(-110, 0, 0, -55, 110, 0, 0, 55)
+
+[node name="PlatformTop" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/SeedGarden"]
+position = Vector2(0, -6)
+color = Color(0.18, 0.25, 0.18, 1)
+polygon = PackedVector2Array(-100, 0, 0, -50, 100, 0, 0, 50)
+
+[node name="SoilBed1" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/SeedGarden"]
+position = Vector2(-45, -10)
+color = Color(0.25, 0.18, 0.12, 1)
+polygon = PackedVector2Array(-30, 0, 0, -18, 30, 0, 0, 18)
+
+[node name="SoilBed2" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/SeedGarden"]
+position = Vector2(45, -10)
+color = Color(0.25, 0.18, 0.12, 1)
+polygon = PackedVector2Array(-30, 0, 0, -18, 30, 0, 0, 18)
+
+[node name="Sprout1" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/SeedGarden"]
+position = Vector2(-45, -28)
+color = Color(0.4, 0.7, 0.45, 1)
+polygon = PackedVector2Array(-3, 12, -4, 0, 0, -15, 4, 0, 3, 12)
+
+[node name="Sprout2" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/SeedGarden"]
+position = Vector2(45, -25)
+color = Color(0.35, 0.65, 0.4, 1)
+polygon = PackedVector2Array(-2, 8, -3, 0, 0, -10, 3, 0, 2, 8)
+
+[node name="WateringCan" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/SeedGarden"]
+position = Vector2(70, 15)
+color = Color(0.45, 0.55, 0.7, 1)
+polygon = PackedVector2Array(-10, 5, -10, -8, 10, -8, 10, 5, 5, 8, -5, 8)
+
+[node name="WateringSpout" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/SeedGarden"]
+position = Vector2(82, 5)
+color = Color(0.45, 0.55, 0.7, 1)
+polygon = PackedVector2Array(0, 0, 12, -8, 15, -5, 3, 3)
+
+[node name="Glow" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/SeedGarden"]
+modulate = Color(1, 1, 1, 0.4)
+position = Vector2(0, -15)
+color = Color(0.5, 0.75, 0.5, 0.3)
+polygon = PackedVector2Array(-90, 35, -95, -20, 0, -50, 95, -20, 90, 35, 0, 50)
+
+[node name="Label" type="Label" parent="GameWorld/IsometricBase/Zones/SeedGarden"]
+offset_left = -60.0
+offset_top = 60.0
+offset_right = 60.0
+offset_bottom = 85.0
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.5, 0.8, 0.55, 1)
+text = "Seed Garden"
+horizontal_alignment = 1
+
+[node name="InteractionArea" type="Area2D" parent="GameWorld/IsometricBase/Zones/SeedGarden"]
+
+[node name="CollisionShape" type="CollisionShape2D" parent="GameWorld/IsometricBase/Zones/SeedGarden/InteractionArea"]
+shape = SubResource("CircleShape2D_zone")
+
+[node name="WishingFountain" type="Node2D" parent="GameWorld/IsometricBase/Zones"]
+position = Vector2(0, 80)
+
+[node name="BasePlatform" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/WishingFountain"]
+color = Color(0.15, 0.18, 0.2, 1)
+polygon = PackedVector2Array(-90, 0, 0, -50, 90, 0, 0, 50)
+
+[node name="FountainBase" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/WishingFountain"]
+position = Vector2(0, -8)
+color = Color(0.25, 0.28, 0.32, 1)
+polygon = PackedVector2Array(-55, 0, -50, -15, 50, -15, 55, 0, 50, 15, -50, 15)
+
+[node name="WaterBasin" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/WishingFountain"]
+position = Vector2(0, -12)
+color = Color(0.25, 0.4, 0.55, 0.9)
+polygon = PackedVector2Array(-45, 0, -40, -10, 40, -10, 45, 0, 40, 10, -40, 10)
+
+[node name="CenterPillar" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/WishingFountain"]
+position = Vector2(0, -35)
+color = Color(0.35, 0.38, 0.42, 1)
+polygon = PackedVector2Array(-12, 25, -12, -15, 12, -15, 12, 25)
+
+[node name="WaterSpout" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/WishingFountain"]
+position = Vector2(0, -55)
+color = Color(0.4, 0.6, 0.8, 0.7)
+polygon = PackedVector2Array(-4, 0, 0, -20, 4, 0)
+
+[node name="WaterDrops" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/WishingFountain"]
+position = Vector2(0, -65)
+color = Color(0.5, 0.7, 0.9, 0.5)
+polygon = PackedVector2Array(-15, 8, -8, 0, 0, -5, 8, 0, 15, 8)
+
+[node name="Coin1" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/WishingFountain"]
+position = Vector2(-20, -8)
+color = Color(0.9, 0.8, 0.4, 0.8)
+polygon = PackedVector2Array(-4, 0, 0, -3, 4, 0, 0, 3)
+
+[node name="Coin2" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/WishingFountain"]
+position = Vector2(15, -5)
+color = Color(0.85, 0.75, 0.35, 0.8)
+polygon = PackedVector2Array(-3, 0, 0, -2, 3, 0, 0, 2)
+
+[node name="Glow" type="Polygon2D" parent="GameWorld/IsometricBase/Zones/WishingFountain"]
+modulate = Color(1, 1, 1, 0.5)
+position = Vector2(0, -30)
+color = Color(0.4, 0.6, 0.8, 0.3)
+polygon = PackedVector2Array(-50, 30, -55, -15, 0, -45, 55, -15, 50, 30, 0, 45)
+
+[node name="Label" type="Label" parent="GameWorld/IsometricBase/Zones/WishingFountain"]
+offset_left = -70.0
+offset_top = 55.0
+offset_right = 70.0
+offset_bottom = 80.0
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.5, 0.7, 0.85, 1)
+text = "Wishing Fountain"
+horizontal_alignment = 1
+
+[node name="InteractionArea" type="Area2D" parent="GameWorld/IsometricBase/Zones/WishingFountain"]
+
+[node name="CollisionShape" type="CollisionShape2D" parent="GameWorld/IsometricBase/Zones/WishingFountain/InteractionArea"]
+shape = SubResource("CircleShape2D_zone")
+
 [node name="Player" type="Node2D" parent="GameWorld/IsometricBase"]
 position = Vector2(0, 180)
 

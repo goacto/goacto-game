@@ -82,7 +82,7 @@ color = Color(0.8, 0.95, 1, 0.35)
 polygon = PackedVector2Array(-1.5, 0, 0, -2, 1.5, 0, 0, 2)
 
 [node name="Window" type="Node2D" parent="GameWorld/IsometricBase"]
-position = Vector2(-350, -150)
+position = Vector2(-550, -80)
 
 [node name="Frame" type="Polygon2D" parent="GameWorld/IsometricBase/Window"]
 color = Color(0.25, 0.22, 0.3, 1)
@@ -146,47 +146,57 @@ horizontal_alignment = 1
 
 [node name="RoomFloor" type="Polygon2D" parent="GameWorld/IsometricBase"]
 color = Color(0.12, 0.1, 0.16, 1)
-polygon = PackedVector2Array(-550, 0, 0, -320, 550, 0, 0, 320)
+polygon = PackedVector2Array(-200, -580, 200, -580, 200, -200, 720, -200, 720, 200, 200, 200, 200, 580, -200, 580, -200, 200, -720, 200, -720, -200, -200, -200)
 
 [node name="RoomFloorEdge" type="Polygon2D" parent="GameWorld/IsometricBase"]
 color = Color(0.08, 0.07, 0.12, 1)
-polygon = PackedVector2Array(-550, 0, -550, 35, 0, 355, 550, 35, 550, 0, 0, 320)
+polygon = PackedVector2Array(-720, 200, -720, 240, -200, 240, -200, 620, 200, 620, 200, 240, 720, 240, 720, 200, 200, 200, 200, 580, -200, 580, -200, 200)
 
 [node name="FloorPattern" type="Node2D" parent="GameWorld/IsometricBase"]
-modulate = Color(1, 1, 1, 0.15)
+modulate = Color(1, 1, 1, 0.12)
 
 [node name="Line1" type="Line2D" parent="GameWorld/IsometricBase/FloorPattern"]
-points = PackedVector2Array(-420, 140, 140, -170)
+points = PackedVector2Array(-680, 0, 680, 0)
 width = 1.5
 default_color = Color(0.4, 0.35, 0.5, 1)
 
 [node name="Line2" type="Line2D" parent="GameWorld/IsometricBase/FloorPattern"]
-points = PackedVector2Array(-140, 170, 420, -140)
+points = PackedVector2Array(0, -540, 0, 540)
 width = 1.5
 default_color = Color(0.4, 0.35, 0.5, 1)
 
 [node name="Line3" type="Line2D" parent="GameWorld/IsometricBase/FloorPattern"]
-points = PackedVector2Array(-420, -140, 140, 170)
-width = 1.5
-default_color = Color(0.4, 0.35, 0.5, 1)
+points = PackedVector2Array(-680, -100, 680, -100)
+width = 1.0
+default_color = Color(0.35, 0.3, 0.45, 1)
 
 [node name="Line4" type="Line2D" parent="GameWorld/IsometricBase/FloorPattern"]
-points = PackedVector2Array(-140, -170, 420, 140)
-width = 1.5
-default_color = Color(0.4, 0.35, 0.5, 1)
+points = PackedVector2Array(-680, 100, 680, 100)
+width = 1.0
+default_color = Color(0.35, 0.3, 0.45, 1)
 
 [node name="Line5" type="Line2D" parent="GameWorld/IsometricBase/FloorPattern"]
-points = PackedVector2Array(-280, 0, 280, 0)
-width = 1.5
-default_color = Color(0.4, 0.35, 0.5, 1)
+points = PackedVector2Array(-100, -540, -100, 540)
+width = 1.0
+default_color = Color(0.35, 0.3, 0.45, 1)
 
 [node name="Line6" type="Line2D" parent="GameWorld/IsometricBase/FloorPattern"]
-points = PackedVector2Array(0, -160, 0, 160)
-width = 1.5
-default_color = Color(0.4, 0.35, 0.5, 1)
+points = PackedVector2Array(100, -540, 100, 540)
+width = 1.0
+default_color = Color(0.35, 0.3, 0.45, 1)
+
+[node name="Line7" type="Line2D" parent="GameWorld/IsometricBase/FloorPattern"]
+points = PackedVector2Array(-400, -50, 400, -50)
+width = 1.0
+default_color = Color(0.3, 0.28, 0.4, 1)
+
+[node name="Line8" type="Line2D" parent="GameWorld/IsometricBase/FloorPattern"]
+points = PackedVector2Array(-400, 50, 400, 50)
+width = 1.0
+default_color = Color(0.3, 0.28, 0.4, 1)
 
 [node name="Console" type="Node2D" parent="GameWorld/IsometricBase"]
-position = Vector2(280, -80)
+position = Vector2(0, 0)
 
 [node name="Desk" type="Polygon2D" parent="GameWorld/IsometricBase/Console"]
 color = Color(0.18, 0.15, 0.22, 1)
@@ -248,7 +258,7 @@ text = "Mindscape by GOACTO"
 horizontal_alignment = 1
 
 [node name="Bed" type="Node2D" parent="GameWorld/IsometricBase"]
-position = Vector2(-220, 200)
+position = Vector2(0, 400)
 
 [node name="Frame" type="Polygon2D" parent="GameWorld/IsometricBase/Bed"]
 color = Color(0.15, 0.12, 0.2, 1)
@@ -280,7 +290,7 @@ text = "Sleep Pod"
 horizontal_alignment = 1
 
 [node name="Bookshelf" type="Node2D" parent="GameWorld/IsometricBase"]
-position = Vector2(340, 200)
+position = Vector2(480, 0)
 
 [node name="Back" type="Polygon2D" parent="GameWorld/IsometricBase/Bookshelf"]
 color = Color(0.2, 0.16, 0.14, 1)
@@ -337,7 +347,7 @@ text = "Data Archive"
 horizontal_alignment = 1
 
 [node name="Plant" type="Node2D" parent="GameWorld/IsometricBase"]
-position = Vector2(-80, -200)
+position = Vector2(0, -420)
 
 [node name="Pot" type="Polygon2D" parent="GameWorld/IsometricBase/Plant"]
 color = Color(0.35, 0.25, 0.2, 1)
@@ -385,7 +395,7 @@ text = "Goactorian Fern"
 horizontal_alignment = 1
 
 [node name="Door" type="Node2D" parent="GameWorld/IsometricBase"]
-position = Vector2(-420, 80)
+position = Vector2(-550, 100)
 
 [node name="Frame" type="Polygon2D" parent="GameWorld/IsometricBase/Door"]
 color = Color(0.22, 0.18, 0.28, 1)
@@ -502,7 +512,7 @@ color = Color(0.5, 0.35, 0.6, 0.8)
 polygon = PackedVector2Array(-20, -3, 20, -3, 20, 3, -20, 3)
 
 [node name="Closet" type="Node2D" parent="GameWorld/IsometricBase"]
-position = Vector2(500, -150)
+position = Vector2(580, -100)
 
 [node name="AmbientGlow" type="Polygon2D" parent="GameWorld/IsometricBase/Closet"]
 modulate = Color(1, 1, 1, 0.15)
@@ -579,7 +589,7 @@ text = "Wardrobe"
 horizontal_alignment = 1
 
 [node name="Mirror" type="Node2D" parent="GameWorld/IsometricBase"]
-position = Vector2(550, 50)
+position = Vector2(580, 100)
 
 [node name="AmbientGlow" type="Polygon2D" parent="GameWorld/IsometricBase/Mirror"]
 modulate = Color(1, 1, 1, 0.12)

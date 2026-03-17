@@ -53,6 +53,11 @@ func _ready() -> void:
 	resume_button.pressed.connect(_close_pause_menu)
 	exit_button.pressed.connect(_travel_to_hub)
 
+	# Play mindscape music
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("play_music_mindscape"):
+		audio.play_music_mindscape()
+
 	setup_region({
 		"region_id": "south",
 		"region_name": "Southern Peaks",
@@ -2546,6 +2551,10 @@ func _save_alignment_check() -> void:
 	var xp_amount = 30
 	if GameManager and GameManager.has_method("add_aspect_experience"):
 		GameManager.add_aspect_experience("wisdom", xp_amount)
+
+	# Track for aspect quests
+	if GameManager:
+		GameManager.check_quests_for_trigger("values_check", {})
 
 	_alignment_ratings.clear()
 	_close_zone()

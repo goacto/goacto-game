@@ -22,6 +22,12 @@ signal settings_closed
 @onready var back_button: Button = $Panel/Margin/ScrollContainer/VBox/ButtonRow/BackButton
 @onready var test_voice_button: Button = $Panel/Margin/ScrollContainer/VBox/AudioSection/TestRow/TestVoiceButton
 
+# Accessibility UI
+@onready var font_size_option: OptionButton = $Panel/Margin/ScrollContainer/VBox/AccessibilitySection/FontSizeRow/FontSizeOption
+@onready var high_contrast_toggle: CheckButton = $Panel/Margin/ScrollContainer/VBox/AccessibilitySection/HighContrastRow/HighContrastToggle
+@onready var reduced_motion_toggle: CheckButton = $Panel/Margin/ScrollContainer/VBox/AccessibilitySection/ReducedMotionRow/ReducedMotionToggle
+@onready var colorblind_option: OptionButton = $Panel/Margin/ScrollContainer/VBox/AccessibilitySection/ColorblindRow/ColorblindOption
+
 # Save/Load UI
 @onready var slot1_label: Label = $Panel/Margin/ScrollContainer/VBox/SaveLoadSection/SlotRow1/Slot1Label
 @onready var slot2_label: Label = $Panel/Margin/ScrollContainer/VBox/SaveLoadSection/SlotRow2/Slot2Label
@@ -95,8 +101,15 @@ func _ready() -> void:
 	import_btn.pressed.connect(_show_import_dialog)
 	file_dialog.file_selected.connect(_on_file_selected)
 
+	# Connect accessibility signals
+	font_size_option.item_selected.connect(_on_font_size_changed)
+	high_contrast_toggle.toggled.connect(_on_high_contrast_toggled)
+	reduced_motion_toggle.toggled.connect(_on_reduced_motion_toggled)
+	colorblind_option.item_selected.connect(_on_colorblind_changed)
+
 	# Load current values
 	_load_settings()
+	_load_accessibility_settings()
 	_update_slot_labels()
 
 	# Setup button sounds
@@ -198,6 +211,64 @@ func _test_voice() -> void:
 		audio.play_voice(stream)
 	else:
 		print("[Settings] No test voice clip found at: ", test_path)
+
+
+# =============================================================================
+# ACCESSIBILITY
+# =============================================================================
+
+const FONT_SIZE_OPTIONS = ["small", "medium", "large"]
+const COLORBLIND_OPTIONS = ["none", "deuteranopia", "protanopia", "tritanopia"]
+
+
+func _load_accessibility_settings() -> void:
+	if not GameManager:
+		return
+
+	# Font size
+	var font_size = GameManager.get_font_size_scale()
+	var font_idx = 1  # Default to medium
+	if font_size < 0.9:
+		font_idx = 0  # Small
+	elif font_size > 1.1:
+		font_idx = 2  # Large
+	font_size_option.select(font_idx)
+
+	# High contrast
+	high_contrast_toggle.button_pressed = GameManager.is_high_contrast()
+
+	# Reduced motion
+	reduced_motion_toggle.button_pressed = GameManager.is_reduced_motion()
+
+	# Colorblind mode
+	var cb_mode = GameManager.get_colorblind_mode()
+	var cb_idx = COLORBLIND_OPTIONS.find(cb_mode)
+	if cb_idx >= 0:
+		colorblind_option.select(cb_idx)
+	else:
+		colorblind_option.select(0)
+
+
+func _on_font_size_changed(idx: int) -> void:
+	if idx >= 0 and idx < FONT_SIZE_OPTIONS.size():
+		GameManager.set_accessibility_setting("font_size", FONT_SIZE_OPTIONS[idx])
+		print("[Settings] Font size set to: ", FONT_SIZE_OPTIONS[idx])
+
+
+func _on_high_contrast_toggled(pressed: bool) -> void:
+	GameManager.set_accessibility_setting("high_contrast", pressed)
+	print("[Settings] High contrast: ", pressed)
+
+
+func _on_reduced_motion_toggled(pressed: bool) -> void:
+	GameManager.set_accessibility_setting("reduced_motion", pressed)
+	print("[Settings] Reduced motion: ", pressed)
+
+
+func _on_colorblind_changed(idx: int) -> void:
+	if idx >= 0 and idx < COLORBLIND_OPTIONS.size():
+		GameManager.set_accessibility_setting("colorblind_mode", COLORBLIND_OPTIONS[idx])
+		print("[Settings] Colorblind mode: ", COLORBLIND_OPTIONS[idx])
 
 
 func _on_back() -> void:

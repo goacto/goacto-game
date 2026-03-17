@@ -3,16 +3,16 @@
 ## Priority 1: Core Gameplay Polish
 
 ### Onboarding & First-Time Experience
-- [ ] Replace placeholder square icons in onboarding slides with proper themed icons
-- [ ] Add visual illustrations to each onboarding slide (mindscape visuals, habit examples)
-- [ ] Smooth transition from onboarding to first mindscape exploration
-- [ ] Tutorial tooltips for key UI elements on first visit
+- [x] Replace placeholder square icons in onboarding slides with proper themed icons (polygon graphics)
+- [x] Add visual illustrations to each onboarding slide (mindscape visuals, habit examples)
+- [x] Smooth transition from onboarding to first mindscape exploration
+- [x] Tutorial tooltips for key UI elements on first visit (hub, bedroom, regions)
 
 ### Habit System Enhancements
-- [ ] Add habit reordering via drag-and-drop (cleaner than arrow buttons)
-- [ ] Habit categories/tags for organization
-- [ ] Custom habit icons selection
-- [ ] Habit reminders/notifications integration
+- [x] Add habit reordering via drag-and-drop (drag handles, visual preview, drop highlighting)
+- [x] Habit categories/tags for organization (comma-separated tags, tag colors)
+- [x] Custom habit icons selection (25+ icons including emoji)
+- [x] Habit reminders/notifications (per-habit time settings, day selection, in-app notifications)
 - [x] Weekly/monthly habit statistics view (toggle, completion rates, per-habit stats)
 - [x] Habit streaks celebration animations (confetti, sparkles at 3/7/14/21/30/60/90/100 days)
 
@@ -75,38 +75,40 @@
 - [x] Values Compass in Goal Compass (South)
 - [x] Kindness Log in Aspect Shrine (West)
 - [x] Constellation mini-game in observatory
-- [ ] Northern Gardens expansion (more interactive plants)
-- [ ] Eastern Shores activities
-- [ ] Western Depths graphics enhancement
+- [x] Northern Gardens expansion (Seed Garden with intention planting, Wishing Fountain)
+- [x] Eastern Shores activities (Tide Pool with wisdom creatures, Message Bottle to future self)
+- [x] Western Depths expansion (Healing Pool with meditation, Memory Cave with journey stats)
 
 ### Audio
 - [x] Generate core SFX (UI, focus, habits, portals)
 - [x] Wire up ambient sounds to all scenes
-- [ ] Add music tracks for different areas
+- [x] Add music tracks for different areas (hub, ship, focus, regions)
 - [ ] Voice acting for key dialogue (Mom, Narrator)
-- [ ] Dynamic audio mixing based on game state
+- [x] Dynamic audio mixing based on game state (8 audio states, mood modifiers, smooth transitions)
 
 ---
 
 ## Priority 3: Narrative & Content
 
 ### Story Progression
-- [ ] Chapter system with clear progression
-- [ ] Cutscene system for key story moments
-- [ ] Character relationship tracking (Mom, Aspects)
+- [x] Chapter system with clear progression (10 chapters, 3 acts, objectives, progress tracking)
+- [x] Cutscene system for key story moments (full dialogue system, typewriter, voice support)
+- [x] Chapter UI panel with journey overview and objectives
+- [x] Cutscene Theater for replaying past scenes
+- [x] Character relationship tracking (Mom, Aspects, bond levels, progress tracking, UI display)
 - [ ] Multiple ending possibilities based on habits
 
 ### Aspects (Discipline, Focus, etc.)
-- [ ] Aspect awakening ceremonies
-- [ ] Aspect dialogue treesww
-- [ ] Aspect-specific quests/challenges
-- [ ] Aspect evolution visuals
+- [x] Aspect awakening ceremonies (visual ceremony at levels 2/3/5/7/10 with speeches)
+- [x] Aspect dialogue trees (advice, encouragement, challenges, progress sharing)
+- [x] Aspect-specific quests/challenges (18 quests, 3 per aspect, difficulty tiers, auto-tracking, rewards)
+- [x] Aspect evolution visuals (dynamic shrine graphics, evolution tiers, XP progress bars, level-based effects)
 
 ### Lore & World-Building
-- [ ] Data archive entries (readable lore)
-- [ ] Photo album with family history
-- [ ] Ship logs and mission details
-- [ ] Goactorian culture exposition
+- [x] Data archive entries (expanded to 11 books with ship logs, traditions, aspects, letters, mission briefing)
+- [x] Photo album with family history (12 photos, chapter-based unlocking, family memories)
+- [x] Ship logs and mission details (included in Data Archive)
+- [x] Goactorian culture exposition (included in Data Archive)
 
 ---
 
@@ -117,8 +119,8 @@
 - [x] Unlockable cosmetics/decorations (Shop with skin colors, outfits, accessories)
 - [x] Player appearance rendering (equipped items show on player sprite)
 - [x] Campaign progression gates (bedroom items unlock with engagement)
-- [ ] Evolution stages for mindscape (visual changes)
-- [ ] Achievement system with rewards
+- [x] Evolution stages for mindscape (5 tiers with crystals, floating islands, runes, mystical aura)
+- [x] Achievement system with rewards (45+ achievements, XP rewards, notifications, progress tracking)
 - [x] Garden patches evolution based on habits
 
 ### Social Features (Future)
@@ -128,11 +130,11 @@
 - [ ] Leaderboards (opt-in)
 
 ### Accessibility
-- [ ] Font size options
-- [ ] High contrast mode
+- [x] Font size options (small/medium/large in Settings)
+- [x] High contrast mode (toggle in Settings)
 - [ ] Screen reader support
-- [ ] Reduced motion option
-- [ ] Colorblind-friendly indicators
+- [x] Reduced motion option (toggle in Settings)
+- [x] Colorblind-friendly indicators (deuteranopia/protanopia/tritanopia modes in Settings)
 
 ---
 
@@ -205,16 +207,41 @@
 - [x] Script Lab template library (18 curated templates across all domains/operational types)
 - [x] Relationship Health Tracker (RelationshipManager autoload, 6 categories, 10 interaction types, health levels, streaks, Compassion XP rewards)
 - [x] CLAUDE.md comprehensive app overview document (~2100 lines, full story bible, system documentation)
+- [x] Northern Gardens Expansion (Seed Garden with 6 seed types, intention planting, watering system, growth levels; Wishing Fountain with wish casting, categories, fulfillment tracking)
+- [x] Eastern Shores Activities (Tide Pool with 10 wisdom creatures collection, seek wisdom feature; Message Bottle with timed delivery to future self, archive)
+- [x] Achievement System Enhanced (45+ achievements across 6 categories, XP rewards, progress tracking, notification popups, achievement pedestals in hub)
+- [x] Western Depths Expansion (Healing Pool with breathing exercises/meditation, Memory Cave with journey stats/history review)
+- [x] Chapter System & Story UI (10 chapters across 3 acts, progress tracking, objectives, journey panel in hub)
+- [x] Cutscene Theater (replay past scenes, 13 cutscenes with full dialogue, character portraits, transitions)
+- [x] Aspect Awakening Ceremonies (level 2/3/5/7/10 ceremonies with unique speeches per aspect)
+- [x] Music wired to all scenes (hub, ship, focus, all mindscape regions)
+- [x] Accessibility Options (font size, high contrast, reduced motion, colorblind modes)
+- [x] Compact progress popup (bottom-left corner, horizontal stats bar)
+- [x] Habit custom icons (25+ emoji icons for habits)
+- [x] Habit tags system (comma-separated tags, tag filtering in habits view)
+- [x] Aspect dialogue enhancements (challenges, progress sharing, contextual responses)
+- [x] Character Relationship Tracking (Mom & 6 aspects, bond levels, progress tracking, UI display in Progress tab)
+- [x] Aspect Quest System (18 quests across 6 aspects, 3 difficulty tiers, auto-tracking, XP & bond rewards)
+- [x] Aspect Evolution Visuals (dynamic shrine graphics, evolution tiers, animated rings/particles, XP progress bars)
+- [x] Data Archive Expansion (11 lore books: ship logs, Goactorian traditions, Six Aspects study, Mom's letters, mission briefing)
+- [x] Script Lab template preview (View All Lines button shows full 25-line script before applying)
+- [x] Family Photo Album (12 photos with chapter-based unlocking, family memories, visual representations)
+- [x] Dynamic Audio Mixing (8 audio states, mood-based modifiers, smooth crossfade transitions, integration with focus/meditation/achievements)
+- [x] Accessibility Settings UI (font size, high contrast, reduced motion, colorblind modes in Settings menu)
+- [x] Bedroom tutorial tooltips (first-time visitor guidance for key interactions)
+- [x] Sleep pod save/load menu (Quick Save, Quick Load, Manage Save Slots)
+- [x] Master key photo album unlock (master key holders can view all family photos)
+- [x] Mindscape Evolution Stages (5 tiers: platform crystals, floating islands, ancient runes, mystical aura, tier-up celebrations)
+- [x] Habit Reminders System (per-habit time/day settings, in-app notifications, reminder UI)
 
 ---
 
 ## Immediate Next Steps (Suggested)
 
-1. **Northern Gardens Expansion** - More interactive plants and activities
-2. **Eastern Shores Activities** - Water-themed interactive elements
-3. **Chapter System** - Clear story progression with cutscenes
-4. **Music Tracks** - Add ambient music for different areas
-5. **Accessibility Options** - Font size, high contrast, colorblind modes
+1. **Multiple Endings** - Story branches based on habits
+2. **Voice acting for key dialogue** - Mom, Narrator voices
+3. **Screen reader support** - Accessibility enhancement
+4. **Code refactoring** - Reduce duplicate code across scenes
 
 ---
 

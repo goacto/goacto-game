@@ -34,7 +34,7 @@ var is_muted: bool = false
 
 # Player movement
 var player_speed: float = 280.0
-var player_bounds: Rect2 = Rect2(-700, -400, 1400, 900)  # Expanded bedroom
+var player_bounds: Rect2 = Rect2(-680, -540, 1360, 1080)  # Expanded plus-shaped bedroom
 
 # Camera
 var camera_zoom: float = 0.85
@@ -67,12 +67,21 @@ var console_visual: Node2D = null
 var closet_unlocked: bool = false
 var mirror_unlocked: bool = false
 var bookshelf_unlocked: bool = false
+var photo_album_unlocked: bool = false
 var closet_visual: Node2D = null
 var mirror_visual: Node2D = null
 var bookshelf_visual: Node2D = null
+var photo_album_visual: Node2D = null
 var closet_lock_icon: Node2D = null
 var mirror_lock_icon: Node2D = null
 var bookshelf_lock_icon: Node2D = null
+var photo_album_lock_icon: Node2D = null
+
+# Photo Album detail view
+var photo_album_panel: Control = null
+var photo_album_time: float = 0.0
+var selected_photo_index: int = 0
+var unlocked_photos: Array = []
 
 # Focus Analytics
 var focus_dashboard: Control = null
@@ -104,6 +113,11 @@ const INTERACTIVE_OBJECTS = {
 		"name": "Goactorian Fern",
 		"prompt": "Press SPACE to examine",
 		"action": "examine_plant"
+	},
+	"PhotoAlbum": {
+		"name": "Family Photo Album",
+		"prompt": "Press SPACE to open album",
+		"action": "open_photo_album"
 	},
 	"Door": {
 		"name": "Room Door",
@@ -137,19 +151,25 @@ const INTERACTIVE_OBJECTS = {
 	}
 }
 
-# Object positions for proximity detection (expanded layout)
+# Object positions for proximity detection (expanded plus-shaped layout)
 var object_positions: Dictionary = {
-	"Console": Vector2(280, -80),
-	"Window": Vector2(-450, -200),
-	"Bed": Vector2(-280, 250),
-	"Bookshelf": Vector2(400, 250),
-	"Plant": Vector2(-100, -250),
-	"Door": Vector2(-420, 80),  # Matches visual position
-	"Closet": Vector2(500, -150),
-	"DecorationSpot": Vector2(450, 50),
-	"Mirror": Vector2(550, 50),
-	"ConsolePlacementSpot": Vector2(280, -80),  # Same spot as console
-	"FocusAnalytics": Vector2(100, -200)  # Near console, unlocks after first session
+	# Left wing
+	"Window": Vector2(-550, -80),
+	"Door": Vector2(-550, 100),
+	# Top wing
+	"Plant": Vector2(0, -420),
+	"FocusAnalytics": Vector2(0, -300),
+	# Center area
+	"Console": Vector2(0, 0),
+	"ConsolePlacementSpot": Vector2(0, 0),
+	# Right wing
+	"Closet": Vector2(580, -100),
+	"Mirror": Vector2(580, 100),
+	"Bookshelf": Vector2(480, 0),
+	# Bottom wing
+	"Bed": Vector2(0, 400),
+	"PhotoAlbum": Vector2(0, 500),
+	"DecorationSpot": Vector2(350, 0)
 }
 
 
@@ -217,6 +237,9 @@ func _ready() -> void:
 
 	# Load any placed room decorations
 	_load_placed_decorations()
+
+	# Show tutorial tooltips for first-time visitors
+	_check_bedroom_tutorials()
 
 	# Check if player has console in inventory - show hint
 	if GameManager.has_item("mindscape_console") and not console_placed:
@@ -292,8 +315,16 @@ func _input(event: InputEvent) -> void:
 			_close_bookshelf_detail()
 			viewport.set_input_as_handled()
 			return
+		if photo_album_panel and photo_album_panel.visible:
+			_close_photo_album()
+			viewport.set_input_as_handled()
+			return
 		if customization_panel:
 			_close_customization_panel()
+			viewport.set_input_as_handled()
+			return
+		if mirror_panel:
+			_close_mirror_view()
 			viewport.set_input_as_handled()
 			return
 		if decoration_panel:
@@ -302,6 +333,14 @@ func _input(event: InputEvent) -> void:
 			return
 		if dialogue_panel.visible:
 			_close_dialogue()
+			viewport.set_input_as_handled()
+			return
+		if focus_dashboard:
+			_close_focus_dashboard()
+			viewport.set_input_as_handled()
+			return
+		if sleep_pod_menu:
+			_close_sleep_pod_menu()
 			viewport.set_input_as_handled()
 			return
 		# If nothing is open, open pause menu
@@ -341,6 +380,13 @@ func _input(event: InputEvent) -> void:
 	if bookshelf_detail_panel and bookshelf_detail_panel.visible:
 		if event.is_action_pressed("ui_accept"):
 			_close_bookshelf_detail()
+			viewport.set_input_as_handled()
+		return
+
+	# Close photo album view with SPACE
+	if photo_album_panel and photo_album_panel.visible:
+		if event.is_action_pressed("ui_accept"):
+			_close_photo_album()
 			viewport.set_input_as_handled()
 		return
 
@@ -527,6 +573,14 @@ func _get_bedroom_item_lock_info(object_id: String) -> Dictionary:
 					"title": "Archive Locked",
 					"message": "The Data Archive's access panel blinks red.\n\n\"Personal records required. Submit at least one journal entry to initialize the archive.\"\n\nVisit the Reflection Pool in the Mindscape to write a journal entry."
 				}
+		"PhotoAlbum":
+			if not photo_album_unlocked:
+				return {
+					"locked": true,
+					"hint": "Complete Chapter 1 to unlock",
+					"title": "Album Sealed",
+					"message": "The Family Photo Album's holographic seal glows faintly.\n\n\"Memory restoration in progress. Complete Chapter 1: The Awakening to unlock family records.\"\n\nProgress through your journey to restore these memories."
+				}
 	return {"locked": false, "hint": "", "title": "", "message": ""}
 
 
@@ -574,6 +628,8 @@ func _interact_with_object(object_id: String) -> void:
 			_place_console_from_inventory()
 		"open_focus_dashboard":
 			_open_focus_dashboard()
+		"open_photo_album":
+			_show_photo_album_view()
 
 
 func _show_locked_item_dialogue(lock_info: Dictionary) -> void:
@@ -666,7 +722,7 @@ func _check_console_state() -> void:
 		if console_visual:
 			console_visual.visible = true
 		if "Console" not in object_positions:
-			object_positions["Console"] = Vector2(280, -80)
+			object_positions["Console"] = Vector2(0, 0)
 		object_positions.erase("ConsolePlacementSpot")
 	elif has_console_in_inventory:
 		# Console in inventory but not placed - show placement spot
@@ -676,7 +732,7 @@ func _check_console_state() -> void:
 			headset_glow.visible = false
 		object_positions.erase("Console")
 		if "ConsolePlacementSpot" not in object_positions:
-			object_positions["ConsolePlacementSpot"] = Vector2(280, -80)
+			object_positions["ConsolePlacementSpot"] = Vector2(0, 0)
 		# Create a visual indicator for placement spot
 		_setup_placement_spot_indicator()
 	else:
@@ -708,6 +764,7 @@ func _check_bedroom_items_state() -> void:
 		closet_unlocked = true
 		mirror_unlocked = true
 		bookshelf_unlocked = true
+		photo_album_unlocked = true
 		console_placed = true
 
 		# Also mark them as installed in save data for persistence
@@ -719,6 +776,8 @@ func _check_bedroom_items_state() -> void:
 			installed_items.append("data_archive")
 		if "mindscape_console" not in installed_items:
 			installed_items.append("mindscape_console")
+		if "photo_album" not in installed_items:
+			installed_items.append("photo_album")
 		GameManager.player_data["bedroom_items_installed"] = installed_items
 		GameManager.player_data["console_placed_in_bedroom"] = true
 	else:
@@ -726,11 +785,16 @@ func _check_bedroom_items_state() -> void:
 		closet_unlocked = "wardrobe" in installed_items or GameManager.player_data.get("closet_unlocked", false)
 		mirror_unlocked = "mirror" in installed_items or GameManager.player_data.get("mirror_unlocked", false)
 		bookshelf_unlocked = "data_archive" in installed_items or GameManager.player_data.get("bookshelf_unlocked", false)
+		# Photo album unlocks after Chapter 1 completion
+		var current_chapter = GameManager.player_data.get("current_chapter", 1)
+		var chapters_completed = GameManager.player_data.get("chapters_completed", [])
+		photo_album_unlocked = "photo_album" in installed_items or current_chapter > 1 or 1 in chapters_completed
 
 	# Find visual nodes
 	closet_visual = isometric_base.get_node_or_null("Closet")
 	mirror_visual = isometric_base.get_node_or_null("Mirror")
 	bookshelf_visual = isometric_base.get_node_or_null("Bookshelf")
+	photo_album_visual = isometric_base.get_node_or_null("PhotoAlbum")
 
 	# Apply visibility based on unlock state
 	_apply_bedroom_item_visibility()
@@ -771,7 +835,7 @@ func _check_master_key_unlock() -> void:
 
 func _play_master_unlock_effect() -> void:
 	## Play a visual effect on all unlocked bedroom items
-	var items_to_flash = [console_visual, closet_visual, mirror_visual, bookshelf_visual]
+	var items_to_flash = [console_visual, closet_visual, mirror_visual, bookshelf_visual, photo_album_visual]
 
 	for item in items_to_flash:
 		if item and item.visible:
@@ -797,7 +861,7 @@ func _apply_bedroom_item_visibility() -> void:
 			closet_visual.modulate = Color(0.5, 0.5, 0.6, 0.7)  # Dimmed, slightly blue
 			_create_lock_icon("closet", Vector2(500, -150))
 		if "Closet" not in object_positions:
-			object_positions["Closet"] = Vector2(500, -150)
+			object_positions["Closet"] = Vector2(580, -100)
 
 	# Mirror - always visible, dimmed if locked
 	if mirror_visual:
@@ -809,7 +873,7 @@ func _apply_bedroom_item_visibility() -> void:
 			mirror_visual.modulate = Color(0.5, 0.5, 0.6, 0.7)
 			_create_lock_icon("mirror", Vector2(550, 50))
 		if "Mirror" not in object_positions:
-			object_positions["Mirror"] = Vector2(550, 50)
+			object_positions["Mirror"] = Vector2(580, 100)
 
 	# Bookshelf (Data Archive) - always visible, dimmed if locked
 	if bookshelf_visual:
@@ -821,13 +885,25 @@ func _apply_bedroom_item_visibility() -> void:
 			bookshelf_visual.modulate = Color(0.5, 0.5, 0.6, 0.7)
 			_create_lock_icon("bookshelf", Vector2(400, 250))
 		if "Bookshelf" not in object_positions:
-			object_positions["Bookshelf"] = Vector2(400, 250)
+			object_positions["Bookshelf"] = Vector2(480, 0)
+
+	# Photo Album - create visual if doesn't exist, manage lock state
+	if not photo_album_visual:
+		_create_photo_album_visual()
+	if photo_album_visual:
+		photo_album_visual.visible = true
+		if photo_album_unlocked:
+			photo_album_visual.modulate = Color(1.0, 1.0, 1.0, 1.0)
+			_remove_lock_icon("photo_album")
+		else:
+			photo_album_visual.modulate = Color(0.5, 0.5, 0.6, 0.7)
+			_create_lock_icon("photo_album", Vector2(300, 150))
 
 	# Console visibility (in case master key was used)
 	if console_visual and console_placed:
 		console_visual.visible = true
 		if "Console" not in object_positions:
-			object_positions["Console"] = Vector2(280, -80)
+			object_positions["Console"] = Vector2(0, 0)
 		if headset_glow:
 			headset_glow.visible = true
 
@@ -839,6 +915,7 @@ func _create_lock_icon(item_id: String, position: Vector2) -> void:
 		"closet": existing_icon = closet_lock_icon
 		"mirror": existing_icon = mirror_lock_icon
 		"bookshelf": existing_icon = bookshelf_lock_icon
+		"photo_album": existing_icon = photo_album_lock_icon
 
 	if existing_icon:
 		return  # Already exists
@@ -911,6 +988,7 @@ func _create_lock_icon(item_id: String, position: Vector2) -> void:
 		"closet": closet_lock_icon = lock_icon
 		"mirror": mirror_lock_icon = lock_icon
 		"bookshelf": bookshelf_lock_icon = lock_icon
+		"photo_album": photo_album_lock_icon = lock_icon
 
 
 func _remove_lock_icon(item_id: String) -> void:
@@ -926,6 +1004,9 @@ func _remove_lock_icon(item_id: String) -> void:
 		"bookshelf":
 			icon = bookshelf_lock_icon
 			bookshelf_lock_icon = null
+		"photo_album":
+			icon = photo_album_lock_icon
+			photo_album_lock_icon = null
 
 	if icon:
 		icon.queue_free()
@@ -933,7 +1014,7 @@ func _remove_lock_icon(item_id: String) -> void:
 
 func _animate_lock_icons(delta: float) -> void:
 	## Animate lock icons with gentle pulsing and floating motion
-	var lock_icons = [closet_lock_icon, mirror_lock_icon, bookshelf_lock_icon]
+	var lock_icons = [closet_lock_icon, mirror_lock_icon, bookshelf_lock_icon, photo_album_lock_icon]
 
 	for icon in lock_icons:
 		if not icon:
@@ -968,7 +1049,7 @@ func _setup_placement_spot_indicator() -> void:
 
 	placement_indicator = Node2D.new()
 	placement_indicator.name = "PlacementIndicator"
-	placement_indicator.position = Vector2(280, -80)
+	placement_indicator.position = Vector2(0, 0)
 
 	# Glowing pedestal base
 	var base_glow = Polygon2D.new()
@@ -1072,6 +1153,10 @@ func _animate_room(delta: float) -> void:
 	# Animate bookshelf detail view if visible
 	if bookshelf_detail_panel and bookshelf_detail_panel.visible:
 		_update_bookshelf_detail(delta)
+
+	# Animate photo album view if visible
+	if photo_album_panel and photo_album_panel.visible:
+		_update_photo_album(delta)
 
 	# Animate headset glow
 	if headset_glow:
@@ -2160,15 +2245,43 @@ func _open_sleep_pod_menu() -> void:
 	dream_btn.pressed.connect(_open_dream_viewer)
 	vbox.add_child(dream_btn)
 
-	var save_btn = Button.new()
-	save_btn.text = "Save Progress"
-	save_btn.custom_minimum_size = Vector2(250, 50)
-	save_btn.add_theme_font_size_override("font_size", 16)
-	save_btn.pressed.connect(func():
+	# Quick Save button
+	var quick_save_btn = Button.new()
+	quick_save_btn.text = "Quick Save"
+	quick_save_btn.custom_minimum_size = Vector2(250, 50)
+	quick_save_btn.add_theme_font_size_override("font_size", 16)
+	quick_save_btn.add_theme_color_override("font_color", Color(0.5, 0.8, 0.6))
+	quick_save_btn.pressed.connect(func():
+		SaveManager.save_game()
+		_play_sfx("res://audio/sfx/confirm.wav")
+		_close_sleep_pod_menu()
+		_show_dialogue("Progress Saved", "Your journey has been saved to the Sleep Pod's memory banks.\n\nAuto-save slot updated.")
+	)
+	vbox.add_child(quick_save_btn)
+
+	# Quick Load button (load last auto-save)
+	var quick_load_btn = Button.new()
+	quick_load_btn.text = "Quick Load"
+	quick_load_btn.custom_minimum_size = Vector2(250, 50)
+	quick_load_btn.add_theme_font_size_override("font_size", 16)
+	quick_load_btn.add_theme_color_override("font_color", Color(0.5, 0.7, 0.9))
+	quick_load_btn.pressed.connect(func():
+		_close_sleep_pod_menu()
+		_confirm_quick_load()
+	)
+	vbox.add_child(quick_load_btn)
+
+	# Manage Saves button (full save/load panel)
+	var manage_btn = Button.new()
+	manage_btn.text = "Manage Save Slots"
+	manage_btn.custom_minimum_size = Vector2(250, 50)
+	manage_btn.add_theme_font_size_override("font_size", 16)
+	manage_btn.add_theme_color_override("font_color", Color(0.8, 0.75, 0.6))
+	manage_btn.pressed.connect(func():
 		_close_sleep_pod_menu()
 		_show_save_panel()
 	)
-	vbox.add_child(save_btn)
+	vbox.add_child(manage_btn)
 
 	var rest_btn = Button.new()
 	rest_btn.text = "Rest & Meditate"
@@ -2195,6 +2308,84 @@ func _close_sleep_pod_menu() -> void:
 	if sleep_pod_menu:
 		sleep_pod_menu.queue_free()
 		sleep_pod_menu = null
+
+
+func _confirm_quick_load() -> void:
+	# Show confirmation dialog before loading
+	var confirm_panel = PanelContainer.new()
+	confirm_panel.name = "QuickLoadConfirm"
+
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.08, 0.06, 0.1, 0.98)
+	style.border_color = Color(0.5, 0.7, 0.9, 0.7)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(10)
+	confirm_panel.add_theme_stylebox_override("panel", style)
+
+	confirm_panel.set_anchors_preset(Control.PRESET_CENTER)
+	confirm_panel.offset_left = -200
+	confirm_panel.offset_right = 200
+	confirm_panel.offset_top = -120
+	confirm_panel.offset_bottom = 120
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 25)
+	margin.add_theme_constant_override("margin_right", 25)
+	margin.add_theme_constant_override("margin_top", 20)
+	margin.add_theme_constant_override("margin_bottom", 20)
+	confirm_panel.add_child(margin)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 15)
+	margin.add_child(vbox)
+
+	var title = Label.new()
+	title.text = "Load Last Save?"
+	title.add_theme_font_size_override("font_size", 22)
+	title.add_theme_color_override("font_color", Color(0.5, 0.7, 0.9))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(title)
+
+	var warning = Label.new()
+	warning.text = "Any unsaved progress will be lost.\nAre you sure you want to reload?"
+	warning.add_theme_font_size_override("font_size", 14)
+	warning.add_theme_color_override("font_color", Color(0.8, 0.7, 0.6))
+	warning.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	warning.autowrap_mode = TextServer.AUTOWRAP_WORD
+	vbox.add_child(warning)
+
+	var btn_row = HBoxContainer.new()
+	btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	btn_row.add_theme_constant_override("separation", 20)
+	vbox.add_child(btn_row)
+
+	var cancel_btn = Button.new()
+	cancel_btn.text = "Cancel"
+	cancel_btn.custom_minimum_size = Vector2(100, 45)
+	cancel_btn.add_theme_font_size_override("font_size", 16)
+	cancel_btn.pressed.connect(func():
+		confirm_panel.queue_free()
+		in_dialogue = false
+	)
+	btn_row.add_child(cancel_btn)
+
+	var load_btn = Button.new()
+	load_btn.text = "Load"
+	load_btn.custom_minimum_size = Vector2(100, 45)
+	load_btn.add_theme_font_size_override("font_size", 16)
+	load_btn.add_theme_color_override("font_color", Color(0.5, 0.8, 0.9))
+	load_btn.pressed.connect(func():
+		confirm_panel.queue_free()
+		_play_sfx("res://audio/sfx/confirm.wav")
+		# Load the auto-save
+		SaveManager.load_game()
+		# Reload the current scene to apply loaded data
+		get_tree().reload_current_scene()
+	)
+	btn_row.add_child(load_btn)
+
+	in_dialogue = true
+	add_child(confirm_panel)
 
 
 func _open_dream_viewer() -> void:
@@ -2483,7 +2674,7 @@ func _setup_personal_items() -> void:
 
 	# Holographic photo frame near bookshelf - only if bookshelf is unlocked
 	if bookshelf_unlocked and "Bookshelf" in object_positions:
-		var bookshelf_pos = object_positions.get("Bookshelf", Vector2(340, 200))
+		var bookshelf_pos = object_positions.get("Bookshelf", Vector2(480, 0))
 		_create_photo_frame(bookshelf_pos + Vector2(-60, -30))
 
 	# Floating trinket near bed
@@ -2842,6 +3033,41 @@ const BOOKS_DATA = [
 		"color": Color(0.5, 0.45, 0.35),
 		"voice_path": "res://audio/voice/bedroom/books/book_discipline.ogg",
 		"description": "An ancient Goactorian manuscript on the virtue of discipline and self-mastery.\n\n\"Discipline is not restriction - it is freedom from the tyranny of impulse.\"\n\nThe first Aspect you will awaken draws from these teachings."
+	},
+	{
+		"title": "The Stellar Wanderer's Log",
+		"author": "Ship AI 'Lumina'",
+		"color": Color(0.25, 0.35, 0.55),
+		"voice_path": "res://audio/voice/bedroom/books/book_ship_log.ogg",
+		"description": "Mission Log - Sol Calendar Year 2847:\n\nThe Stellar Wanderer continues its 47-year journey to the Cygnus Arm. Current assignment: Agent Goacto, tasked with guiding a human consciousness toward full potential.\n\nShip systems nominal. Mindscape Chamber operating at 94.7% efficiency. The human shows promising signs of growth.\n\n\"Every light-year traveled brings us closer to proving that consciousness, once nurtured, can transcend its origins.\""
+	},
+	{
+		"title": "Goactorian Traditions",
+		"author": "Elder Council Archives",
+		"color": Color(0.6, 0.45, 0.55),
+		"voice_path": "res://audio/voice/bedroom/books/book_traditions.ogg",
+		"description": "Volume VII - Cultural Foundations:\n\nThe Goactorian people have cultivated their mindscapes for over 10,000 cycles. Each citizen tends an inner garden, growing aspects of their consciousness as a farmer grows crops.\n\nThe Six Aspects - Discipline, Courage, Creativity, Compassion, Wisdom, and Vitality - were first identified by the Sage of the Crystal Valleys.\n\n\"A Goactorian is never truly alone. Within each mind dwell six faithful companions, waiting to be awakened.\""
+	},
+	{
+		"title": "The Six Aspects: A Study",
+		"author": "Philosopher Ven'kai",
+		"color": Color(0.55, 0.35, 0.6),
+		"voice_path": "res://audio/voice/bedroom/books/book_aspects.ogg",
+		"description": "A comprehensive study of the six aspects of consciousness:\n\n• Discipline - The foundation, providing structure and consistency\n• Courage - The spark, pushing past fear into growth\n• Creativity - The weaver, making new patterns from old threads\n• Compassion - The healer, binding self to others with kindness\n• Wisdom - The sage, seeing truth beyond illusion\n• Vitality - The flame, sustaining energy and health\n\n\"All six must be nurtured. Neglect one, and the mindscape withers.\""
+	},
+	{
+		"title": "Letters from Goactoria",
+		"author": "Mom (Lumina)",
+		"color": Color(0.7, 0.55, 0.4),
+		"voice_path": "res://audio/voice/bedroom/books/book_letters.ogg",
+		"description": "A collection of holo-letters from Mom, preserved for moments of homesickness:\n\n\"My dear child,\n\nThe crystal moons are bright tonight. I think of you out there among the stars, carrying our hopes with you.\n\nRemember: you weren't chosen for this mission because you were already perfect. You were chosen because you have the capacity to grow - and the heart to help others grow too.\n\nYour human doesn't know how lucky they are to have you.\n\nWith all my love,\nMom\""
+	},
+	{
+		"title": "Mission Briefing: Earth",
+		"author": "Goactorian High Council",
+		"color": Color(0.35, 0.45, 0.4),
+		"voice_path": "res://audio/voice/bedroom/books/book_mission.ogg",
+		"description": "Classified Mission Parameters:\n\nObjective: Guide assigned human toward conscious evolution.\n\nMethod: Mindscape cultivation via neural-link interface.\n\nDuration: 47 Earth years (journey time)\n\nNotes: Earth humans possess remarkable neuroplasticity but limited introspective tradition. The Mindscape Interface must feel like an internal journey, not an external imposition.\n\n\"We do not change them. We help them become who they already are.\"\n\n- Authorized by the Council of Seven"
 	}
 ]
 
@@ -3385,14 +3611,19 @@ func _create_detail_bookshelf(parent: Node2D) -> void:
 	top.color = Color(0.45, 0.32, 0.2)
 	parent.add_child(top)
 
-	# Create interactive books (2 per shelf, main books on shelves 1-3)
+	# Create interactive books (3 per shelf on top 3 shelves, 2 on bottom)
 	var book_configs = [
-		{"shelf": 0, "x": -100, "index": 0},  # The Art of Habit Formation
-		{"shelf": 0, "x": 60, "index": 1},    # Mindscape Cultivation
-		{"shelf": 1, "x": -80, "index": 2},   # Understanding Human Potential
-		{"shelf": 1, "x": 80, "index": 3},    # Focus & Flow States
-		{"shelf": 2, "x": -60, "index": 4},   # The Stellar Navigator's Log
-		{"shelf": 2, "x": 100, "index": 5},   # Discipline of the Ancients
+		{"shelf": 0, "x": -120, "index": 0},  # The Art of Habit Formation
+		{"shelf": 0, "x": 0, "index": 1},     # Mindscape Cultivation
+		{"shelf": 0, "x": 120, "index": 6},   # The Stellar Wanderer's Log (ship)
+		{"shelf": 1, "x": -100, "index": 2},  # Understanding Human Potential
+		{"shelf": 1, "x": 20, "index": 3},    # Focus & Flow States
+		{"shelf": 1, "x": 120, "index": 7},   # Goactorian Traditions
+		{"shelf": 2, "x": -110, "index": 4},  # The Stellar Navigator's Log
+		{"shelf": 2, "x": 10, "index": 5},    # Discipline of the Ancients
+		{"shelf": 2, "x": 120, "index": 8},   # The Six Aspects: A Study
+		{"shelf": 3, "x": -90, "index": 9},   # Letters from Goactoria
+		{"shelf": 3, "x": 50, "index": 10},   # Mission Briefing: Earth
 	]
 
 	for config in book_configs:
@@ -3400,8 +3631,8 @@ func _create_detail_bookshelf(parent: Node2D) -> void:
 		var book_data = BOOKS_DATA[config["index"]]
 		_create_interactive_book(parent, config["x"], shelf_y, config["index"], book_data)
 
-	# Add decorative items on bottom shelf
-	_create_shelf_decorations(parent, shelf_positions[3])
+	# Note: Decorations moved since bottom shelf has books now
+	# _create_shelf_decorations(parent, shelf_positions[3])
 
 	# Add ambient glow particles
 	_create_bookshelf_particles(parent)
@@ -3647,6 +3878,774 @@ func _cleanup_bookshelf_detail() -> void:
 		bookshelf_detail_panel = null
 
 	book_buttons.clear()
+	in_dialogue = false
+
+
+# =============================================================================
+# FAMILY PHOTO ALBUM
+# =============================================================================
+
+# Photo data - memories from the journey to Goacto and family history
+const PHOTOS_DATA = [
+	{
+		"id": "departure_day",
+		"title": "The Day We Left",
+		"description": "Our last day on the homeworld. Mom is smiling, but her eyes tell a different story. Behind us, the Stellar Wanderer awaits.",
+		"memory": "I remember being excited and terrified at the same time. Mom held my hand so tight as we walked up the boarding ramp. 'A new beginning,' she said. 'For all of us.'",
+		"unlock": "chapter_1",
+		"color": Color(0.6, 0.5, 0.4)
+	},
+	{
+		"id": "family_portrait",
+		"title": "Family Portrait",
+		"description": "The four of us, before everything changed. Mom, Dad, my sister Lyra, and me. Taken in our garden on the homeworld.",
+		"memory": "Dad always said we were the luckiest family in the sector. Looking at this photo now, I think he was right. Even if luck doesn't last forever.",
+		"unlock": "chapter_1",
+		"color": Color(0.5, 0.6, 0.7)
+	},
+	{
+		"id": "first_steps",
+		"title": "First Steps Aboard",
+		"description": "My first day exploring the Stellar Wanderer. Everything was so big and mysterious. The corridor lights seemed to go on forever.",
+		"memory": "The ship hummed with energy I could feel in my bones. Mom said it was the engine, but I always felt like the ship was alive, welcoming us home.",
+		"unlock": "chapter_2",
+		"color": Color(0.4, 0.5, 0.6)
+	},
+	{
+		"id": "stargazing",
+		"title": "Stargazing with Mom",
+		"description": "Mom and me at the observation window. She's pointing out the Goacto constellation, our destination among the stars.",
+		"memory": "'That's where we're going,' she said. 'A world where we can truly be ourselves. Where our spirits can grow without limits.' I didn't fully understand then. I'm starting to now.",
+		"unlock": "chapter_2",
+		"color": Color(0.3, 0.4, 0.6)
+	},
+	{
+		"id": "lyra_smile",
+		"title": "Lyra's Last Smile",
+		"description": "My sister Lyra, laughing at something I said. Her eyes sparkle with mischief and warmth. This is how I want to remember her.",
+		"memory": "She always knew how to make me laugh, even when I was scared. 'The universe is full of wonders,' she'd say. 'We just have to be brave enough to find them.'",
+		"unlock": "chapter_3",
+		"color": Color(0.7, 0.5, 0.6)
+	},
+	{
+		"id": "dads_workshop",
+		"title": "Dad's Workshop",
+		"description": "Dad in his element, surrounded by tools and half-finished inventions. He built the Mindscape Console prototype right here.",
+		"memory": "He'd spend hours explaining his inventions to me, even when I couldn't follow. 'Understanding comes with time,' he'd say. 'What matters is that you're curious.'",
+		"unlock": "chapter_3",
+		"color": Color(0.5, 0.4, 0.3)
+	},
+	{
+		"id": "birthday_celebration",
+		"title": "My Birthday Aboard",
+		"description": "My first birthday on the Stellar Wanderer. Mom made a cake from synthesized ingredients. It tasted like home.",
+		"memory": "Lyra gave me a hand-drawn star map. 'So you'll always know where we're going,' she said. I still have it, tucked away somewhere safe.",
+		"unlock": "chapter_4",
+		"color": Color(0.6, 0.6, 0.5)
+	},
+	{
+		"id": "moms_garden",
+		"title": "Mom's Hydroponic Garden",
+		"description": "Mom tending to her plants in the ship's small garden bay. She brought seeds from home - a piece of our world traveling with us.",
+		"memory": "She said plants remind us that growth takes patience. 'Water them, give them light, and trust the process.' I think she was talking about more than just flowers.",
+		"unlock": "chapter_4",
+		"color": Color(0.4, 0.6, 0.4)
+	},
+	{
+		"id": "storm_passing",
+		"title": "The Nebula Storm",
+		"description": "Our ship passing through the Crimson Nebula. The colors were terrifying and beautiful. We lost contact with the homeworld that day.",
+		"memory": "The lights flickered for hours. Mom held us close and told us stories of Goacto - of the Aspects and the power of the mind. That's when I first heard about the Six.",
+		"unlock": "chapter_5",
+		"color": Color(0.7, 0.3, 0.4)
+	},
+	{
+		"id": "quiet_moment",
+		"title": "A Quiet Moment",
+		"description": "Mom reading to me in my sleep pod. The soft glow of the page illuminates her face. She looks tired, but her voice is steady.",
+		"memory": "She read me the same story every night - 'The Traveler Who Found Home.' Now I understand it was about our journey, about finding ourselves in the vast unknown.",
+		"unlock": "chapter_5",
+		"color": Color(0.5, 0.5, 0.6)
+	},
+	{
+		"id": "goacto_approach",
+		"title": "First Sight of Goacto",
+		"description": "The moment we saw Goacto through the viewport. A world of swirling purples and teals. Our new home, finally within reach.",
+		"memory": "My heart raced. After all those years of traveling, all the losses and struggles, we were finally here. I could feel something calling to me from the surface.",
+		"unlock": "chapter_7",
+		"color": Color(0.5, 0.4, 0.7)
+	},
+	{
+		"id": "final_message",
+		"title": "A Message from the Past",
+		"description": "A holographic recording I found in Mom's belongings. Dad and Lyra, waving goodbye. They knew what was coming.",
+		"memory": "'Take care of Mom,' Dad says in the recording. 'And remember - you carry all of us with you. In your heart, in your mind. We're never truly gone.'",
+		"unlock": "chapter_10",
+		"color": Color(0.6, 0.5, 0.5)
+	}
+]
+
+
+func _create_photo_album_visual() -> void:
+	## Create the photo album visual element in the bedroom
+	if photo_album_visual:
+		return
+
+	photo_album_visual = Node2D.new()
+	photo_album_visual.name = "PhotoAlbum"
+	photo_album_visual.position = object_positions.get("PhotoAlbum", Vector2(300, 150))
+	isometric_base.add_child(photo_album_visual)
+
+	# Album base - decorative stand
+	var stand = Polygon2D.new()
+	stand.polygon = PackedVector2Array([
+		Vector2(-25, 25), Vector2(25, 25), Vector2(20, 35), Vector2(-20, 35)
+	])
+	stand.color = Color(0.35, 0.25, 0.2)
+	photo_album_visual.add_child(stand)
+
+	# Album cover
+	var cover = Polygon2D.new()
+	cover.name = "AlbumCover"
+	cover.polygon = PackedVector2Array([
+		Vector2(-28, -30), Vector2(28, -30), Vector2(28, 25), Vector2(-28, 25)
+	])
+	cover.color = Color(0.5, 0.35, 0.25)
+	photo_album_visual.add_child(cover)
+
+	# Album spine detail
+	var spine = Polygon2D.new()
+	spine.polygon = PackedVector2Array([
+		Vector2(-28, -30), Vector2(-22, -30), Vector2(-22, 25), Vector2(-28, 25)
+	])
+	spine.color = Color(0.4, 0.28, 0.2)
+	photo_album_visual.add_child(spine)
+
+	# Decorative gold trim
+	var trim = Polygon2D.new()
+	trim.polygon = PackedVector2Array([
+		Vector2(-24, -26), Vector2(24, -26), Vector2(24, -24), Vector2(-24, -24)
+	])
+	trim.color = Color(0.8, 0.65, 0.3, 0.7)
+	photo_album_visual.add_child(trim)
+
+	var trim2 = Polygon2D.new()
+	trim2.polygon = PackedVector2Array([
+		Vector2(-24, 21), Vector2(24, 21), Vector2(24, 23), Vector2(-24, 23)
+	])
+	trim2.color = Color(0.8, 0.65, 0.3, 0.7)
+	photo_album_visual.add_child(trim2)
+
+	# Center emblem (family crest/symbol)
+	var emblem = Polygon2D.new()
+	emblem.name = "Emblem"
+	var emblem_points = PackedVector2Array()
+	for i in range(6):
+		var angle = -PI/2 + (i / 6.0) * TAU
+		emblem_points.append(Vector2(cos(angle) * 12, sin(angle) * 12))
+	emblem.polygon = emblem_points
+	emblem.color = Color(0.85, 0.7, 0.35, 0.8)
+	emblem.position = Vector2(0, -2)
+	photo_album_visual.add_child(emblem)
+
+	# Inner star on emblem
+	var star = Polygon2D.new()
+	star.name = "Star"
+	var star_points = PackedVector2Array()
+	for i in range(5):
+		var angle = -PI/2 + (i / 5.0) * TAU
+		star_points.append(Vector2(cos(angle) * 6, sin(angle) * 6))
+		var inner_angle = -PI/2 + ((i + 0.5) / 5.0) * TAU
+		star_points.append(Vector2(cos(inner_angle) * 3, sin(inner_angle) * 3))
+	star.polygon = star_points
+	star.color = Color(0.95, 0.85, 0.5)
+	star.position = Vector2(0, -2)
+	photo_album_visual.add_child(star)
+
+	# Soft glow effect
+	var glow = Polygon2D.new()
+	glow.name = "Glow"
+	var glow_points = PackedVector2Array()
+	for i in range(12):
+		var angle = (i / 12.0) * TAU
+		glow_points.append(Vector2(cos(angle) * 35, sin(angle) * 35))
+	glow.polygon = glow_points
+	glow.color = Color(0.8, 0.6, 0.3, 0.08)
+	glow.position = Vector2(0, -2)
+	glow.z_index = -1
+	photo_album_visual.add_child(glow)
+
+
+func _show_photo_album_view() -> void:
+	if photo_album_panel:
+		return
+
+	in_dialogue = true
+	interaction_prompt.visible = false
+	photo_album_time = 0.0
+	selected_photo_index = 0
+
+	# Calculate which photos are unlocked
+	_calculate_unlocked_photos()
+
+	_play_sfx("res://audio/sfx/book_open.wav")
+
+	# Create fullscreen panel
+	photo_album_panel = Control.new()
+	photo_album_panel.name = "PhotoAlbumView"
+	photo_album_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	photo_album_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(photo_album_panel)
+
+	# Warm sepia-toned background
+	var bg = ColorRect.new()
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.color = Color(0.05, 0.04, 0.03, 0.96)
+	photo_album_panel.add_child(bg)
+
+	var viewport_size = get_viewport_rect().size
+
+	# Header
+	var header = Label.new()
+	header.text = "FAMILY MEMORIES"
+	header.add_theme_font_size_override("font_size", 32)
+	header.add_theme_color_override("font_color", Color(0.85, 0.75, 0.6))
+	header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	header.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	header.offset_top = 30
+	photo_album_panel.add_child(header)
+
+	var subheader = Label.new()
+	subheader.text = "A journey through time and space"
+	subheader.add_theme_font_size_override("font_size", 14)
+	subheader.add_theme_color_override("font_color", Color(0.6, 0.55, 0.5))
+	subheader.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	subheader.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	subheader.offset_top = 68
+	photo_album_panel.add_child(subheader)
+
+	# Main content area - split layout
+	var content = HBoxContainer.new()
+	content.name = "ContentArea"
+	content.set_anchors_preset(Control.PRESET_CENTER)
+	content.offset_left = -550
+	content.offset_right = 550
+	content.offset_top = -220
+	content.offset_bottom = 280
+	content.add_theme_constant_override("separation", 40)
+	photo_album_panel.add_child(content)
+
+	# Left side - Photo thumbnails grid
+	var photos_panel = PanelContainer.new()
+	var photos_style = StyleBoxFlat.new()
+	photos_style.bg_color = Color(0.08, 0.06, 0.05, 0.9)
+	photos_style.set_corner_radius_all(8)
+	photos_style.border_color = Color(0.5, 0.4, 0.3, 0.3)
+	photos_style.set_border_width_all(1)
+	photos_panel.add_theme_stylebox_override("panel", photos_style)
+	photos_panel.custom_minimum_size = Vector2(400, 480)
+	content.add_child(photos_panel)
+
+	var photos_margin = MarginContainer.new()
+	photos_margin.add_theme_constant_override("margin_left", 15)
+	photos_margin.add_theme_constant_override("margin_right", 15)
+	photos_margin.add_theme_constant_override("margin_top", 15)
+	photos_margin.add_theme_constant_override("margin_bottom", 15)
+	photos_panel.add_child(photos_margin)
+
+	var photos_vbox = VBoxContainer.new()
+	photos_vbox.add_theme_constant_override("separation", 10)
+	photos_margin.add_child(photos_vbox)
+
+	var photos_title = Label.new()
+	photos_title.text = "Photo Collection"
+	photos_title.add_theme_font_size_override("font_size", 16)
+	photos_title.add_theme_color_override("font_color", Color(0.7, 0.6, 0.5))
+	photos_vbox.add_child(photos_title)
+
+	var photos_scroll = ScrollContainer.new()
+	photos_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	photos_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	photos_vbox.add_child(photos_scroll)
+
+	var photos_grid = GridContainer.new()
+	photos_grid.name = "PhotosGrid"
+	photos_grid.columns = 3
+	photos_grid.add_theme_constant_override("h_separation", 10)
+	photos_grid.add_theme_constant_override("v_separation", 10)
+	photos_scroll.add_child(photos_grid)
+
+	# Create photo thumbnails
+	for i in range(PHOTOS_DATA.size()):
+		var photo = PHOTOS_DATA[i]
+		var is_unlocked = photo["id"] in unlocked_photos
+		_create_photo_thumbnail(photos_grid, i, photo, is_unlocked)
+
+	# Right side - Selected photo detail
+	var detail_panel = PanelContainer.new()
+	detail_panel.name = "PhotoDetailPanel"
+	var detail_style = StyleBoxFlat.new()
+	detail_style.bg_color = Color(0.1, 0.08, 0.06, 0.95)
+	detail_style.set_corner_radius_all(8)
+	detail_style.border_color = Color(0.6, 0.5, 0.4, 0.4)
+	detail_style.set_border_width_all(2)
+	detail_panel.add_theme_stylebox_override("panel", detail_style)
+	detail_panel.custom_minimum_size = Vector2(500, 480)
+	content.add_child(detail_panel)
+
+	var detail_margin = MarginContainer.new()
+	detail_margin.add_theme_constant_override("margin_left", 25)
+	detail_margin.add_theme_constant_override("margin_right", 25)
+	detail_margin.add_theme_constant_override("margin_top", 20)
+	detail_margin.add_theme_constant_override("margin_bottom", 20)
+	detail_panel.add_child(detail_margin)
+
+	var detail_vbox = VBoxContainer.new()
+	detail_vbox.name = "DetailContent"
+	detail_vbox.add_theme_constant_override("separation", 15)
+	detail_margin.add_child(detail_vbox)
+
+	# Photo display area
+	var photo_display = Control.new()
+	photo_display.name = "PhotoDisplay"
+	photo_display.custom_minimum_size = Vector2(0, 200)
+	detail_vbox.add_child(photo_display)
+
+	# Title
+	var title_label = Label.new()
+	title_label.name = "PhotoTitle"
+	title_label.text = "Select a photo"
+	title_label.add_theme_font_size_override("font_size", 24)
+	title_label.add_theme_color_override("font_color", Color(0.9, 0.8, 0.7))
+	detail_vbox.add_child(title_label)
+
+	# Description
+	var desc_label = Label.new()
+	desc_label.name = "PhotoDescription"
+	desc_label.text = "Browse through family memories captured on our journey."
+	desc_label.add_theme_font_size_override("font_size", 14)
+	desc_label.add_theme_color_override("font_color", Color(0.7, 0.65, 0.6))
+	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	detail_vbox.add_child(desc_label)
+
+	# Memory text (italic/reflective)
+	var memory_label = Label.new()
+	memory_label.name = "PhotoMemory"
+	memory_label.text = ""
+	memory_label.add_theme_font_size_override("font_size", 13)
+	memory_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.65))
+	memory_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	detail_vbox.add_child(memory_label)
+
+	# Spacer
+	var spacer = Control.new()
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	detail_vbox.add_child(spacer)
+
+	# Progress indicator
+	var progress_label = Label.new()
+	progress_label.name = "ProgressLabel"
+	progress_label.text = "%d / %d photos unlocked" % [unlocked_photos.size(), PHOTOS_DATA.size()]
+	progress_label.add_theme_font_size_override("font_size", 12)
+	progress_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
+	progress_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	detail_vbox.add_child(progress_label)
+
+	# Close button
+	var close_btn = Button.new()
+	close_btn.text = "Close Album"
+	close_btn.custom_minimum_size = Vector2(150, 40)
+	close_btn.add_theme_font_size_override("font_size", 14)
+	close_btn.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	close_btn.offset_left = -160
+	close_btn.offset_top = -50
+	close_btn.offset_right = -10
+	close_btn.offset_bottom = -10
+	close_btn.pressed.connect(_close_photo_album)
+	photo_album_panel.add_child(close_btn)
+
+	# Hint text
+	var hint = Label.new()
+	hint.text = "Click a photo to view • Progress through chapters to unlock more"
+	hint.add_theme_font_size_override("font_size", 12)
+	hint.add_theme_color_override("font_color", Color(0.4, 0.4, 0.4))
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	hint.offset_top = -25
+	photo_album_panel.add_child(hint)
+
+	# Fade in
+	photo_album_panel.modulate.a = 0.0
+	var tween = create_tween()
+	tween.tween_property(photo_album_panel, "modulate:a", 1.0, 0.5)
+
+	# Select first unlocked photo
+	if unlocked_photos.size() > 0:
+		for i in range(PHOTOS_DATA.size()):
+			if PHOTOS_DATA[i]["id"] in unlocked_photos:
+				_select_photo(i)
+				break
+
+
+func _calculate_unlocked_photos() -> void:
+	## Determine which photos are unlocked based on chapter progress
+	unlocked_photos.clear()
+
+	# Master key unlocks all photos
+	var has_master = GameManager.has_master_key() if GameManager.has_method("has_master_key") else false
+	if has_master:
+		for photo in PHOTOS_DATA:
+			unlocked_photos.append(photo["id"])
+		return
+
+	var current_chapter = GameManager.player_data.get("current_chapter", 1)
+	var chapters_completed: Array = GameManager.player_data.get("chapters_completed", [])
+
+	for photo in PHOTOS_DATA:
+		var unlock_req = photo.get("unlock", "chapter_1")
+		var chapter_num = int(unlock_req.replace("chapter_", ""))
+
+		# Photo is unlocked if we've reached or passed the required chapter
+		if current_chapter > chapter_num or chapter_num in chapters_completed:
+			unlocked_photos.append(photo["id"])
+		# Special case: chapter_1 photos unlock at the start
+		elif unlock_req == "chapter_1" and current_chapter >= 1:
+			unlocked_photos.append(photo["id"])
+
+
+func _create_photo_thumbnail(parent: Node, index: int, photo: Dictionary, is_unlocked: bool) -> void:
+	var thumb_btn = Button.new()
+	thumb_btn.custom_minimum_size = Vector2(110, 90)
+	thumb_btn.clip_contents = true
+
+	var style = StyleBoxFlat.new()
+	if is_unlocked:
+		style.bg_color = photo["color"].darkened(0.4)
+		style.border_color = photo["color"]
+	else:
+		style.bg_color = Color(0.15, 0.15, 0.15, 0.8)
+		style.border_color = Color(0.3, 0.3, 0.3, 0.5)
+	style.set_corner_radius_all(4)
+	style.set_border_width_all(2)
+	thumb_btn.add_theme_stylebox_override("normal", style)
+
+	var hover_style = style.duplicate()
+	if is_unlocked:
+		hover_style.bg_color = photo["color"].darkened(0.2)
+	else:
+		hover_style.bg_color = Color(0.2, 0.2, 0.2, 0.8)
+	thumb_btn.add_theme_stylebox_override("hover", hover_style)
+
+	# Content container
+	var content = VBoxContainer.new()
+	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	content.set_anchors_preset(Control.PRESET_FULL_RECT)
+	content.add_theme_constant_override("separation", 2)
+	thumb_btn.add_child(content)
+
+	var margin = MarginContainer.new()
+	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	margin.add_theme_constant_override("margin_left", 5)
+	margin.add_theme_constant_override("margin_right", 5)
+	margin.add_theme_constant_override("margin_top", 5)
+	margin.add_theme_constant_override("margin_bottom", 5)
+	content.add_child(margin)
+
+	var inner = VBoxContainer.new()
+	inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	margin.add_child(inner)
+
+	if is_unlocked:
+		# Photo icon (abstract representation)
+		var icon_label = Label.new()
+		icon_label.text = "📷"
+		icon_label.add_theme_font_size_override("font_size", 24)
+		icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		icon_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		inner.add_child(icon_label)
+
+		# Photo title (truncated)
+		var title_text = photo["title"]
+		if title_text.length() > 12:
+			title_text = title_text.substr(0, 10) + "..."
+		var title = Label.new()
+		title.text = title_text
+		title.add_theme_font_size_override("font_size", 10)
+		title.add_theme_color_override("font_color", Color(0.85, 0.8, 0.75))
+		title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		inner.add_child(title)
+
+		thumb_btn.pressed.connect(_select_photo.bind(index))
+	else:
+		# Locked indicator
+		var lock_label = Label.new()
+		lock_label.text = "🔒"
+		lock_label.add_theme_font_size_override("font_size", 28)
+		lock_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		lock_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		inner.add_child(lock_label)
+
+		var unlock_text = photo["unlock"].replace("_", " ").capitalize()
+		var req_label = Label.new()
+		req_label.text = unlock_text
+		req_label.add_theme_font_size_override("font_size", 9)
+		req_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
+		req_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		req_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		inner.add_child(req_label)
+
+		thumb_btn.disabled = true
+
+	parent.add_child(thumb_btn)
+
+
+func _select_photo(index: int) -> void:
+	if index < 0 or index >= PHOTOS_DATA.size():
+		return
+
+	selected_photo_index = index
+	var photo = PHOTOS_DATA[index]
+
+	if not photo["id"] in unlocked_photos:
+		return
+
+	_play_sfx("res://audio/sfx/page_turn.wav")
+
+	if not photo_album_panel:
+		return
+
+	# Update detail panel
+	var detail_panel = photo_album_panel.get_node_or_null("ContentArea/PhotoDetailPanel")
+	if not detail_panel:
+		return
+
+	var detail_content = detail_panel.find_child("DetailContent", true, false)
+	if not detail_content:
+		return
+
+	var title_label = detail_content.get_node_or_null("PhotoTitle")
+	var desc_label = detail_content.get_node_or_null("PhotoDescription")
+	var memory_label = detail_content.get_node_or_null("PhotoMemory")
+	var photo_display = detail_content.get_node_or_null("PhotoDisplay")
+
+	if title_label:
+		title_label.text = photo["title"]
+		title_label.add_theme_color_override("font_color", photo["color"].lightened(0.3))
+
+	if desc_label:
+		desc_label.text = photo["description"]
+
+	if memory_label:
+		memory_label.text = "\"" + photo["memory"] + "\""
+
+	# Update photo display
+	if photo_display:
+		# Clear existing
+		for child in photo_display.get_children():
+			child.queue_free()
+
+		# Create abstract photo representation
+		_create_photo_visual(photo_display, photo)
+
+
+func _create_photo_visual(parent: Control, photo: Dictionary) -> void:
+	## Create an abstract visual representation of the photo
+	var display = Node2D.new()
+	display.name = "PhotoVisual"
+	display.position = Vector2(parent.size.x / 2 if parent.size.x > 0 else 225, 100)
+	parent.add_child(display)
+
+	# Photo frame
+	var frame = Polygon2D.new()
+	frame.polygon = PackedVector2Array([
+		Vector2(-120, -80), Vector2(120, -80), Vector2(120, 80), Vector2(-120, 80)
+	])
+	frame.color = Color(0.3, 0.25, 0.2)
+	display.add_child(frame)
+
+	# Photo image area
+	var image = Polygon2D.new()
+	image.polygon = PackedVector2Array([
+		Vector2(-110, -70), Vector2(110, -70), Vector2(110, 70), Vector2(-110, 70)
+	])
+	image.color = photo["color"].darkened(0.2)
+	display.add_child(image)
+
+	# Create scene silhouettes based on photo content
+	var photo_id = photo["id"]
+	match photo_id:
+		"family_portrait", "departure_day":
+			# Family silhouettes
+			_add_figure_silhouette(display, -50, 0.9, photo["color"])
+			_add_figure_silhouette(display, -15, 0.85, photo["color"])
+			_add_figure_silhouette(display, 20, 0.6, photo["color"])
+			_add_figure_silhouette(display, 50, 0.7, photo["color"])
+		"stargazing", "goacto_approach":
+			# Stars and figures
+			_add_figure_silhouette(display, -30, 0.8, photo["color"])
+			_add_figure_silhouette(display, 10, 0.55, photo["color"])
+			_add_star_elements(display, photo["color"])
+		"lyra_smile", "quiet_moment":
+			# Single figure portrait
+			_add_figure_silhouette(display, 0, 0.95, photo["color"])
+		"dads_workshop":
+			# Figure with geometric shapes
+			_add_figure_silhouette(display, -20, 0.85, photo["color"])
+			_add_workshop_elements(display, photo["color"])
+		"storm_passing":
+			# Abstract nebula pattern
+			_add_nebula_elements(display, photo["color"])
+		"moms_garden":
+			# Figure with plants
+			_add_figure_silhouette(display, -10, 0.8, photo["color"])
+			_add_garden_elements(display, photo["color"])
+		_:
+			# Default composition
+			_add_figure_silhouette(display, 0, 0.8, photo["color"])
+
+	# Soft vignette effect
+	var vignette = Polygon2D.new()
+	vignette.polygon = PackedVector2Array([
+		Vector2(-110, -70), Vector2(110, -70), Vector2(110, 70), Vector2(-110, 70)
+	])
+	vignette.color = Color(0, 0, 0, 0.2)
+	display.add_child(vignette)
+
+
+func _add_figure_silhouette(parent: Node2D, x_pos: float, height_factor: float, base_color: Color) -> void:
+	var height = 60 * height_factor
+	var width = 20 * height_factor
+
+	var figure = Polygon2D.new()
+	figure.polygon = PackedVector2Array([
+		Vector2(x_pos - width/2, 50),
+		Vector2(x_pos - width/2, 50 - height * 0.7),
+		Vector2(x_pos - width/3, 50 - height * 0.75),
+		Vector2(x_pos, 50 - height),  # Head top
+		Vector2(x_pos + width/3, 50 - height * 0.75),
+		Vector2(x_pos + width/2, 50 - height * 0.7),
+		Vector2(x_pos + width/2, 50)
+	])
+	figure.color = base_color.lightened(0.2)
+	figure.color.a = 0.7
+	parent.add_child(figure)
+
+
+func _add_star_elements(parent: Node2D, base_color: Color) -> void:
+	var star_positions = [
+		Vector2(-80, -50), Vector2(-40, -40), Vector2(20, -55),
+		Vector2(60, -35), Vector2(80, -50), Vector2(-60, -30)
+	]
+	for pos in star_positions:
+		var star = Polygon2D.new()
+		var star_points = PackedVector2Array()
+		for i in range(5):
+			var angle = -PI/2 + (i / 5.0) * TAU
+			star_points.append(Vector2(pos.x + cos(angle) * 4, pos.y + sin(angle) * 4))
+			var inner_angle = -PI/2 + ((i + 0.5) / 5.0) * TAU
+			star_points.append(Vector2(pos.x + cos(inner_angle) * 2, pos.y + sin(inner_angle) * 2))
+		star.polygon = star_points
+		star.color = base_color.lightened(0.4)
+		star.color.a = 0.8
+		parent.add_child(star)
+
+
+func _add_workshop_elements(parent: Node2D, base_color: Color) -> void:
+	# Geometric shapes representing inventions
+	var shapes = [
+		{"pos": Vector2(40, 20), "size": 15},
+		{"pos": Vector2(60, 0), "size": 12},
+		{"pos": Vector2(70, 30), "size": 10}
+	]
+	for shape in shapes:
+		var rect = Polygon2D.new()
+		var s = shape["size"]
+		rect.polygon = PackedVector2Array([
+			Vector2(-s, -s), Vector2(s, -s), Vector2(s, s), Vector2(-s, s)
+		])
+		rect.position = shape["pos"]
+		rect.rotation = randf() * 0.5
+		rect.color = base_color.lightened(0.1)
+		rect.color.a = 0.5
+		parent.add_child(rect)
+
+
+func _add_nebula_elements(parent: Node2D, base_color: Color) -> void:
+	# Swirling nebula clouds
+	for i in range(8):
+		var cloud = Polygon2D.new()
+		var points = PackedVector2Array()
+		var center = Vector2(randf_range(-80, 80), randf_range(-50, 50))
+		var radius = randf_range(20, 40)
+		for j in range(8):
+			var angle = (j / 8.0) * TAU
+			var r = radius * (0.8 + randf() * 0.4)
+			points.append(center + Vector2(cos(angle) * r, sin(angle) * r * 0.6))
+		cloud.polygon = points
+		cloud.color = base_color.lightened(randf() * 0.3)
+		cloud.color.a = 0.3
+		parent.add_child(cloud)
+
+
+func _add_garden_elements(parent: Node2D, base_color: Color) -> void:
+	# Simple plant shapes
+	var plant_positions = [Vector2(40, 40), Vector2(60, 35), Vector2(80, 45)]
+	for pos in plant_positions:
+		# Stem
+		var stem = Polygon2D.new()
+		stem.polygon = PackedVector2Array([
+			Vector2(-2, 0), Vector2(2, 0), Vector2(1, -30), Vector2(-1, -30)
+		])
+		stem.position = pos
+		stem.color = Color(0.3, 0.5, 0.3, 0.7)
+		parent.add_child(stem)
+
+		# Leaves
+		var leaf = Polygon2D.new()
+		leaf.polygon = PackedVector2Array([
+			Vector2(0, -25), Vector2(10, -15), Vector2(8, -10), Vector2(0, -15),
+			Vector2(-8, -10), Vector2(-10, -15)
+		])
+		leaf.position = pos
+		leaf.color = base_color.lightened(0.1)
+		leaf.color.a = 0.6
+		parent.add_child(leaf)
+
+
+func _update_photo_album(delta: float) -> void:
+	photo_album_time += delta
+
+	if not photo_album_panel:
+		return
+
+	# Animate photo visual elements
+	var detail_panel = photo_album_panel.get_node_or_null("ContentArea/PhotoDetailPanel")
+	if detail_panel:
+		var photo_display = detail_panel.find_child("PhotoDisplay", true, false)
+		if photo_display:
+			var visual = photo_display.get_node_or_null("PhotoVisual")
+			if visual:
+				# Subtle floating animation
+				visual.position.y = 100 + sin(photo_album_time * 0.8) * 2
+
+
+func _close_photo_album() -> void:
+	if not photo_album_panel:
+		return
+
+	_play_sfx("res://audio/sfx/book_close.wav")
+
+	var tween = create_tween()
+	tween.tween_property(photo_album_panel, "modulate:a", 0.0, 0.3)
+	tween.tween_callback(_cleanup_photo_album)
+
+
+func _cleanup_photo_album() -> void:
+	if photo_album_panel:
+		photo_album_panel.queue_free()
+		photo_album_panel = null
+
 	in_dialogue = false
 
 
@@ -4622,7 +5621,7 @@ func _toggle_volume_popup() -> void:
 	volume_popup.add_theme_stylebox_override("panel", style)
 
 	volume_popup.position = volume_button.global_position + Vector2(-80, volume_button.size.y + 5)
-	volume_popup.custom_minimum_size = Vector2(200, 0)
+	volume_popup.custom_minimum_size = Vector2(0, 0)
 
 	var margin = MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 15)
@@ -6837,3 +7836,150 @@ func _close_focus_dashboard() -> void:
 		focus_dashboard = null
 	in_dialogue = false
 	_play_sfx("res://audio/sfx/menu_close.wav")
+
+
+# =============================================================================
+# TUTORIAL TOOLTIPS
+# =============================================================================
+
+const BEDROOM_TUTORIALS = {
+	"bedroom_welcome": {
+		"title": "Your Ship Quarters",
+		"text": "This is your private space aboard the Stellar Wanderer.\n\nExplore and interact with objects to discover features.",
+		"icon": "🚀"
+	},
+	"bedroom_console": {
+		"title": "Mindscape Console",
+		"text": "Put on the headset to enter your Mindscape.\n\nPress SPACE near the console to begin.",
+		"icon": "🎮"
+	},
+	"bedroom_sleep_pod": {
+		"title": "Sleep Pod",
+		"text": "Save your progress, view dream memories,\nor rest and meditate here.",
+		"icon": "💤"
+	}
+}
+
+var tutorial_tooltip: PanelContainer = null
+var tutorial_queue: Array = []
+
+func _check_bedroom_tutorials() -> void:
+	# Skip if player is waking up or in dialogue
+	if GameManager.player_data.get("wakeup_from_continue", false):
+		return
+
+	# Build queue of unseen tutorials
+	tutorial_queue.clear()
+
+	if not GameManager.has_seen_tutorial("bedroom_welcome"):
+		tutorial_queue.append("bedroom_welcome")
+
+	if console_placed and not GameManager.has_seen_tutorial("bedroom_console"):
+		tutorial_queue.append("bedroom_console")
+
+	if not GameManager.has_seen_tutorial("bedroom_sleep_pod"):
+		tutorial_queue.append("bedroom_sleep_pod")
+
+	# Show first tooltip after short delay
+	if tutorial_queue.size() > 0:
+		await get_tree().create_timer(1.0).timeout
+		_show_next_bedroom_tutorial()
+
+
+func _show_next_bedroom_tutorial() -> void:
+	if tutorial_queue.is_empty():
+		return
+
+	var tip_id = tutorial_queue.pop_front()
+	var tip_data = BEDROOM_TUTORIALS.get(tip_id, {})
+
+	if tip_data.is_empty():
+		_show_next_bedroom_tutorial()
+		return
+
+	_create_bedroom_tooltip(tip_id, tip_data)
+
+
+func _create_bedroom_tooltip(tip_id: String, tip_data: Dictionary) -> void:
+	if tutorial_tooltip:
+		tutorial_tooltip.queue_free()
+
+	tutorial_tooltip = PanelContainer.new()
+	tutorial_tooltip.name = "TutorialTooltip"
+
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.08, 0.1, 0.15, 0.95)
+	style.set_corner_radius_all(10)
+	style.border_color = Color(0.5, 0.7, 0.9, 0.7)
+	style.set_border_width_all(2)
+	tutorial_tooltip.add_theme_stylebox_override("panel", style)
+
+	tutorial_tooltip.set_anchors_preset(Control.PRESET_CENTER)
+	tutorial_tooltip.offset_left = -180
+	tutorial_tooltip.offset_right = 180
+	tutorial_tooltip.offset_top = -100
+	tutorial_tooltip.offset_bottom = 100
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 20)
+	margin.add_theme_constant_override("margin_right", 20)
+	margin.add_theme_constant_override("margin_top", 15)
+	margin.add_theme_constant_override("margin_bottom", 15)
+	tutorial_tooltip.add_child(margin)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 10)
+	margin.add_child(vbox)
+
+	# Icon and title row
+	var header = HBoxContainer.new()
+	header.add_theme_constant_override("separation", 10)
+	header.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_child(header)
+
+	var icon = Label.new()
+	icon.text = tip_data.get("icon", "💡")
+	icon.add_theme_font_size_override("font_size", 24)
+	header.add_child(icon)
+
+	var title = Label.new()
+	title.text = tip_data.get("title", "Tip")
+	title.add_theme_font_size_override("font_size", 20)
+	title.add_theme_color_override("font_color", Color(0.5, 0.75, 0.9))
+	header.add_child(title)
+
+	# Text
+	var text = Label.new()
+	text.text = tip_data.get("text", "")
+	text.add_theme_font_size_override("font_size", 14)
+	text.add_theme_color_override("font_color", Color(0.8, 0.82, 0.85))
+	text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	text.autowrap_mode = TextServer.AUTOWRAP_WORD
+	vbox.add_child(text)
+
+	# Got it button
+	var btn_row = HBoxContainer.new()
+	btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_child(btn_row)
+
+	var got_it_btn = Button.new()
+	got_it_btn.text = "Got it!"
+	got_it_btn.custom_minimum_size = Vector2(100, 35)
+	got_it_btn.add_theme_font_size_override("font_size", 14)
+	got_it_btn.pressed.connect(func():
+		GameManager.mark_tutorial_seen(tip_id)
+		_close_bedroom_tutorial()
+		# Show next after a short delay
+		await get_tree().create_timer(0.3).timeout
+		_show_next_bedroom_tutorial()
+	)
+	btn_row.add_child(got_it_btn)
+
+	add_child(tutorial_tooltip)
+	_play_sfx("res://audio/sfx/ui_open.wav")
+
+
+func _close_bedroom_tutorial() -> void:
+	if tutorial_tooltip:
+		tutorial_tooltip.queue_free()
+		tutorial_tooltip = null

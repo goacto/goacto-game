@@ -6,6 +6,7 @@ signal habit_completed(habit_id: String, habit_data: Dictionary)
 signal habit_streak_updated(habit_id: String, streak: int)
 signal streak_recovered(habit_id: String, grace_days_used: int)
 signal daily_reset_occurred
+signal habit_reminder_triggered(habit_id: String, habit_name: String)
 
 # Habit categories matching our design
 enum HabitDomain {
@@ -48,10 +49,51 @@ const GRACE_DAY_RECHARGE_STREAK: int = 7  # Earn 1 grace day per 7-day streak
 var grace_days_available: int = 1  # Start with 1 grace day
 var pending_streak_breaks: Dictionary = {}  # habit_id -> { missed_date, streak_value }
 
+# Available habit icons
+const HABIT_ICONS: Dictionary = {
+	"health": {"emoji": "💪", "label": "Health"},
+	"mindfulness": {"emoji": "🧘", "label": "Mindfulness"},
+	"learning": {"emoji": "📚", "label": "Learning"},
+	"social": {"emoji": "💬", "label": "Social"},
+	"productivity": {"emoji": "⚡", "label": "Productivity"},
+	"custom": {"emoji": "⭐", "label": "Custom"},
+	# Extended icons
+	"exercise": {"emoji": "🏃", "label": "Exercise"},
+	"meditation": {"emoji": "🕯️", "label": "Meditation"},
+	"reading": {"emoji": "📖", "label": "Reading"},
+	"writing": {"emoji": "✍️", "label": "Writing"},
+	"water": {"emoji": "💧", "label": "Hydration"},
+	"sleep": {"emoji": "😴", "label": "Sleep"},
+	"nutrition": {"emoji": "🥗", "label": "Nutrition"},
+	"creativity": {"emoji": "🎨", "label": "Creativity"},
+	"music": {"emoji": "🎵", "label": "Music"},
+	"gratitude": {"emoji": "🙏", "label": "Gratitude"},
+	"nature": {"emoji": "🌿", "label": "Nature"},
+	"family": {"emoji": "👨‍👩‍👧", "label": "Family"},
+	"work": {"emoji": "💼", "label": "Work"},
+	"finance": {"emoji": "💰", "label": "Finance"},
+	"cleaning": {"emoji": "🧹", "label": "Cleaning"},
+	"coding": {"emoji": "💻", "label": "Coding"},
+	"language": {"emoji": "🗣️", "label": "Language"},
+	"yoga": {"emoji": "🧘‍♀️", "label": "Yoga"},
+	"journaling": {"emoji": "📝", "label": "Journaling"},
+	"walking": {"emoji": "🚶", "label": "Walking"}
+}
+
+# User-defined tags for habits
+var habit_tags: Dictionary = {}  # tag_name -> { color: Color, habit_ids: Array }
+
+# Reminder system
+var habit_reminders: Dictionary = {}  # habit_id -> { time: "HH:MM", enabled: bool, days: Array }
+var reminder_check_timer: Timer = null
+var triggered_reminders_today: Array = []  # Track which reminders already fired today
+var last_reminder_check_minute: int = -1
+
 
 func _ready() -> void:
 	_initialize_preset_habits()
 	_check_daily_reset()
+	_setup_reminder_system()
 	print("[HabitManager] Initialized with ", habits.size(), " habits")
 
 
@@ -177,6 +219,20 @@ func complete_habit(habit_id: String) -> Dictionary:
 	# Emit signal
 	habit_completed.emit(habit_id, habit)
 	habit_streak_updated.emit(habit_id, habit.streak)
+
+	# Track for aspect quests
+	var is_first = habit.total_completions == 1
+	GameManager.check_quests_for_trigger("habit_completed", {
+		"domain": domain_name,
+		"is_first_completion": is_first,
+		"streak": habit.streak
+	})
+
+	# Check if all habits completed today = streak day
+	if _all_habits_completed_today():
+		GameManager.check_quests_for_trigger("habit_streak_day", {
+			"streak": _get_consecutive_all_habits_days()
+		})
 
 	print("[HabitManager] Completed: ", habit.name, " | Streak: ", habit.streak, " | EXP: ", exp_earned)
 
@@ -529,8 +585,11 @@ func _domain_to_string(domain: HabitDomain) -> String:
 
 
 ## Create a custom habit
-func create_custom_habit(name: String, description: String, domain: HabitDomain) -> String:
+func create_custom_habit(name: String, description: String, domain: HabitDomain, icon: String = "custom", tags: Array = []) -> String:
 	var id = "custom_" + str(Time.get_unix_time_from_system())
+
+	# Validate icon
+	var valid_icon = icon if HABIT_ICONS.has(icon) else "custom"
 
 	add_habit({
 		"id": id,
@@ -538,7 +597,8 @@ func create_custom_habit(name: String, description: String, domain: HabitDomain)
 		"description": description,
 		"domain": domain,
 		"frequency": HabitFrequency.DAILY,
-		"icon": "custom",
+		"icon": valid_icon,
+		"tags": tags,
 		"exp_reward": 20,
 		"evolution_reward": 0.4,
 		"streak": 0,
@@ -547,7 +607,125 @@ func create_custom_habit(name: String, description: String, domain: HabitDomain)
 		"is_preset": false
 	})
 
+	# Add habit to tag references
+	for tag in tags:
+		add_habit_to_tag(id, tag)
+
 	return id
+
+
+## Get available icon options
+func get_available_icons() -> Dictionary:
+	return HABIT_ICONS
+
+
+## Get icon emoji for a habit
+func get_habit_emoji(habit_id: String) -> String:
+	if not habits.has(habit_id):
+		return "⭐"
+	var icon_key = habits[habit_id].get("icon", "custom")
+	if HABIT_ICONS.has(icon_key):
+		return HABIT_ICONS[icon_key].emoji
+	return "⭐"
+
+
+## Update habit icon
+func set_habit_icon(habit_id: String, icon: String) -> void:
+	if habits.has(habit_id) and HABIT_ICONS.has(icon):
+		habits[habit_id].icon = icon
+
+
+## Get habit tags
+func get_habit_tags(habit_id: String) -> Array:
+	if habits.has(habit_id):
+		return habits[habit_id].get("tags", [])
+	return []
+
+
+## Add tag to habit
+func add_tag_to_habit(habit_id: String, tag: String) -> void:
+	if not habits.has(habit_id):
+		return
+
+	if not habits[habit_id].has("tags"):
+		habits[habit_id]["tags"] = []
+
+	if tag not in habits[habit_id].tags:
+		habits[habit_id].tags.append(tag)
+		add_habit_to_tag(habit_id, tag)
+
+
+## Remove tag from habit
+func remove_tag_from_habit(habit_id: String, tag: String) -> void:
+	if not habits.has(habit_id):
+		return
+
+	if habits[habit_id].has("tags"):
+		habits[habit_id].tags.erase(tag)
+
+	if habit_tags.has(tag):
+		habit_tags[tag].habit_ids.erase(habit_id)
+
+
+## Create a new tag
+func create_tag(tag_name: String, color: Color = Color(0.5, 0.5, 0.7)) -> void:
+	if not habit_tags.has(tag_name):
+		habit_tags[tag_name] = {
+			"color": color,
+			"habit_ids": []
+		}
+
+
+## Add habit to tag tracking
+func add_habit_to_tag(habit_id: String, tag_name: String) -> void:
+	if not habit_tags.has(tag_name):
+		create_tag(tag_name)
+
+	if habit_id not in habit_tags[tag_name].habit_ids:
+		habit_tags[tag_name].habit_ids.append(habit_id)
+
+
+## Get all tags
+func get_all_tags() -> Array:
+	return habit_tags.keys()
+
+
+## Get habits by tag
+func get_habits_by_tag(tag_name: String) -> Array:
+	if not habit_tags.has(tag_name):
+		return []
+
+	var result = []
+	for habit_id in habit_tags[tag_name].habit_ids:
+		if habits.has(habit_id):
+			result.append(habits[habit_id])
+	return result
+
+
+## Get tag color
+func get_tag_color(tag_name: String) -> Color:
+	if habit_tags.has(tag_name):
+		return habit_tags[tag_name].color
+	return Color(0.5, 0.5, 0.7)
+
+
+## Set tag color
+func set_tag_color(tag_name: String, color: Color) -> void:
+	if habit_tags.has(tag_name):
+		habit_tags[tag_name].color = color
+
+
+## Delete a tag (removes from all habits)
+func delete_tag(tag_name: String) -> void:
+	if not habit_tags.has(tag_name):
+		return
+
+	# Remove tag from all habits
+	for habit_id in habit_tags[tag_name].habit_ids:
+		if habits.has(habit_id) and habits[habit_id].has("tags"):
+			habits[habit_id].tags.erase(tag_name)
+
+	habit_tags.erase(tag_name)
 
 
 # ============ TOPICS (Lightweight focus tracking) ============
@@ -835,3 +1013,261 @@ func reset_habits() -> void:
 	last_date = ""
 	_initialize_preset_habits()
 	print("[HabitManager] Habits and topics reset to defaults")
+
+
+## Check if all active habits are completed today
+func _all_habits_completed_today() -> bool:
+	var active_habits = get_all_habits(false)
+	if active_habits.size() == 0:
+		return false
+
+	for habit in active_habits:
+		if not todays_completions.get(habit.id, false):
+			return false
+	return true
+
+
+## Get number of consecutive days with all habits completed
+func _get_consecutive_all_habits_days() -> int:
+	var active_habits = get_all_habits(false)
+	if active_habits.size() == 0:
+		return 0
+
+	var consecutive = 0
+	var day_offset = 0
+
+	# Start from today if all completed, otherwise start from yesterday
+	if _all_habits_completed_today():
+		day_offset = 0
+		consecutive = 1
+	else:
+		return 0
+
+	# Check previous days
+	for i in range(1, 30):  # Check up to 30 days back
+		var check_date = _get_date_n_days_ago(i)
+		var all_done_that_day = true
+
+		for habit in active_habits:
+			var history = completion_history.get(habit.id, [])
+			if check_date not in history:
+				all_done_that_day = false
+				break
+
+		if all_done_that_day:
+			consecutive += 1
+		else:
+			break
+
+	return consecutive
+
+
+# =============================================================================
+# REMINDER SYSTEM
+# =============================================================================
+
+func _setup_reminder_system() -> void:
+	## Initialize the reminder checking system
+	reminder_check_timer = Timer.new()
+	reminder_check_timer.name = "ReminderCheckTimer"
+	reminder_check_timer.wait_time = 30.0  # Check every 30 seconds
+	reminder_check_timer.autostart = true
+	reminder_check_timer.timeout.connect(_check_reminders)
+	add_child(reminder_check_timer)
+
+	# Load saved reminders
+	_load_reminders()
+
+	print("[HabitManager] Reminder system initialized")
+
+
+func _check_reminders() -> void:
+	## Check if any reminders should trigger now
+	var now = Time.get_datetime_dict_from_system()
+	var current_minute = now.hour * 60 + now.minute
+	var current_day = now.weekday  # 0 = Sunday, 6 = Saturday
+
+	# Only check once per minute
+	if current_minute == last_reminder_check_minute:
+		return
+	last_reminder_check_minute = current_minute
+
+	# Reset triggered reminders at midnight
+	if now.hour == 0 and now.minute == 0:
+		triggered_reminders_today.clear()
+
+	# Check each habit's reminder
+	for habit_id in habit_reminders:
+		var reminder = habit_reminders[habit_id]
+
+		if not reminder.get("enabled", false):
+			continue
+
+		# Check if already triggered today
+		if habit_id in triggered_reminders_today:
+			continue
+
+		# Check if habit is already completed today
+		if habit_id in todays_completions:
+			continue
+
+		# Parse reminder time
+		var time_parts = reminder.get("time", "09:00").split(":")
+		if time_parts.size() != 2:
+			continue
+
+		var reminder_minute = int(time_parts[0]) * 60 + int(time_parts[1])
+
+		# Check if it's time (within 1 minute window)
+		if abs(current_minute - reminder_minute) > 0:
+			continue
+
+		# Check if today is an enabled day
+		var enabled_days = reminder.get("days", [0, 1, 2, 3, 4, 5, 6])
+		if current_day not in enabled_days:
+			continue
+
+		# Trigger the reminder
+		_trigger_reminder(habit_id)
+
+
+func _trigger_reminder(habit_id: String) -> void:
+	## Fire a reminder notification for a habit
+	if habit_id in triggered_reminders_today:
+		return
+
+	var habit = habits.get(habit_id, {})
+	if habit.is_empty():
+		return
+
+	triggered_reminders_today.append(habit_id)
+
+	var habit_name = habit.get("name", "Habit")
+	var habit_icon = habit.get("icon", "custom")
+	var icon_info = HABIT_ICONS.get(habit_icon, HABIT_ICONS["custom"])
+
+	print("[HabitManager] Reminder triggered for: ", habit_name)
+
+	# Emit signal for UI to handle
+	habit_reminder_triggered.emit(habit_id, habit_name)
+
+
+func set_habit_reminder(habit_id: String, time: String, enabled: bool = true, days: Array = [0, 1, 2, 3, 4, 5, 6]) -> void:
+	## Set or update a reminder for a habit
+	## time: "HH:MM" format (24-hour)
+	## days: Array of weekday numbers (0 = Sunday, 6 = Saturday)
+	habit_reminders[habit_id] = {
+		"time": time,
+		"enabled": enabled,
+		"days": days
+	}
+	_save_reminders()
+	print("[HabitManager] Reminder set for %s at %s" % [habit_id, time])
+
+
+func get_habit_reminder(habit_id: String) -> Dictionary:
+	## Get reminder settings for a habit
+	return habit_reminders.get(habit_id, {"time": "09:00", "enabled": false, "days": [0, 1, 2, 3, 4, 5, 6]})
+
+
+func clear_habit_reminder(habit_id: String) -> void:
+	## Remove a reminder for a habit
+	if habit_id in habit_reminders:
+		habit_reminders.erase(habit_id)
+		_save_reminders()
+		print("[HabitManager] Reminder cleared for ", habit_id)
+
+
+func toggle_habit_reminder(habit_id: String) -> bool:
+	## Toggle a reminder on/off, returns new state
+	if habit_id in habit_reminders:
+		habit_reminders[habit_id]["enabled"] = not habit_reminders[habit_id]["enabled"]
+	else:
+		habit_reminders[habit_id] = {"time": "09:00", "enabled": true, "days": [0, 1, 2, 3, 4, 5, 6]}
+
+	_save_reminders()
+	return habit_reminders[habit_id]["enabled"]
+
+
+func get_all_reminders() -> Dictionary:
+	## Get all habit reminders
+	return habit_reminders.duplicate()
+
+
+func get_next_reminder() -> Dictionary:
+	## Get the next upcoming reminder (for display purposes)
+	var now = Time.get_datetime_dict_from_system()
+	var current_minute = now.hour * 60 + now.minute
+	var current_day = now.weekday
+
+	var next_reminder = {}
+	var next_time_diff = 999999
+
+	for habit_id in habit_reminders:
+		var reminder = habit_reminders[habit_id]
+		if not reminder.get("enabled", false):
+			continue
+
+		# Skip if already completed today
+		if habit_id in todays_completions:
+			continue
+
+		var time_parts = reminder.get("time", "09:00").split(":")
+		if time_parts.size() != 2:
+			continue
+
+		var reminder_minute = int(time_parts[0]) * 60 + int(time_parts[1])
+
+		# Check enabled days
+		var enabled_days = reminder.get("days", [0, 1, 2, 3, 4, 5, 6])
+
+		# Calculate time until next occurrence
+		var time_diff = reminder_minute - current_minute
+		if time_diff <= 0 or current_day not in enabled_days:
+			time_diff += 1440  # Next day
+
+		if time_diff < next_time_diff:
+			next_time_diff = time_diff
+			var habit = habits.get(habit_id, {})
+			next_reminder = {
+				"habit_id": habit_id,
+				"habit_name": habit.get("name", "Habit"),
+				"time": reminder.get("time", "09:00"),
+				"minutes_until": time_diff
+			}
+
+	return next_reminder
+
+
+func _save_reminders() -> void:
+	## Save reminders to file
+	var file = FileAccess.open("user://habit_reminders.json", FileAccess.WRITE)
+	if file:
+		file.store_string(JSON.stringify(habit_reminders, "\t"))
+		file.close()
+
+
+func _load_reminders() -> void:
+	## Load reminders from file
+	var path = "user://habit_reminders.json"
+	if not FileAccess.file_exists(path):
+		return
+
+	var file = FileAccess.open(path, FileAccess.READ)
+	if not file:
+		return
+
+	var json = JSON.new()
+	var result = json.parse(file.get_as_text())
+	file.close()
+
+	if result == OK and json.data is Dictionary:
+		habit_reminders = json.data
+		# Convert days arrays back to proper format
+		for habit_id in habit_reminders:
+			var days = habit_reminders[habit_id].get("days", [])
+			var int_days = []
+			for d in days:
+				int_days.append(int(d))
+			habit_reminders[habit_id]["days"] = int_days
+		print("[HabitManager] Loaded ", habit_reminders.size(), " reminders")

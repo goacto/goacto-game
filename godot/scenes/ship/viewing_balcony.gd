@@ -890,6 +890,11 @@ func _start_meditation(duration: float) -> void:
 
 	_play_sfx("res://audio/sfx/confirm.wav")
 
+	# Enter meditation audio state for dynamic mixing
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("enter_meditation_mode"):
+		audio.enter_meditation_mode()
+
 	# Update UI
 	if meditation_panel:
 		var breath_label = meditation_panel.get_node_or_null("MarginContainer/MeditationVBox/CenterContainer/BreathingCircle/BreathLabel")
@@ -965,6 +970,11 @@ func _update_meditation(delta: float) -> void:
 func _complete_meditation() -> void:
 	is_meditating = false
 
+	# Exit meditation audio state
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("exit_meditation_mode"):
+		audio.exit_meditation_mode()
+
 	# Record stats
 	var sessions = GameManager.player_data.get("balcony_meditation_sessions", 0) + 1
 	var minutes = GameManager.player_data.get("balcony_meditation_minutes", 0) + int(meditation_duration / 60)
@@ -976,6 +986,10 @@ func _complete_meditation() -> void:
 	if GameManager.has_method("add_aspect_experience"):
 		GameManager.add_aspect_experience("spirit", xp_reward)
 
+	# Track for aspect quests
+	if GameManager:
+		GameManager.check_quests_for_trigger("meditation_completed", {})
+
 	_play_sfx("res://audio/sfx/success.wav")
 
 	_close_meditation_panel()
@@ -984,6 +998,13 @@ func _complete_meditation() -> void:
 
 func _close_meditation_panel() -> void:
 	is_meditating = false
+
+	# Exit meditation audio state if still in it
+	if is_meditating:
+		var audio = get_node_or_null("/root/AudioManager")
+		if audio and audio.has_method("exit_meditation_mode"):
+			audio.exit_meditation_mode()
+
 	if meditation_panel:
 		meditation_panel.queue_free()
 		meditation_panel = null

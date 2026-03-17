@@ -619,6 +619,206 @@ goal = {
 
 ---
 
+### RelationshipManager.gd (~10 KB)
+**Purpose**: Track and nurture important relationships - the social pillar of self-improvement
+
+> *"No person is an island. Growth happens in connection with others."*
+
+#### Overview Card
+
+| Attribute | Value |
+|-----------|-------|
+| **File** | `godot/autoload/RelationshipManager.gd` |
+| **Aspect Integration** | Compassion |
+| **XP Range** | 5-30 per interaction |
+| **Categories** | 6 relationship types |
+| **Health Levels** | 5 (Distant → Thriving) |
+| **Streak System** | Weekly interaction tracking |
+
+#### Relationship Categories
+
+| Category | Enum Value | Description | Examples |
+|----------|------------|-------------|----------|
+| **Family** | 0 | Blood relatives, chosen family | Parents, siblings, grandparents |
+| **Friend** | 1 | Close personal connections | Best friends, longtime friends |
+| **Romantic** | 2 | Intimate partnerships | Partner, spouse, significant other |
+| **Professional** | 3 | Work-related relationships | Colleagues, boss, clients |
+| **Mentor** | 4 | Guidance relationships | Coaches, teachers, advisors |
+| **Community** | 5 | Broader social connections | Neighbors, club members, acquaintances |
+
+#### Interaction Types & XP Values
+
+| Interaction | XP | Icon | Description |
+|-------------|-----|------|-------------|
+| **Message** | 5 | chat | Text, email, social media message |
+| **Call** | 15 | phone | Phone or video call |
+| **Listen** | 15 | ear | Active, focused listening session |
+| **Help** | 20 | hands | Provided assistance or support |
+| **Gift** | 20 | gift | Gave a gift or surprise |
+| **Celebrate** | 20 | party | Celebrated together (birthday, achievement) |
+| **Shared Activity** | 20 | activity | Did an activity together |
+| **Support** | 25 | hug | Provided emotional support |
+| **Visit** | 25 | home | In-person visit |
+| **Quality Time** | 30 | heart | Dedicated, meaningful time together |
+
+#### Health Level System
+
+| Level | Name | Color | Description | Auto-Trigger |
+|-------|------|-------|-------------|--------------|
+| 1 | **Distant** | Red | Needs immediate attention | 3+ weeks no contact |
+| 2 | **Cooling** | Orange | Could use more connection | 2 weeks no contact |
+| 3 | **Stable** | Yellow | Maintaining well | Default / 1 week no contact |
+| 4 | **Warm** | Light Green | Growing stronger | 2+ week streak |
+| 5 | **Thriving** | Green | Flourishing connection | 4+ week streak |
+
+#### Relationship Data Structure
+```gdscript
+relationship = {
+    "id": String,                    # Unique identifier
+    "name": String,                  # Person's name
+    "category": RelationshipCategory, # Enum value 0-5
+    "notes": String,                 # Optional notes
+    "health": int,                   # 1-5 health level
+    "streak_weeks": int,             # Consecutive weeks with interaction
+    "best_streak": int,              # Personal record
+    "total_interactions": int,       # Lifetime count
+    "last_interaction_date": String, # ISO date
+    "last_interaction_week": String, # "2026-W12" format
+    "created_at": int,               # Unix timestamp
+    "weekly_check_ins": Dictionary,  # week -> {completed, reflection, timestamp}
+    "interaction_goal": int,         # Target interactions per week
+    "priority": bool,                # Is this a priority relationship?
+    "birthday": String,              # Optional birthday
+    "reminders": Array               # Custom reminders
+}
+```
+
+#### Interaction Record Structure
+```gdscript
+interaction = {
+    "id": String,           # Unique identifier
+    "type": String,         # Interaction type key
+    "type_name": String,    # Human-readable name
+    "note": String,         # Optional reflection
+    "date": String,         # ISO date
+    "week": String,         # Week identifier
+    "timestamp": int,       # Unix timestamp
+    "xp_earned": int        # XP awarded (added after calculation)
+}
+```
+
+#### XP Calculation Formula
+```gdscript
+func _calculate_interaction_xp(relationship: Dictionary, interaction_type: String) -> int:
+    var base_xp = INTERACTION_TYPES[interaction_type].xp
+
+    # Streak bonus: +5 XP per week of streak (capped at 25)
+    var streak_bonus = min(relationship.streak_weeks * 5, 25)
+
+    # Priority relationship bonus: +10 XP
+    var priority_bonus = 10 if relationship.priority else 0
+
+    return base_xp + streak_bonus + priority_bonus
+```
+
+#### Key Signals
+```gdscript
+signal relationship_added(relationship_id: String, relationship_data: Dictionary)
+signal relationship_updated(relationship_id: String, relationship_data: Dictionary)
+signal relationship_removed(relationship_id: String)
+signal interaction_logged(relationship_id: String, interaction_data: Dictionary)
+signal relationship_streak_updated(relationship_id: String, streak: int)
+signal relationship_health_changed(relationship_id: String, health: int)
+signal weekly_check_in_completed(relationship_id: String)
+```
+
+#### Key Methods
+```gdscript
+# Relationship Management
+func add_relationship(name: String, category: RelationshipCategory, notes: String = "") -> String
+func update_relationship(relationship_id: String, updates: Dictionary) -> void
+func remove_relationship(relationship_id: String) -> void
+func get_relationship(relationship_id: String) -> Dictionary
+func get_all_relationships() -> Array  # Sorted by priority, then health
+func get_relationships_by_category(category: RelationshipCategory) -> Array
+func get_relationships_needing_attention() -> Array  # Health <= 2 OR no contact this week
+
+# Interaction Logging
+func log_interaction(relationship_id: String, interaction_type: String, note: String = "") -> Dictionary
+func get_interaction_history(relationship_id: String, limit: int = 20) -> Array
+func get_recent_interactions(days: int = 7) -> Array  # All relationships
+
+# Weekly Check-ins
+func complete_weekly_check_in(relationship_id: String, reflection: String = "") -> void
+func is_weekly_check_in_done(relationship_id: String) -> bool
+func get_weekly_check_in_progress() -> Dictionary  # {total, completed, percentage}
+
+# Statistics
+func get_statistics() -> Dictionary
+```
+
+#### Statistics Dictionary
+```gdscript
+{
+    "total_relationships": int,
+    "total_interactions": int,
+    "healthy_relationships": int,      # Health >= 4
+    "needs_attention": int,            # Health <= 2
+    "longest_streak": int,             # Best streak across all relationships
+    "interactions_this_week": int,     # Total interactions in past 7 days
+    "relationships_contacted_this_week": int,
+    "average_health": float            # Mean health across all relationships
+}
+```
+
+#### UI Integration (Daily Rituals Scene)
+
+The Relationship Health Tracker is accessed via the "Rel" button in the Daily Rituals scene:
+
+**Main Panel:**
+- Statistics summary (total, thriving, need care, this week)
+- Add new relationship button
+- Scrollable relationship list
+- Each row shows: health indicator, name, category, streak, log button
+
+**Add Relationship Form:**
+- Name input
+- Category dropdown (6 options)
+- Notes input (optional)
+
+**Log Interaction Form:**
+- Interaction type grid (10 options with XP values)
+- Note input (optional)
+- Submit logs interaction and awards XP
+
+#### Save/Load Integration
+```gdscript
+func get_save_data() -> Dictionary:
+    return {
+        "relationships": relationships,
+        "interaction_history": interaction_history,
+        "last_check_date": last_check_date
+    }
+
+func load_save_data(data: Dictionary) -> void:
+    relationships = data.get("relationships", {})
+    interaction_history = data.get("interaction_history", {})
+    last_check_date = data.get("last_check_date", "")
+    _check_date_change()  # Update health levels
+```
+
+#### Design Philosophy
+
+The Relationship Health Tracker embodies the "C" in GOACTO - **Contributing To Others**:
+
+1. **Intentional Connection**: Track relationships to be more intentional about nurturing them
+2. **Gentle Accountability**: Health levels decline gradually, not punitively
+3. **Variety of Connection**: 10 interaction types recognize that connection takes many forms
+4. **Compassion XP**: All relationship activities feed the Compassion aspect
+5. **Streak Rewards**: Consistency in relationships is celebrated with bonus XP
+
+---
+
 ## Game Mechanics
 
 ### Focus Session Flow

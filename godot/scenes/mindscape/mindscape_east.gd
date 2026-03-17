@@ -58,6 +58,11 @@ func _ready() -> void:
 	resume_button.pressed.connect(_close_pause_menu)
 	exit_button.pressed.connect(_travel_to_hub)
 
+	# Play mindscape music
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("play_music_mindscape"):
+		audio.play_music_mindscape()
+
 	# Setup region config
 	setup_region({
 		"region_id": "east",
@@ -65,7 +70,9 @@ func _ready() -> void:
 		"theme_color": Color(0.5, 0.5, 0.8),
 		"zone_names": {
 			"Observatory": "Star Observatory",
-			"ReflectionPool": "Reflection Pool"
+			"ReflectionPool": "Reflection Pool",
+			"TidePool": "Tide Pool",
+			"MessageBottle": "Message Bottle"
 		},
 		"player_bounds": Rect2(-900, -700, 1800, 1400)  # Expanded bounds
 	})
@@ -704,6 +711,10 @@ func _open_zone(zone_id: String) -> void:
 			_open_observatory()
 		"ReflectionPool":
 			_open_reflection_pool()
+		"TidePool":
+			_open_tide_pool()
+		"MessageBottle":
+			_open_message_bottle()
 		_:
 			super._open_zone(zone_id)
 
@@ -2143,3 +2154,763 @@ func _build_activity_bars(daily_activity: Dictionary) -> void:
 		day_label.add_theme_color_override("font_color", Color(0.5, 0.55, 0.6))
 		day_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		day_col.add_child(day_label)
+
+
+# =============================================================================
+# TIDE POOL - Discover wisdom creatures
+# =============================================================================
+
+func _open_tide_pool() -> void:
+	zone_title.text = "Tide Pool"
+	_clear_zone_body()
+	_create_tide_pool_graphic()
+
+	_add_pool_spacer(10)
+
+	var intro = Label.new()
+	intro.text = "A mystical pool where wisdom creatures dwell. Each creature carries an insight to share with those who listen."
+	intro.autowrap_mode = TextServer.AUTOWRAP_WORD
+	intro.add_theme_font_size_override("font_size", 18)
+	intro.add_theme_color_override("font_color", Color(0.7, 0.8, 0.85))
+	zone_body.add_child(intro)
+
+	_add_pool_spacer(15)
+
+	var discover_btn = Button.new()
+	discover_btn.text = "Discover a Creature"
+	discover_btn.custom_minimum_size = Vector2(0, 50)
+	discover_btn.add_theme_font_size_override("font_size", 18)
+	discover_btn.pressed.connect(_discover_creature)
+	zone_body.add_child(discover_btn)
+
+	_add_pool_spacer(8)
+
+	var collection_btn = Button.new()
+	collection_btn.text = "View Collection"
+	collection_btn.custom_minimum_size = Vector2(0, 50)
+	collection_btn.add_theme_font_size_override("font_size", 18)
+	collection_btn.pressed.connect(_view_creature_collection)
+	zone_body.add_child(collection_btn)
+
+	_add_pool_spacer(8)
+
+	var wisdom_btn = Button.new()
+	wisdom_btn.text = "Seek Wisdom"
+	wisdom_btn.custom_minimum_size = Vector2(0, 50)
+	wisdom_btn.add_theme_font_size_override("font_size", 18)
+	wisdom_btn.pressed.connect(_seek_wisdom)
+	zone_body.add_child(wisdom_btn)
+
+	# Show collection stats
+	_add_pool_spacer(15)
+	var creatures = _load_creatures()
+	var stats = Label.new()
+	stats.text = str(creatures.size()) + " creatures discovered"
+	stats.add_theme_font_size_override("font_size", 14)
+	stats.add_theme_color_override("font_color", Color(0.5, 0.6, 0.7))
+	stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	zone_body.add_child(stats)
+
+	zone_panel.visible = true
+	in_zone_panel = true
+
+
+func _create_tide_pool_graphic() -> void:
+	for child in zone_graphic_container.get_children():
+		child.queue_free()
+
+	var graphic = Control.new()
+	graphic.set_anchors_preset(Control.PRESET_FULL_RECT)
+	zone_graphic_container.add_child(graphic)
+
+	var canvas = Node2D.new()
+	graphic.add_child(canvas)
+	graphic.resized.connect(func(): canvas.position = graphic.size / 2)
+	canvas.position = Vector2(200, 300)
+
+	var scale_factor = 2.0
+
+	# Rock border
+	var rocks = Polygon2D.new()
+	rocks.polygon = PackedVector2Array([
+		Vector2(-70, 0), Vector2(-60, -35), Vector2(0, -45),
+		Vector2(60, -35), Vector2(70, 0), Vector2(60, 35),
+		Vector2(0, 45), Vector2(-60, 35)
+	])
+	rocks.scale = Vector2(scale_factor, scale_factor)
+	rocks.color = Color(0.22, 0.25, 0.32)
+	canvas.add_child(rocks)
+
+	# Water
+	var water = Polygon2D.new()
+	water.polygon = PackedVector2Array([
+		Vector2(-55, 0), Vector2(-45, -28), Vector2(0, -36),
+		Vector2(45, -28), Vector2(55, 0), Vector2(45, 28),
+		Vector2(0, 36), Vector2(-45, 28)
+	])
+	water.scale = Vector2(scale_factor, scale_factor)
+	water.color = Color(0.2, 0.4, 0.55, 0.9)
+	canvas.add_child(water)
+
+	# Creatures
+	var creature_data = [
+		{"pos": Vector2(-25, -10), "color": Color(0.85, 0.6, 0.45)},
+		{"pos": Vector2(20, 8), "color": Color(0.5, 0.75, 0.9)},
+		{"pos": Vector2(-8, 18), "color": Color(0.9, 0.55, 0.65)},
+		{"pos": Vector2(30, -15), "color": Color(0.65, 0.85, 0.6)},
+	]
+	for c in creature_data:
+		var creature = Polygon2D.new()
+		creature.position = c.pos * scale_factor
+		creature.polygon = PackedVector2Array([
+			Vector2(-7, 0), Vector2(-4, -6), Vector2(0, -8),
+			Vector2(4, -6), Vector2(7, 0), Vector2(4, 5), Vector2(-4, 5)
+		])
+		creature.scale = Vector2(scale_factor, scale_factor)
+		creature.color = c.color
+		canvas.add_child(creature)
+
+	# Seaweed
+	var seaweed_positions = [Vector2(-50, 15), Vector2(45, -5)]
+	for pos in seaweed_positions:
+		var seaweed = Polygon2D.new()
+		seaweed.position = pos * scale_factor
+		seaweed.polygon = PackedVector2Array([
+			Vector2(-3, 12), Vector2(-5, 0), Vector2(-2, -18),
+			Vector2(2, -20), Vector2(4, -5), Vector2(3, 12)
+		])
+		seaweed.scale = Vector2(scale_factor, scale_factor)
+		seaweed.color = Color(0.3, 0.55, 0.45, 0.9)
+		canvas.add_child(seaweed)
+
+	# Glow
+	var glow = Polygon2D.new()
+	glow.polygon = PackedVector2Array([
+		Vector2(-65, 40), Vector2(-70, -25), Vector2(0, -50),
+		Vector2(70, -25), Vector2(65, 40), Vector2(0, 50)
+	])
+	glow.scale = Vector2(scale_factor, scale_factor)
+	glow.color = Color(0.3, 0.5, 0.7, 0.2)
+	canvas.add_child(glow)
+
+
+const WISDOM_CREATURES = [
+	{"name": "Patience Crab", "wisdom": "The tide comes and goes. What matters is what you do while waiting.", "aspect": "discipline", "icon": "crab", "color": Color(0.85, 0.55, 0.35)},
+	{"name": "Clarity Jellyfish", "wisdom": "Sometimes the most beautiful things are found by drifting, not swimming.", "aspect": "wisdom", "icon": "jellyfish", "color": Color(0.6, 0.7, 0.95)},
+	{"name": "Courage Urchin", "wisdom": "Spines protect, but they also limit connection. Choose when to open.", "aspect": "courage", "icon": "urchin", "color": Color(0.5, 0.35, 0.55)},
+	{"name": "Creative Octopus", "wisdom": "Eight arms, endless possibilities. Try many paths at once.", "aspect": "creativity", "icon": "octopus", "color": Color(0.9, 0.5, 0.6)},
+	{"name": "Kindness Starfish", "wisdom": "When you lose a part of yourself, you can grow it back with time.", "aspect": "compassion", "icon": "starfish", "color": Color(0.95, 0.75, 0.4)},
+	{"name": "Balance Seahorse", "wisdom": "Standing still in a current requires constant adjustment.", "aspect": "vitality", "icon": "seahorse", "color": Color(0.4, 0.8, 0.6)},
+	{"name": "Depth Anemone", "wisdom": "Beauty often hides danger. Wisdom sees both.", "aspect": "wisdom", "icon": "anemone", "color": Color(0.95, 0.45, 0.7)},
+	{"name": "Flow Eel", "wisdom": "The path of least resistance is not always the coward's path.", "aspect": "discipline", "icon": "eel", "color": Color(0.35, 0.5, 0.65)},
+	{"name": "Trust Clownfish", "wisdom": "Home is where you're accepted, not where you're born.", "aspect": "compassion", "icon": "clownfish", "color": Color(0.95, 0.6, 0.3)},
+	{"name": "Vision Mantis Shrimp", "wisdom": "Others see seven colors. You can train yourself to see more.", "aspect": "creativity", "icon": "mantis", "color": Color(0.4, 0.85, 0.85)},
+]
+
+
+func _discover_creature() -> void:
+	var discovered = _load_creatures()
+	var discovered_names = []
+	for c in discovered:
+		discovered_names.append(c.get("name", ""))
+
+	# Find undiscovered creatures
+	var available = []
+	for creature in WISDOM_CREATURES:
+		if creature.name not in discovered_names:
+			available.append(creature)
+
+	if available.is_empty():
+		_show_dialogue("All Discovered!", "You've discovered all the wisdom creatures in the tide pool!\n\nReturn to seek wisdom from your collected creatures.")
+		return
+
+	# Random discovery
+	var found = available[randi() % available.size()]
+
+	# Save the discovered creature
+	var new_creature = {
+		"name": found.name,
+		"wisdom": found.wisdom,
+		"aspect": found.aspect,
+		"icon": found.icon,
+		"discovered_date": Time.get_date_string_from_system()
+	}
+	discovered.append(new_creature)
+	_save_creatures(discovered)
+
+	# Award XP
+	GameManager.add_aspect_experience(found.aspect, 12)
+
+	_close_zone()
+	_show_dialogue("Creature Discovered!", "You found a " + found.name + "!\n\n\"" + found.wisdom + "\"\n\n+12 " + found.aspect.capitalize() + " XP\n\nThis creature has been added to your collection.", _open_tide_pool)
+
+
+func _view_creature_collection() -> void:
+	zone_title.text = "Creature Collection"
+	_clear_zone_body()
+	_create_tide_pool_graphic()
+
+	_add_pool_spacer(10)
+
+	var creatures = _load_creatures()
+
+	if creatures.is_empty():
+		var empty = Label.new()
+		empty.text = "No creatures discovered yet.\n\nVisit the tide pool and discover the wisdom creatures that dwell within."
+		empty.autowrap_mode = TextServer.AUTOWRAP_WORD
+		empty.add_theme_font_size_override("font_size", 18)
+		empty.add_theme_color_override("font_color", Color(0.5, 0.6, 0.7))
+		zone_body.add_child(empty)
+	else:
+		var header = Label.new()
+		header.text = "Your collection (" + str(creatures.size()) + "/" + str(WISDOM_CREATURES.size()) + "):"
+		header.add_theme_font_size_override("font_size", 18)
+		zone_body.add_child(header)
+
+		_add_pool_spacer(10)
+
+		for creature in creatures:
+			_add_creature_entry(creature)
+
+	_add_pool_spacer(12)
+
+	var back_btn = Button.new()
+	back_btn.text = "Back"
+	back_btn.custom_minimum_size = Vector2(0, 45)
+	back_btn.add_theme_font_size_override("font_size", 18)
+	back_btn.pressed.connect(_open_tide_pool)
+	zone_body.add_child(back_btn)
+
+
+func _add_creature_entry(creature: Dictionary) -> void:
+	var container = VBoxContainer.new()
+	container.add_theme_constant_override("separation", 3)
+
+	var title = Label.new()
+	title.text = creature.get("name", "Unknown")
+	title.add_theme_font_size_override("font_size", 17)
+	title.add_theme_color_override("font_color", Color(0.5, 0.75, 0.85))
+	container.add_child(title)
+
+	var wisdom = Label.new()
+	wisdom.text = "\"" + creature.get("wisdom", "") + "\""
+	wisdom.add_theme_font_size_override("font_size", 14)
+	wisdom.add_theme_color_override("font_color", Color(0.6, 0.65, 0.7))
+	wisdom.autowrap_mode = TextServer.AUTOWRAP_WORD
+	container.add_child(wisdom)
+
+	var meta = Label.new()
+	meta.text = creature.get("aspect", "").capitalize() + " • Discovered " + creature.get("discovered_date", "")
+	meta.add_theme_font_size_override("font_size", 12)
+	meta.add_theme_color_override("font_color", Color(0.45, 0.5, 0.55))
+	container.add_child(meta)
+
+	zone_body.add_child(container)
+	_add_pool_spacer(10)
+
+
+func _seek_wisdom() -> void:
+	var creatures = _load_creatures()
+
+	if creatures.is_empty():
+		_show_dialogue("No Creatures", "You haven't discovered any creatures yet.\n\nExplore the tide pool to find wisdom creatures.")
+		return
+
+	# Pick a random creature from collection
+	var chosen = creatures[randi() % creatures.size()]
+
+	_close_zone()
+	_show_dialogue("Wisdom from " + chosen.get("name", "Creature"), "\"" + chosen.get("wisdom", "") + "\"\n\nTake this wisdom with you today.", _open_tide_pool)
+
+
+func _save_creatures(creatures: Array) -> void:
+	var json_string = JSON.stringify(creatures, "\t")
+	var path = SaveManager.get_creatures_path()
+	var file = FileAccess.open(path, FileAccess.WRITE)
+	if file:
+		file.store_string(json_string)
+		file.close()
+
+
+func _load_creatures() -> Array:
+	var path = SaveManager.get_creatures_path()
+	if not FileAccess.file_exists(path):
+		return []
+
+	var file = FileAccess.open(path, FileAccess.READ)
+	if not file:
+		return []
+
+	var json_string = file.get_as_text()
+	file.close()
+
+	var json = JSON.new()
+	if json.parse(json_string) != OK:
+		return []
+
+	var data = json.get_data()
+	if data is Array:
+		return data
+	return []
+
+
+# =============================================================================
+# MESSAGE BOTTLE - Messages to your future self
+# =============================================================================
+
+func _open_message_bottle() -> void:
+	zone_title.text = "Message Bottle"
+	_clear_zone_body()
+	_create_message_bottle_graphic()
+
+	_add_pool_spacer(10)
+
+	var intro = Label.new()
+	intro.text = "Cast messages into the cosmic ocean. They will return to you when the time is right."
+	intro.autowrap_mode = TextServer.AUTOWRAP_WORD
+	intro.add_theme_font_size_override("font_size", 18)
+	intro.add_theme_color_override("font_color", Color(0.7, 0.8, 0.75))
+	zone_body.add_child(intro)
+
+	_add_pool_spacer(15)
+
+	var write_btn = Button.new()
+	write_btn.text = "Write a Message"
+	write_btn.custom_minimum_size = Vector2(0, 50)
+	write_btn.add_theme_font_size_override("font_size", 18)
+	write_btn.pressed.connect(_write_message)
+	zone_body.add_child(write_btn)
+
+	_add_pool_spacer(8)
+
+	var check_btn = Button.new()
+	check_btn.text = "Check for Returned Bottles"
+	check_btn.custom_minimum_size = Vector2(0, 50)
+	check_btn.add_theme_font_size_override("font_size", 18)
+	check_btn.pressed.connect(_check_returned_bottles)
+	zone_body.add_child(check_btn)
+
+	_add_pool_spacer(8)
+
+	var archive_btn = Button.new()
+	archive_btn.text = "Message Archive"
+	archive_btn.custom_minimum_size = Vector2(0, 50)
+	archive_btn.add_theme_font_size_override("font_size", 18)
+	archive_btn.pressed.connect(_view_message_archive)
+	zone_body.add_child(archive_btn)
+
+	# Show bottle stats
+	_add_pool_spacer(15)
+	var bottles = _load_bottles()
+	var floating = bottles.filter(func(b): return not b.get("returned", false))
+	var stats = Label.new()
+	stats.text = str(floating.size()) + " bottle(s) floating at sea"
+	stats.add_theme_font_size_override("font_size", 14)
+	stats.add_theme_color_override("font_color", Color(0.5, 0.6, 0.55))
+	stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	zone_body.add_child(stats)
+
+	zone_panel.visible = true
+	in_zone_panel = true
+
+
+func _create_message_bottle_graphic() -> void:
+	for child in zone_graphic_container.get_children():
+		child.queue_free()
+
+	var graphic = Control.new()
+	graphic.set_anchors_preset(Control.PRESET_FULL_RECT)
+	zone_graphic_container.add_child(graphic)
+
+	var canvas = Node2D.new()
+	graphic.add_child(canvas)
+	graphic.resized.connect(func(): canvas.position = graphic.size / 2)
+	canvas.position = Vector2(200, 300)
+
+	var scale_factor = 2.0
+
+	# Sandy beach
+	var sand = Polygon2D.new()
+	sand.polygon = PackedVector2Array([
+		Vector2(-60, 0), Vector2(-50, -30), Vector2(0, -40),
+		Vector2(50, -30), Vector2(60, 0), Vector2(50, 30),
+		Vector2(0, 40), Vector2(-50, 30)
+	])
+	sand.scale = Vector2(scale_factor, scale_factor)
+	sand.color = Color(0.5, 0.45, 0.35, 0.95)
+	canvas.add_child(sand)
+
+	# Water edge
+	var water = Polygon2D.new()
+	water.position = Vector2(-25, 25) * scale_factor
+	water.polygon = PackedVector2Array([
+		Vector2(-35, 0), Vector2(-30, -10), Vector2(30, -10),
+		Vector2(35, 0), Vector2(30, 12), Vector2(-30, 12)
+	])
+	water.scale = Vector2(scale_factor, scale_factor)
+	water.color = Color(0.25, 0.45, 0.6, 0.75)
+	canvas.add_child(water)
+
+	# Bottle
+	var bottle_body = Polygon2D.new()
+	bottle_body.position = Vector2(12, -15) * scale_factor
+	bottle_body.polygon = PackedVector2Array([
+		Vector2(-14, 18), Vector2(-12, -12), Vector2(-8, -22),
+		Vector2(8, -22), Vector2(12, -12), Vector2(14, 18),
+		Vector2(10, 22), Vector2(-10, 22)
+	])
+	bottle_body.scale = Vector2(scale_factor, scale_factor)
+	bottle_body.color = Color(0.55, 0.75, 0.65, 0.85)
+	canvas.add_child(bottle_body)
+
+	# Bottle neck
+	var neck = Polygon2D.new()
+	neck.position = Vector2(12, -42) * scale_factor
+	neck.polygon = PackedVector2Array([
+		Vector2(-5, 6), Vector2(-4, -10), Vector2(4, -10), Vector2(5, 6)
+	])
+	neck.scale = Vector2(scale_factor, scale_factor)
+	neck.color = Color(0.6, 0.8, 0.7, 0.85)
+	canvas.add_child(neck)
+
+	# Cork
+	var cork = Polygon2D.new()
+	cork.position = Vector2(12, -55) * scale_factor
+	cork.polygon = PackedVector2Array([
+		Vector2(-5, 4), Vector2(-4, -5), Vector2(4, -5), Vector2(5, 4)
+	])
+	cork.scale = Vector2(scale_factor, scale_factor)
+	cork.color = Color(0.6, 0.45, 0.35)
+	canvas.add_child(cork)
+
+	# Paper inside
+	var paper = Polygon2D.new()
+	paper.position = Vector2(12, -8) * scale_factor
+	paper.polygon = PackedVector2Array([
+		Vector2(-6, 8), Vector2(-6, -8), Vector2(6, -8), Vector2(6, 8)
+	])
+	paper.scale = Vector2(scale_factor, scale_factor)
+	paper.color = Color(0.95, 0.92, 0.85, 0.7)
+	canvas.add_child(paper)
+
+	# Shells
+	var shell_positions = [Vector2(-30, -8), Vector2(40, 10)]
+	for pos in shell_positions:
+		var shell = Polygon2D.new()
+		shell.position = pos * scale_factor
+		shell.polygon = PackedVector2Array([
+			Vector2(-7, 0), Vector2(-5, -6), Vector2(0, -8),
+			Vector2(5, -6), Vector2(7, 0), Vector2(4, 5), Vector2(-4, 5)
+		])
+		shell.scale = Vector2(scale_factor, scale_factor)
+		shell.color = Color(0.95, 0.88, 0.8, 0.9)
+		canvas.add_child(shell)
+
+	# Glow
+	var glow = Polygon2D.new()
+	glow.polygon = PackedVector2Array([
+		Vector2(-55, 35), Vector2(-60, -20), Vector2(0, -45),
+		Vector2(60, -20), Vector2(55, 35), Vector2(0, 45)
+	])
+	glow.scale = Vector2(scale_factor, scale_factor)
+	glow.color = Color(0.45, 0.55, 0.5, 0.2)
+	canvas.add_child(glow)
+
+
+func _write_message() -> void:
+	zone_title.text = "Write a Message"
+	_clear_zone_body()
+	_create_message_bottle_graphic()
+
+	_add_pool_spacer(10)
+
+	var intro = Label.new()
+	intro.text = "Write a message to your future self:"
+	intro.add_theme_font_size_override("font_size", 18)
+	zone_body.add_child(intro)
+
+	_add_pool_spacer(12)
+
+	var message_input = TextEdit.new()
+	message_input.name = "MessageInput"
+	message_input.placeholder_text = "Dear future me..."
+	message_input.custom_minimum_size = Vector2(0, 120)
+	message_input.add_theme_font_size_override("font_size", 16)
+	message_input.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+	zone_body.add_child(message_input)
+
+	_add_pool_spacer(12)
+
+	# Delivery time selection
+	var time_label = Label.new()
+	time_label.text = "When should this message return?"
+	time_label.add_theme_font_size_override("font_size", 16)
+	zone_body.add_child(time_label)
+
+	var time_container = HBoxContainer.new()
+	time_container.name = "TimeContainer"
+	time_container.add_theme_constant_override("separation", 8)
+
+	var times = [
+		{"label": "1 Day", "days": 1},
+		{"label": "1 Week", "days": 7},
+		{"label": "1 Month", "days": 30},
+		{"label": "3 Months", "days": 90},
+	]
+	for t in times:
+		var btn = Button.new()
+		btn.name = "Time_" + str(t.days)
+		btn.text = t.label
+		btn.toggle_mode = true
+		btn.add_theme_font_size_override("font_size", 14)
+		btn.pressed.connect(_select_bottle_time.bind(t.days))
+		time_container.add_child(btn)
+
+	zone_body.add_child(time_container)
+
+	_add_pool_spacer(15)
+
+	var button_row = HBoxContainer.new()
+	button_row.add_theme_constant_override("separation", 12)
+
+	var back_btn = Button.new()
+	back_btn.text = "Back"
+	back_btn.custom_minimum_size = Vector2(0, 45)
+	back_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	back_btn.add_theme_font_size_override("font_size", 16)
+	back_btn.pressed.connect(_open_message_bottle)
+	button_row.add_child(back_btn)
+
+	var send_btn = Button.new()
+	send_btn.text = "Cast into Sea"
+	send_btn.custom_minimum_size = Vector2(0, 45)
+	send_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	send_btn.add_theme_font_size_override("font_size", 16)
+	send_btn.add_theme_color_override("font_color", Color(0.5, 0.75, 0.7))
+	send_btn.pressed.connect(_cast_bottle)
+	button_row.add_child(send_btn)
+
+	zone_body.add_child(button_row)
+
+
+var _selected_bottle_days: int = 7
+
+func _select_bottle_time(days: int) -> void:
+	_selected_bottle_days = days
+	var container = zone_body.find_child("TimeContainer", true, false)
+	if container:
+		for child in container.get_children():
+			if child is Button:
+				child.button_pressed = (child.name == "Time_" + str(days))
+
+
+func _cast_bottle() -> void:
+	var message_input = zone_body.find_child("MessageInput", true, false) as TextEdit
+	if not message_input or message_input.text.strip_edges() == "":
+		_show_dialogue("Empty Message", "Please write a message before casting the bottle.")
+		return
+
+	var return_timestamp = Time.get_unix_time_from_system() + (_selected_bottle_days * 86400)
+
+	var bottle = {
+		"id": str(Time.get_unix_time_from_system()),
+		"message": message_input.text.strip_edges(),
+		"sent_date": Time.get_date_string_from_system(),
+		"return_days": _selected_bottle_days,
+		"return_timestamp": return_timestamp,
+		"returned": false,
+		"read": false
+	}
+
+	_save_bottle(bottle)
+
+	# Award XP
+	GameManager.add_aspect_experience("wisdom", 10)
+
+	var time_label = str(_selected_bottle_days) + " day" + ("s" if _selected_bottle_days > 1 else "")
+	_close_zone()
+	_show_dialogue("Bottle Cast!", "Your message has been cast into the cosmic sea.\n\n+10 Wisdom XP\n\nIt will return to you in " + time_label + ".", _open_message_bottle)
+
+
+func _check_returned_bottles() -> void:
+	var bottles = _load_bottles()
+	var current_time = Time.get_unix_time_from_system()
+	var returned_now = []
+
+	for bottle in bottles:
+		if not bottle.get("returned", false) and current_time >= bottle.get("return_timestamp", 0):
+			bottle["returned"] = true
+			returned_now.append(bottle)
+
+	if returned_now.size() > 0:
+		_save_all_bottles(bottles)
+
+		zone_title.text = "Returned Bottles!"
+		_clear_zone_body()
+		_create_message_bottle_graphic()
+
+		_add_pool_spacer(10)
+
+		var header = Label.new()
+		header.text = str(returned_now.size()) + " bottle(s) have returned from the sea!"
+		header.add_theme_font_size_override("font_size", 18)
+		header.add_theme_color_override("font_color", Color(0.6, 0.85, 0.7))
+		zone_body.add_child(header)
+
+		_add_pool_spacer(15)
+
+		for bottle in returned_now:
+			_add_returned_bottle(bottle)
+
+		# Award XP for receiving messages
+		GameManager.add_aspect_experience("wisdom", returned_now.size() * 15)
+
+		_add_pool_spacer(12)
+
+		var xp_label = Label.new()
+		xp_label.text = "+" + str(returned_now.size() * 15) + " Wisdom XP"
+		xp_label.add_theme_font_size_override("font_size", 16)
+		xp_label.add_theme_color_override("font_color", Color(0.7, 0.8, 0.6))
+		xp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		zone_body.add_child(xp_label)
+
+		_add_pool_spacer(12)
+
+		var back_btn = Button.new()
+		back_btn.text = "Continue"
+		back_btn.custom_minimum_size = Vector2(0, 45)
+		back_btn.add_theme_font_size_override("font_size", 18)
+		back_btn.pressed.connect(_open_message_bottle)
+		zone_body.add_child(back_btn)
+	else:
+		# Check if there are any floating bottles
+		var floating = bottles.filter(func(b): return not b.get("returned", false))
+		if floating.is_empty():
+			_show_dialogue("No Bottles", "No bottles are currently floating at sea.\n\nWrite a message to your future self!")
+		else:
+			# Find the next returning bottle
+			var next_return = INF
+			for bottle in floating:
+				var return_time = bottle.get("return_timestamp", INF)
+				if return_time < next_return:
+					next_return = return_time
+
+			var days_left = int((next_return - current_time) / 86400) + 1
+			_show_dialogue("Still at Sea", "Your bottles are still floating in the cosmic ocean.\n\nThe next one will return in about " + str(days_left) + " day(s).")
+
+
+func _add_returned_bottle(bottle: Dictionary) -> void:
+	var container = VBoxContainer.new()
+	container.add_theme_constant_override("separation", 5)
+
+	var date_label = Label.new()
+	date_label.text = "Sent on " + bottle.get("sent_date", "Unknown")
+	date_label.add_theme_font_size_override("font_size", 14)
+	date_label.add_theme_color_override("font_color", Color(0.5, 0.6, 0.55))
+	container.add_child(date_label)
+
+	var message_label = Label.new()
+	message_label.text = bottle.get("message", "")
+	message_label.add_theme_font_size_override("font_size", 16)
+	message_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	container.add_child(message_label)
+
+	zone_body.add_child(container)
+	_add_pool_spacer(15)
+
+
+func _view_message_archive() -> void:
+	zone_title.text = "Message Archive"
+	_clear_zone_body()
+	_create_message_bottle_graphic()
+
+	_add_pool_spacer(10)
+
+	var bottles = _load_bottles()
+	var returned = bottles.filter(func(b): return b.get("returned", false))
+
+	if returned.is_empty():
+		var empty = Label.new()
+		empty.text = "No returned messages yet.\n\nMessages you cast into the sea will appear here when they return."
+		empty.autowrap_mode = TextServer.AUTOWRAP_WORD
+		empty.add_theme_font_size_override("font_size", 18)
+		empty.add_theme_color_override("font_color", Color(0.5, 0.6, 0.55))
+		zone_body.add_child(empty)
+	else:
+		var header = Label.new()
+		header.text = "Returned messages (" + str(returned.size()) + "):"
+		header.add_theme_font_size_override("font_size", 18)
+		zone_body.add_child(header)
+
+		_add_pool_spacer(10)
+
+		returned.reverse()  # Most recent first
+		for bottle in returned.slice(0, 10):  # Show last 10
+			_add_archive_bottle(bottle)
+
+	_add_pool_spacer(12)
+
+	var back_btn = Button.new()
+	back_btn.text = "Back"
+	back_btn.custom_minimum_size = Vector2(0, 45)
+	back_btn.add_theme_font_size_override("font_size", 18)
+	back_btn.pressed.connect(_open_message_bottle)
+	zone_body.add_child(back_btn)
+
+
+func _add_archive_bottle(bottle: Dictionary) -> void:
+	var container = VBoxContainer.new()
+	container.add_theme_constant_override("separation", 3)
+
+	var date_label = Label.new()
+	date_label.text = "Sent " + bottle.get("sent_date", "")
+	date_label.add_theme_font_size_override("font_size", 13)
+	date_label.add_theme_color_override("font_color", Color(0.5, 0.55, 0.5))
+	container.add_child(date_label)
+
+	var message_label = Label.new()
+	var msg = bottle.get("message", "")
+	message_label.text = msg.substr(0, 100) + ("..." if msg.length() > 100 else "")
+	message_label.add_theme_font_size_override("font_size", 15)
+	message_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	container.add_child(message_label)
+
+	zone_body.add_child(container)
+	_add_pool_spacer(10)
+
+
+func _save_bottle(bottle: Dictionary) -> void:
+	var bottles = _load_bottles()
+	bottles.append(bottle)
+	_save_all_bottles(bottles)
+
+
+func _save_all_bottles(bottles: Array) -> void:
+	var json_string = JSON.stringify(bottles, "\t")
+	var path = SaveManager.get_bottles_path()
+	var file = FileAccess.open(path, FileAccess.WRITE)
+	if file:
+		file.store_string(json_string)
+		file.close()
+
+
+func _load_bottles() -> Array:
+	var path = SaveManager.get_bottles_path()
+	if not FileAccess.file_exists(path):
+		return []
+
+	var file = FileAccess.open(path, FileAccess.READ)
+	if not file:
+		return []
+
+	var json_string = file.get_as_text()
+	file.close()
+
+	var json = JSON.new()
+	if json.parse(json_string) != OK:
+		return []
+
+	var data = json.get_data()
+	if data is Array:
+		return data
+	return []

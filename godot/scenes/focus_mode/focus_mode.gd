@@ -716,6 +716,10 @@ func _on_start() -> void:
 		# Play selected ambient sound
 		_play_focus_ambient()
 
+		# Enter focus audio state for dynamic mixing
+		if audio.has_method("enter_focus_mode"):
+			audio.enter_focus_mode()
+
 	start_button.visible = false
 	complete_button.visible = true
 	instructions_label.text = "Focus on your task. Return when complete."
@@ -1269,6 +1273,13 @@ func _on_submit_journal() -> void:
 	if AchievementManager:
 		AchievementManager.record_focus_session(minutes_focused)
 
+	# Track for aspect quests
+	if GameManager:
+		GameManager.check_quests_for_trigger("focus_session_completed", {
+			"duration_minutes": minutes_focused,
+			"category": domain
+		})
+
 	print("[FocusMode] Journal saved - ", minutes_focused, " minutes on ", current_topic, " (", diff_name, " mode, ", xp_multiplier, "x XP)")
 
 	# Check if batch has more scripts
@@ -1473,6 +1484,11 @@ func _finish_block() -> void:
 func _return_to_base() -> void:
 	# Stop focus ambient sound
 	_stop_focus_ambient()
+
+	# Exit focus audio state
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("exit_focus_mode"):
+		audio.exit_focus_mode()
 
 	GameManager.change_state(GameManager.GameState.MINDSCAPE)
 

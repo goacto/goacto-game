@@ -529,3 +529,801 @@ func get_aspect_level(aspect_id: String) -> int:
 	if player_data.aspects.has(aspect_id):
 		return player_data.aspects[aspect_id].get("level", 1)
 	return 1
+
+
+# ============== ACCESSIBILITY SYSTEM ==============
+
+var _settings_cache: Dictionary = {}
+
+
+## Load and cache accessibility settings
+func _load_accessibility_settings() -> void:
+	if SaveManager:
+		_settings_cache = SaveManager.load_settings()
+	else:
+		_settings_cache = {
+			"font_size": "medium",
+			"high_contrast": false,
+			"reduced_motion": false,
+			"colorblind_mode": "none"
+		}
+
+
+## Get font size multiplier based on setting
+func get_font_size_multiplier() -> float:
+	if _settings_cache.is_empty():
+		_load_accessibility_settings()
+
+	var size = _settings_cache.get("font_size", "medium")
+	match size:
+		"small": return 0.85
+		"medium": return 1.0
+		"large": return 1.25
+		_: return 1.0
+
+
+## Get scaled font size
+func get_scaled_font_size(base_size: int) -> int:
+	return int(base_size * get_font_size_multiplier())
+
+
+## Check if high contrast mode is enabled
+func is_high_contrast() -> bool:
+	if _settings_cache.is_empty():
+		_load_accessibility_settings()
+	return _settings_cache.get("high_contrast", false)
+
+
+## Check if reduced motion is enabled
+func is_reduced_motion() -> bool:
+	if _settings_cache.is_empty():
+		_load_accessibility_settings()
+	return _settings_cache.get("reduced_motion", false)
+
+
+## Get colorblind mode
+func get_colorblind_mode() -> String:
+	if _settings_cache.is_empty():
+		_load_accessibility_settings()
+	return _settings_cache.get("colorblind_mode", "none")
+
+
+## Update accessibility setting and save
+func set_accessibility_option(key: String, value) -> void:
+	if _settings_cache.is_empty():
+		_load_accessibility_settings()
+
+	_settings_cache[key] = value
+
+	if SaveManager:
+		SaveManager.save_settings(_settings_cache)
+
+
+## Adjust color for colorblind mode
+func adjust_color_for_colorblind(color: Color) -> Color:
+	var mode = get_colorblind_mode()
+	if mode == "none":
+		return color
+
+	# Simple colorblind simulation adjustments
+	match mode:
+		"deuteranopia":  # Red-green (green weak)
+			return Color(
+				color.r * 0.8 + color.g * 0.2,
+				color.g * 0.7 + color.b * 0.3,
+				color.b,
+				color.a
+			)
+		"protanopia":  # Red-green (red weak)
+			return Color(
+				color.r * 0.6 + color.g * 0.4,
+				color.g * 0.8 + color.r * 0.2,
+				color.b,
+				color.a
+			)
+		"tritanopia":  # Blue-yellow
+			return Color(
+				color.r,
+				color.g * 0.8 + color.b * 0.2,
+				color.b * 0.6 + color.g * 0.4,
+				color.a
+			)
+		_:
+			return color
+
+
+# ============== CHARACTER BOND SYSTEM ==============
+
+signal character_bond_increased(character_id: String, new_level: int, amount: int)
+signal character_bond_milestone(character_id: String, milestone: String)
+
+# Character definitions
+const CHARACTERS = {
+	"mom": {
+		"name": "Mom",
+		"description": "Your Goactorian mother, guiding you from the ship",
+		"color": Color(0.9, 0.7, 0.5),
+		"max_bond": 100
+	},
+	"discipline": {
+		"name": "Discipline",
+		"description": "The Aspect of consistency and structure",
+		"color": Color(0.2, 0.4, 0.8),
+		"max_bond": 100
+	},
+	"courage": {
+		"name": "Courage",
+		"description": "The Aspect of bravery and facing fears",
+		"color": Color(0.8, 0.3, 0.2),
+		"max_bond": 100
+	},
+	"creativity": {
+		"name": "Creativity",
+		"description": "The Aspect of imagination and expression",
+		"color": Color(0.7, 0.4, 0.9),
+		"max_bond": 100
+	},
+	"compassion": {
+		"name": "Compassion",
+		"description": "The Aspect of empathy and kindness",
+		"color": Color(0.3, 0.7, 0.5),
+		"max_bond": 100
+	},
+	"wisdom": {
+		"name": "Wisdom",
+		"description": "The Aspect of insight and reflection",
+		"color": Color(0.9, 0.8, 0.3),
+		"max_bond": 100
+	},
+	"vitality": {
+		"name": "Vitality",
+		"description": "The Aspect of health and energy",
+		"color": Color(0.2, 0.8, 0.4),
+		"max_bond": 100
+	}
+}
+
+# Bond level thresholds and titles
+const BOND_LEVELS = {
+	0: {"title": "Stranger", "min": 0},
+	1: {"title": "Acquaintance", "min": 10},
+	2: {"title": "Familiar", "min": 25},
+	3: {"title": "Friend", "min": 45},
+	4: {"title": "Close Friend", "min": 65},
+	5: {"title": "Trusted Ally", "min": 85},
+	6: {"title": "Kindred Spirit", "min": 100}
+}
+
+# Character bonds storage (in player_data)
+func _ensure_character_bonds() -> void:
+	if not player_data.has("character_bonds"):
+		player_data["character_bonds"] = {}
+		for char_id in CHARACTERS:
+			player_data.character_bonds[char_id] = {
+				"bond_points": 0,
+				"interactions": 0,
+				"last_interaction": "",
+				"milestones": []
+			}
+
+
+## Get bond points for a character
+func get_character_bond(character_id: String) -> int:
+	_ensure_character_bonds()
+	if player_data.character_bonds.has(character_id):
+		return player_data.character_bonds[character_id].get("bond_points", 0)
+	return 0
+
+
+## Get bond level (0-6) for a character
+func get_character_bond_level(character_id: String) -> int:
+	var points = get_character_bond(character_id)
+	var level = 0
+	for lvl in BOND_LEVELS:
+		if points >= BOND_LEVELS[lvl].min:
+			level = lvl
+	return level
+
+
+## Get bond title for a character
+func get_character_bond_title(character_id: String) -> String:
+	var level = get_character_bond_level(character_id)
+	return BOND_LEVELS[level].title
+
+
+## Increase bond with a character
+func increase_character_bond(character_id: String, amount: int, reason: String = "") -> void:
+	_ensure_character_bonds()
+	if not player_data.character_bonds.has(character_id):
+		return
+
+	var char_data = player_data.character_bonds[character_id]
+	var old_level = get_character_bond_level(character_id)
+	var max_bond = CHARACTERS.get(character_id, {}).get("max_bond", 100)
+
+	char_data.bond_points = mini(char_data.bond_points + amount, max_bond)
+	char_data.interactions += 1
+	char_data.last_interaction = Time.get_datetime_string_from_system()
+
+	if reason != "" and reason not in char_data.milestones:
+		char_data.milestones.append(reason)
+
+	var new_level = get_character_bond_level(character_id)
+
+	if new_level > old_level:
+		character_bond_increased.emit(character_id, new_level, amount)
+		var milestone_name = BOND_LEVELS[new_level].title
+		character_bond_milestone.emit(character_id, milestone_name)
+		print("[GameManager] Bond with %s increased to level %d (%s)" % [character_id, new_level, milestone_name])
+
+
+## Get all character bonds as array
+func get_all_character_bonds() -> Array:
+	_ensure_character_bonds()
+	var result = []
+	for char_id in CHARACTERS:
+		var char_info = CHARACTERS[char_id].duplicate()
+		char_info["id"] = char_id
+		char_info["bond_points"] = get_character_bond(char_id)
+		char_info["bond_level"] = get_character_bond_level(char_id)
+		char_info["bond_title"] = get_character_bond_title(char_id)
+		if player_data.character_bonds.has(char_id):
+			char_info["interactions"] = player_data.character_bonds[char_id].get("interactions", 0)
+			char_info["milestones"] = player_data.character_bonds[char_id].get("milestones", [])
+		result.append(char_info)
+	return result
+
+
+## Get progress to next bond level (0.0 to 1.0)
+func get_bond_progress(character_id: String) -> float:
+	var current_level = get_character_bond_level(character_id)
+	var current_points = get_character_bond(character_id)
+
+	if current_level >= 6:
+		return 1.0
+
+	var current_min = BOND_LEVELS[current_level].min
+	var next_min = BOND_LEVELS[current_level + 1].min
+	var range_size = next_min - current_min
+
+	if range_size <= 0:
+		return 1.0
+
+	return float(current_points - current_min) / float(range_size)
+
+
+## Record interaction with Mom (called from cutscenes, dialogues)
+func record_mom_interaction(interaction_type: String = "dialogue") -> void:
+	var amount = 2
+	match interaction_type:
+		"cutscene": amount = 5
+		"call": amount = 3
+		"letter": amount = 4
+		"milestone": amount = 10
+		_: amount = 2
+	increase_character_bond("mom", amount, interaction_type)
+
+
+## Record interaction with an Aspect (called from shrine, dialogues)
+func record_aspect_interaction(aspect_id: String, interaction_type: String = "dialogue") -> void:
+	var amount = 2
+	match interaction_type:
+		"communion": amount = 3
+		"advice": amount = 2
+		"challenge_accepted": amount = 5
+		"challenge_completed": amount = 10
+		"awakening": amount = 15
+		_: amount = 2
+	increase_character_bond(aspect_id, amount, interaction_type)
+
+
+# ============================================
+# ASPECT QUEST/CHALLENGE SYSTEM
+# ============================================
+
+signal quest_accepted(quest_id: String, aspect_id: String)
+signal quest_completed(quest_id: String, aspect_id: String, xp_earned: int)
+signal quest_abandoned(quest_id: String)
+
+# Quest definitions - each aspect has unique quests across 3 difficulty tiers
+const ASPECT_QUESTS = {
+	"discipline": {
+		"disc_focus_streak": {
+			"name": "Focused Intent",
+			"description": "Complete 3 focus sessions of at least 15 minutes each within 24 hours.",
+			"difficulty": "easy",
+			"xp_reward": 25,
+			"bond_reward": 5,
+			"requirements": {"focus_sessions": 3, "min_duration": 15, "time_limit_hours": 24},
+			"icon": "🎯"
+		},
+		"disc_habit_chain": {
+			"name": "Chain of Will",
+			"description": "Complete all your habits for 3 consecutive days.",
+			"difficulty": "medium",
+			"xp_reward": 50,
+			"bond_reward": 8,
+			"requirements": {"habit_streak_days": 3},
+			"icon": "⛓️"
+		},
+		"disc_morning_ritual": {
+			"name": "Dawn's Discipline",
+			"description": "Complete 5 habits before noon for 5 days.",
+			"difficulty": "hard",
+			"xp_reward": 100,
+			"bond_reward": 15,
+			"requirements": {"morning_habits": 5, "days": 5},
+			"icon": "🌅"
+		}
+	},
+	"courage": {
+		"cour_new_habit": {
+			"name": "Leap of Faith",
+			"description": "Create and complete a new challenging habit for the first time.",
+			"difficulty": "easy",
+			"xp_reward": 25,
+			"bond_reward": 5,
+			"requirements": {"new_habit_completed": true},
+			"icon": "🦁"
+		},
+		"cour_shadow_work": {
+			"name": "Face the Shadow",
+			"description": "Complete 3 shadow work journal entries.",
+			"difficulty": "medium",
+			"xp_reward": 50,
+			"bond_reward": 8,
+			"requirements": {"shadow_entries": 3},
+			"icon": "🌑"
+		},
+		"cour_long_focus": {
+			"name": "Endurance Trial",
+			"description": "Complete a single focus session of 60 minutes or more.",
+			"difficulty": "hard",
+			"xp_reward": 100,
+			"bond_reward": 15,
+			"requirements": {"single_session_minutes": 60},
+			"icon": "🏔️"
+		}
+	},
+	"creativity": {
+		"crea_script_create": {
+			"name": "Script Spark",
+			"description": "Create a new behavioral script in the Script Lab.",
+			"difficulty": "easy",
+			"xp_reward": 25,
+			"bond_reward": 5,
+			"requirements": {"scripts_created": 1},
+			"icon": "✨"
+		},
+		"crea_dream_journal": {
+			"name": "Dream Weaver",
+			"description": "Record 5 dreams in the dream journal.",
+			"difficulty": "medium",
+			"xp_reward": 50,
+			"bond_reward": 8,
+			"requirements": {"dream_entries": 5},
+			"icon": "💭"
+		},
+		"crea_varied_focus": {
+			"name": "Polymathic Path",
+			"description": "Complete focus sessions in 4 different categories.",
+			"difficulty": "hard",
+			"xp_reward": 100,
+			"bond_reward": 15,
+			"requirements": {"unique_categories": 4},
+			"icon": "🎨"
+		}
+	},
+	"compassion": {
+		"comp_kindness_log": {
+			"name": "Ripples of Kindness",
+			"description": "Log 3 acts of kindness in a single day.",
+			"difficulty": "easy",
+			"xp_reward": 25,
+			"bond_reward": 5,
+			"requirements": {"kindness_acts_daily": 3},
+			"icon": "💝"
+		},
+		"comp_relationship": {
+			"name": "Connection Builder",
+			"description": "Log interactions with 3 different relationships in a week.",
+			"difficulty": "medium",
+			"xp_reward": 50,
+			"bond_reward": 8,
+			"requirements": {"relationships_contacted": 3, "time_limit_days": 7},
+			"icon": "🤝"
+		},
+		"comp_gratitude_streak": {
+			"name": "Gratitude Garden",
+			"description": "Write in the gratitude journal for 7 consecutive days.",
+			"difficulty": "hard",
+			"xp_reward": 100,
+			"bond_reward": 15,
+			"requirements": {"gratitude_streak_days": 7},
+			"icon": "🌸"
+		}
+	},
+	"wisdom": {
+		"wis_reflection": {
+			"name": "Pool of Insight",
+			"description": "Complete a weekly synthesis reflection.",
+			"difficulty": "easy",
+			"xp_reward": 25,
+			"bond_reward": 5,
+			"requirements": {"weekly_synthesis": 1},
+			"icon": "🪞"
+		},
+		"wis_values_check": {
+			"name": "Compass True",
+			"description": "Complete a values alignment check with all values rated.",
+			"difficulty": "medium",
+			"xp_reward": 50,
+			"bond_reward": 8,
+			"requirements": {"values_check_complete": true},
+			"icon": "🧭"
+		},
+		"wis_meditation": {
+			"name": "Still Waters",
+			"description": "Complete 10 meditation sessions total.",
+			"difficulty": "hard",
+			"xp_reward": 100,
+			"bond_reward": 15,
+			"requirements": {"meditation_sessions": 10},
+			"icon": "🧘"
+		}
+	},
+	"vitality": {
+		"vita_energy_check": {
+			"name": "Energy Pulse",
+			"description": "Track your energy in daily check-ins for 3 days.",
+			"difficulty": "easy",
+			"xp_reward": 25,
+			"bond_reward": 5,
+			"requirements": {"energy_checkins": 3},
+			"icon": "⚡"
+		},
+		"vita_health_habits": {
+			"name": "Temple Care",
+			"description": "Complete 5 health-domain habits.",
+			"difficulty": "medium",
+			"xp_reward": 50,
+			"bond_reward": 8,
+			"requirements": {"health_habits": 5},
+			"icon": "💪"
+		},
+		"vita_full_day": {
+			"name": "Peak Performance",
+			"description": "Rate both mood and energy 4+ on the same day for 5 days.",
+			"difficulty": "hard",
+			"xp_reward": 100,
+			"bond_reward": 15,
+			"requirements": {"high_vitality_days": 5},
+			"icon": "🌟"
+		}
+	}
+}
+
+## Initialize quest data in player_data
+func _ensure_quest_data() -> void:
+	if not player_data.has("active_quests"):
+		player_data["active_quests"] = {}  # quest_id -> {accepted_at, progress, aspect_id}
+	if not player_data.has("completed_quests"):
+		player_data["completed_quests"] = []  # [{quest_id, completed_at, aspect_id}]
+	if not player_data.has("quest_stats"):
+		player_data["quest_stats"] = {
+			"total_completed": 0,
+			"total_xp_earned": 0,
+			"quests_by_aspect": {}
+		}
+
+
+## Get all available quests for an aspect (not currently active or recently completed)
+func get_available_quests(aspect_id: String) -> Array:
+	_ensure_quest_data()
+
+	if not ASPECT_QUESTS.has(aspect_id):
+		return []
+
+	var available = []
+	var aspect_quests = ASPECT_QUESTS[aspect_id]
+
+	for quest_id in aspect_quests:
+		# Skip if already active
+		if player_data.active_quests.has(quest_id):
+			continue
+
+		# Skip if completed in last 7 days (repeatable after cooldown)
+		var recently_completed = false
+		for completed in player_data.completed_quests:
+			if completed.quest_id == quest_id:
+				var completed_time = completed.get("completed_at", 0)
+				var days_since = (Time.get_unix_time_from_system() - completed_time) / 86400.0
+				if days_since < 7:
+					recently_completed = true
+					break
+
+		if not recently_completed:
+			var quest = aspect_quests[quest_id].duplicate()
+			quest["id"] = quest_id
+			quest["aspect_id"] = aspect_id
+			available.append(quest)
+
+	return available
+
+
+## Accept a quest from an aspect
+func accept_quest(quest_id: String, aspect_id: String) -> bool:
+	_ensure_quest_data()
+
+	# Validate quest exists
+	if not ASPECT_QUESTS.has(aspect_id) or not ASPECT_QUESTS[aspect_id].has(quest_id):
+		return false
+
+	# Check if already active
+	if player_data.active_quests.has(quest_id):
+		return false
+
+	# Limit active quests to 3 per aspect, 6 total
+	var active_count = player_data.active_quests.size()
+	if active_count >= 6:
+		return false
+
+	var aspect_active = 0
+	for qid in player_data.active_quests:
+		if player_data.active_quests[qid].aspect_id == aspect_id:
+			aspect_active += 1
+	if aspect_active >= 3:
+		return false
+
+	# Accept the quest
+	player_data.active_quests[quest_id] = {
+		"aspect_id": aspect_id,
+		"accepted_at": Time.get_unix_time_from_system(),
+		"progress": {},
+		"quest_data": ASPECT_QUESTS[aspect_id][quest_id].duplicate()
+	}
+
+	quest_accepted.emit(quest_id, aspect_id)
+	SaveManager.save_game()
+	return true
+
+
+## Get all active quests
+func get_active_quests() -> Array:
+	_ensure_quest_data()
+	var result = []
+
+	for quest_id in player_data.active_quests:
+		var quest_info = player_data.active_quests[quest_id].duplicate()
+		quest_info["id"] = quest_id
+		result.append(quest_info)
+
+	return result
+
+
+## Get active quests for a specific aspect
+func get_active_quests_for_aspect(aspect_id: String) -> Array:
+	_ensure_quest_data()
+	var result = []
+
+	for quest_id in player_data.active_quests:
+		if player_data.active_quests[quest_id].aspect_id == aspect_id:
+			var quest_info = player_data.active_quests[quest_id].duplicate()
+			quest_info["id"] = quest_id
+			result.append(quest_info)
+
+	return result
+
+
+## Update quest progress (called from various game actions)
+func update_quest_progress(quest_id: String, progress_key: String, value) -> void:
+	_ensure_quest_data()
+
+	if not player_data.active_quests.has(quest_id):
+		return
+
+	player_data.active_quests[quest_id].progress[progress_key] = value
+
+	# Check if quest is now complete
+	_check_quest_completion(quest_id)
+
+
+## Increment quest progress counter
+func increment_quest_progress(quest_id: String, progress_key: String, amount: int = 1) -> void:
+	_ensure_quest_data()
+
+	if not player_data.active_quests.has(quest_id):
+		return
+
+	var current = player_data.active_quests[quest_id].progress.get(progress_key, 0)
+	player_data.active_quests[quest_id].progress[progress_key] = current + amount
+
+	_check_quest_completion(quest_id)
+
+
+## Check all active quests for a specific trigger type
+func check_quests_for_trigger(trigger_type: String, data: Dictionary = {}) -> void:
+	_ensure_quest_data()
+
+	for quest_id in player_data.active_quests.keys():
+		var quest = player_data.active_quests[quest_id]
+		var requirements = quest.quest_data.get("requirements", {})
+
+		match trigger_type:
+			"focus_session_completed":
+				if requirements.has("focus_sessions"):
+					increment_quest_progress(quest_id, "focus_sessions", 1)
+				if requirements.has("single_session_minutes"):
+					var duration = data.get("duration_minutes", 0)
+					if duration >= requirements.single_session_minutes:
+						update_quest_progress(quest_id, "long_session_completed", true)
+				if requirements.has("unique_categories"):
+					var category = data.get("category", "")
+					if category:
+						var categories = quest.progress.get("categories", [])
+						if category not in categories:
+							categories.append(category)
+							update_quest_progress(quest_id, "categories", categories)
+
+			"habit_completed":
+				var domain = data.get("domain", "")
+				if domain == "health" and requirements.has("health_habits"):
+					increment_quest_progress(quest_id, "health_habits", 1)
+				if requirements.has("new_habit_completed") and data.get("is_first_completion", false):
+					update_quest_progress(quest_id, "new_habit_completed", true)
+
+			"habit_streak_day":
+				if requirements.has("habit_streak_days"):
+					var streak = data.get("streak", 0)
+					update_quest_progress(quest_id, "habit_streak_days", streak)
+
+			"journal_entry":
+				var journal_type = data.get("type", "")
+				if journal_type == "shadow" and requirements.has("shadow_entries"):
+					increment_quest_progress(quest_id, "shadow_entries", 1)
+				if journal_type == "dream" and requirements.has("dream_entries"):
+					increment_quest_progress(quest_id, "dream_entries", 1)
+				if journal_type == "gratitude" and requirements.has("gratitude_streak_days"):
+					var streak = data.get("streak", 1)
+					update_quest_progress(quest_id, "gratitude_streak_days", streak)
+
+			"kindness_logged":
+				if requirements.has("kindness_acts_daily"):
+					increment_quest_progress(quest_id, "kindness_acts_daily", 1)
+
+			"script_created":
+				if requirements.has("scripts_created"):
+					increment_quest_progress(quest_id, "scripts_created", 1)
+
+			"weekly_synthesis":
+				if requirements.has("weekly_synthesis"):
+					update_quest_progress(quest_id, "weekly_synthesis_completed", true)
+
+			"values_check":
+				if requirements.has("values_check_complete"):
+					update_quest_progress(quest_id, "values_check_completed", true)
+
+			"meditation_completed":
+				if requirements.has("meditation_sessions"):
+					increment_quest_progress(quest_id, "meditation_sessions", 1)
+
+			"checkin_completed":
+				if requirements.has("energy_checkins"):
+					increment_quest_progress(quest_id, "energy_checkins", 1)
+				var mood = data.get("mood", 0)
+				var energy = data.get("energy", 0)
+				if mood >= 4 and energy >= 4 and requirements.has("high_vitality_days"):
+					increment_quest_progress(quest_id, "high_vitality_days", 1)
+
+			"relationship_interaction":
+				if requirements.has("relationships_contacted"):
+					var contacted = quest.progress.get("relationships", [])
+					var rel_id = data.get("relationship_id", "")
+					if rel_id and rel_id not in contacted:
+						contacted.append(rel_id)
+						update_quest_progress(quest_id, "relationships", contacted)
+
+
+## Check if a quest is complete
+func _check_quest_completion(quest_id: String) -> void:
+	if not player_data.active_quests.has(quest_id):
+		return
+
+	var quest = player_data.active_quests[quest_id]
+	var requirements = quest.quest_data.get("requirements", {})
+	var progress = quest.progress
+
+	var is_complete = true
+
+	for req_key in requirements:
+		var req_value = requirements[req_key]
+		var prog_value = progress.get(req_key, progress.get(req_key + "_completed", false))
+
+		# Handle different requirement types
+		if req_key.ends_with("_hours") or req_key.ends_with("_days"):
+			continue  # Time limits checked separately
+
+		if typeof(req_value) == TYPE_BOOL:
+			if prog_value != req_value:
+				is_complete = false
+				break
+		elif typeof(req_value) == TYPE_INT or typeof(req_value) == TYPE_FLOAT:
+			if typeof(prog_value) == TYPE_ARRAY:
+				if prog_value.size() < req_value:
+					is_complete = false
+					break
+			elif prog_value < req_value:
+				is_complete = false
+				break
+
+	if is_complete:
+		complete_quest(quest_id)
+
+
+## Complete a quest and award rewards
+func complete_quest(quest_id: String) -> void:
+	_ensure_quest_data()
+
+	if not player_data.active_quests.has(quest_id):
+		return
+
+	var quest = player_data.active_quests[quest_id]
+	var aspect_id = quest.aspect_id
+	var quest_data = quest.quest_data
+
+	# Award XP
+	var xp_reward = quest_data.get("xp_reward", 25)
+	add_aspect_experience(aspect_id, xp_reward)
+
+	# Award bond points
+	var bond_reward = quest_data.get("bond_reward", 5)
+	increase_character_bond(aspect_id, bond_reward, "quest_completed")
+
+	# Record completion
+	player_data.completed_quests.append({
+		"quest_id": quest_id,
+		"aspect_id": aspect_id,
+		"completed_at": Time.get_unix_time_from_system(),
+		"xp_earned": xp_reward
+	})
+
+	# Update stats
+	player_data.quest_stats.total_completed += 1
+	player_data.quest_stats.total_xp_earned += xp_reward
+	if not player_data.quest_stats.quests_by_aspect.has(aspect_id):
+		player_data.quest_stats.quests_by_aspect[aspect_id] = 0
+	player_data.quest_stats.quests_by_aspect[aspect_id] += 1
+
+	# Remove from active
+	player_data.active_quests.erase(quest_id)
+
+	quest_completed.emit(quest_id, aspect_id, xp_reward)
+	SaveManager.save_game()
+
+
+## Abandon a quest
+func abandon_quest(quest_id: String) -> void:
+	_ensure_quest_data()
+
+	if player_data.active_quests.has(quest_id):
+		player_data.active_quests.erase(quest_id)
+		quest_abandoned.emit(quest_id)
+		SaveManager.save_game()
+
+
+## Get quest completion stats
+func get_quest_stats() -> Dictionary:
+	_ensure_quest_data()
+	return player_data.quest_stats.duplicate()
+
+
+## Get completed quests for an aspect
+func get_completed_quests_for_aspect(aspect_id: String) -> Array:
+	_ensure_quest_data()
+	var result = []
+
+	for completed in player_data.completed_quests:
+		if completed.aspect_id == aspect_id:
+			result.append(completed)
+
+	return result

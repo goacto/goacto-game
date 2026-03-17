@@ -253,6 +253,9 @@ func _ready() -> void:
 	_create_enhanced_hub_environment()
 	_create_enhanced_portals()
 
+	# Setup evolution stages (visual changes based on evolution level)
+	_setup_evolution_stages()
+
 	print("[MindscapeHub] Hub ready")
 
 
@@ -414,6 +417,9 @@ func _process(delta: float) -> void:
 	# Animate progress indicators
 	_animate_progress_indicators()
 
+	# Animate evolution stage elements
+	_animate_evolution_stages(delta)
+
 	# Update minimap
 	_update_minimap()
 
@@ -459,7 +465,7 @@ func _process(delta: float) -> void:
 func _input(event: InputEvent) -> void:
 	var viewport = get_viewport()
 
-	# ESC key
+	# ESC key - close panels in order, then open pause menu
 	if event.is_action_pressed("ui_cancel"):
 		if volume_popup:
 			_close_volume_popup()
@@ -467,10 +473,16 @@ func _input(event: InputEvent) -> void:
 			_close_shortcuts_guide()
 		elif daily_summary_panel:
 			_close_daily_summary()
+		elif cutscene_theater_panel:
+			_close_cutscene_theater()
+		elif story_panel:
+			_close_story_panel()
 		elif achievements_panel:
 			_close_achievements_view()
 		elif focus_history_panel:
 			_close_focus_history()
+		elif shop_panel:
+			_close_experience_shop()
 		elif pause_menu.visible:
 			_close_pause_menu()
 		elif zone_panel.visible:
@@ -1172,19 +1184,20 @@ func _show_center_status_panel() -> void:
 
 	center_status_panel = PanelContainer.new()
 	center_status_panel.name = "CenterStatusPanel"
-	center_status_panel.set_anchors_preset(Control.PRESET_CENTER_LEFT)
-	center_status_panel.offset_left = 20
-	center_status_panel.offset_top = -120
-	center_status_panel.offset_right = 220
-	center_status_panel.offset_bottom = 120
+	# Position at bottom-left corner, out of the way
+	center_status_panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	center_status_panel.offset_left = 12
+	center_status_panel.offset_bottom = -12
+	center_status_panel.offset_top = -50
+	center_status_panel.offset_right = 320
 
 	var style = StyleBoxFlat.new()
-	style.bg_color = Color(0.08, 0.1, 0.15, 0.92)
-	style.corner_radius_top_left = 12
-	style.corner_radius_top_right = 12
-	style.corner_radius_bottom_left = 12
-	style.corner_radius_bottom_right = 12
-	style.border_color = Color(0.3, 0.35, 0.5, 0.6)
+	style.bg_color = Color(0.06, 0.08, 0.12, 0.75)  # More transparent
+	style.corner_radius_top_left = 8
+	style.corner_radius_top_right = 8
+	style.corner_radius_bottom_left = 8
+	style.corner_radius_bottom_right = 8
+	style.border_color = Color(0.3, 0.35, 0.5, 0.4)
 	style.border_width_left = 1
 	style.border_width_right = 1
 	style.border_width_top = 1
@@ -1192,81 +1205,44 @@ func _show_center_status_panel() -> void:
 	center_status_panel.add_theme_stylebox_override("panel", style)
 
 	var margin = MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 15)
-	margin.add_theme_constant_override("margin_top", 12)
-	margin.add_theme_constant_override("margin_right", 15)
-	margin.add_theme_constant_override("margin_bottom", 12)
+	margin.add_theme_constant_override("margin_left", 10)
+	margin.add_theme_constant_override("margin_top", 6)
+	margin.add_theme_constant_override("margin_right", 10)
+	margin.add_theme_constant_override("margin_bottom", 6)
 	center_status_panel.add_child(margin)
 
-	var vbox = VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 10)
-	margin.add_child(vbox)
-
-	# Title
-	var title = Label.new()
-	title.text = "Your Progress"
-	title.add_theme_font_size_override("font_size", 16)
-	title.add_theme_color_override("font_color", Color(0.85, 0.85, 0.95))
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(title)
+	# Horizontal compact layout
+	var hbox = HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 16)
+	margin.add_child(hbox)
 
 	# Get stats
 	var habits = HabitManager.get_all_habits() if HabitManager else []
 	var weekly_stats = HabitManager.get_weekly_stats() if HabitManager else {}
 	var unlocked_achievements = AchievementManager.get_unlocked_achievements() if AchievementManager else []
 
-	# Active Streaks section
+	# Active Streaks
 	var active_streaks = []
 	for habit in habits:
 		if habit.get("streak", 0) > 0:
 			active_streaks.append({"name": habit.name, "streak": habit.streak})
-	active_streaks.sort_custom(func(a, b): return a.streak > b.streak)
 
-	var streaks_row = _create_status_row(
-		"~",
-		"Active Streaks",
-		"%d habit(s)" % active_streaks.size() if active_streaks.size() > 0 else "None yet",
-		Color(0.95, 0.7, 0.3)
-	)
-	vbox.add_child(streaks_row)
-
-	# Show top streak if exists
-	if active_streaks.size() > 0:
-		var best = active_streaks[0]
-		var detail = Label.new()
-		detail.text = "  Best: %s (%d days)" % [best.name, best.streak]
-		detail.add_theme_font_size_override("font_size", 11)
-		detail.add_theme_color_override("font_color", Color(0.6, 0.6, 0.65))
-		vbox.add_child(detail)
+	var streak_stat = _create_compact_stat("~", "%d" % active_streaks.size(), Color(0.95, 0.7, 0.3))
+	hbox.add_child(streak_stat)
 
 	# Weekly Completions
 	var completions = weekly_stats.get("this_week_completions", 0)
-	var completions_row = _create_status_row(
-		"*",
-		"This Week",
-		"%d completion(s)" % completions,
-		Color(0.4, 0.75, 0.5)
-	)
-	vbox.add_child(completions_row)
+	var week_stat = _create_compact_stat("*", "%d" % completions, Color(0.4, 0.75, 0.5))
+	hbox.add_child(week_stat)
 
 	# Achievements
-	var achievements_row = _create_status_row(
-		"#",
-		"Achievements",
-		"%d unlocked" % unlocked_achievements.size(),
-		Color(0.9, 0.8, 0.4)
-	)
-	vbox.add_child(achievements_row)
+	var ach_stat = _create_compact_stat("#", "%d" % unlocked_achievements.size(), Color(0.9, 0.8, 0.4))
+	hbox.add_child(ach_stat)
 
 	# Evolution level
 	var evo_level = GameManager.get_evolution_level() if GameManager else 1
-	var evo_row = _create_status_row(
-		"+",
-		"Evolution",
-		"Level %d" % evo_level,
-		Color(0.7, 0.5, 0.9)
-	)
-	vbox.add_child(evo_row)
+	var evo_stat = _create_compact_stat("+", "Lv%d" % evo_level, Color(0.7, 0.5, 0.9))
+	hbox.add_child(evo_stat)
 
 	add_child(center_status_panel)
 
@@ -1302,6 +1278,25 @@ func _create_status_row(icon: String, label_text: String, value_text: String, ic
 	row.add_child(value)
 
 	return row
+
+
+func _create_compact_stat(icon: String, value: String, icon_color: Color) -> HBoxContainer:
+	var stat = HBoxContainer.new()
+	stat.add_theme_constant_override("separation", 4)
+
+	var icon_label = Label.new()
+	icon_label.text = icon
+	icon_label.add_theme_font_size_override("font_size", 12)
+	icon_label.add_theme_color_override("font_color", icon_color)
+	stat.add_child(icon_label)
+
+	var value_label = Label.new()
+	value_label.text = value
+	value_label.add_theme_font_size_override("font_size", 12)
+	value_label.add_theme_color_override("font_color", Color(0.8, 0.8, 0.85))
+	stat.add_child(value_label)
+
+	return stat
 
 
 func _hide_center_status_panel() -> void:
@@ -2529,17 +2524,61 @@ func _open_habits_zone() -> void:
 
 	zone_body.add_child(grace_row)
 
-	_add_habit_spacer(12)
+	_add_habit_spacer(8)
+
+	# Tag filter
+	var all_tags = HabitManager.get_all_tags()
+	if all_tags.size() > 0:
+		var filter_row = HBoxContainer.new()
+		filter_row.add_theme_constant_override("separation", 8)
+
+		var filter_label = Label.new()
+		filter_label.text = "Filter:"
+		filter_label.add_theme_font_size_override("font_size", 14)
+		filter_label.add_theme_color_override("font_color", Color(0.5, 0.55, 0.6))
+		filter_row.add_child(filter_label)
+
+		var all_btn = Button.new()
+		all_btn.text = "All"
+		all_btn.toggle_mode = true
+		all_btn.button_pressed = (_habit_tag_filter == "")
+		all_btn.custom_minimum_size = Vector2(50, 30)
+		all_btn.add_theme_font_size_override("font_size", 14)
+		all_btn.pressed.connect(_filter_habits_by_tag.bind(""))
+		filter_row.add_child(all_btn)
+
+		for tag in all_tags:
+			var tag_btn = Button.new()
+			tag_btn.text = "#" + tag
+			tag_btn.toggle_mode = true
+			tag_btn.button_pressed = (_habit_tag_filter == tag)
+			tag_btn.custom_minimum_size = Vector2(0, 30)
+			tag_btn.add_theme_font_size_override("font_size", 14)
+			var tag_color = HabitManager.get_tag_color(tag)
+			tag_btn.add_theme_color_override("font_color", tag_color)
+			tag_btn.pressed.connect(_filter_habits_by_tag.bind(tag))
+			filter_row.add_child(tag_btn)
+
+		zone_body.add_child(filter_row)
+		_add_habit_spacer(8)
 
 	var habits = HabitManager.get_all_habits()
+
+	# Apply tag filter
+	if _habit_tag_filter != "":
+		habits = habits.filter(func(h): return _habit_tag_filter in h.get("tags", []))
+
 	if habits.is_empty():
 		var label = Label.new()
-		label.text = "No habits tracked yet.\nCreate your first daily ritual!"
+		if _habit_tag_filter != "":
+			label.text = "No habits with tag #" + _habit_tag_filter + "\nTry a different filter or create new habits."
+		else:
+			label.text = "No habits tracked yet.\nCreate your first daily ritual!"
 		label.autowrap_mode = TextServer.AUTOWRAP_WORD
 		label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.6))
 		zone_body.add_child(label)
 	else:
-		# Count incomplete habits
+		# Count incomplete habits (in current filter)
 		var incomplete_count = 0
 		for habit in habits:
 			if not HabitManager.is_completed_today(habit.id):
@@ -2572,8 +2611,10 @@ func _open_habits_zone() -> void:
 			var habit_row = HBoxContainer.new()
 			habit_row.add_theme_constant_override("separation", 10)
 
+			# Icon + checkbox
+			var icon_emoji = HabitManager.get_habit_emoji(habit.id)
 			var checkbox = CheckBox.new()
-			checkbox.text = habit.get("name", "Habit")
+			checkbox.text = icon_emoji + " " + habit.get("name", "Habit")
 			checkbox.button_pressed = is_completed
 			checkbox.add_theme_font_size_override("font_size", 22)
 			checkbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -2640,6 +2681,26 @@ func _open_habits_zone() -> void:
 				desc_label.add_theme_color_override("font_color", Color(0.5, 0.55, 0.6))
 				desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 				habit_container.add_child(desc_label)
+
+			# Show tags if any
+			var tags = habit.get("tags", [])
+			if tags.size() > 0:
+				var tags_row = HBoxContainer.new()
+				tags_row.add_theme_constant_override("separation", 6)
+
+				var tags_prefix = Label.new()
+				tags_prefix.text = "    "
+				tags_row.add_child(tags_prefix)
+
+				for tag in tags:
+					var tag_label = Label.new()
+					tag_label.text = "#" + tag
+					tag_label.add_theme_font_size_override("font_size", 12)
+					var tag_color = HabitManager.get_tag_color(tag)
+					tag_label.add_theme_color_override("font_color", tag_color)
+					tags_row.add_child(tag_label)
+
+				habit_container.add_child(tags_row)
 
 			zone_body.add_child(habit_container)
 
@@ -3362,6 +3423,55 @@ func _show_habit_creation_form() -> void:
 
 	zone_body.add_child(domain_grid)
 
+	_add_habit_spacer(12)
+
+	# Icon selection
+	var icon_label = Label.new()
+	icon_label.text = "Choose Icon:"
+	icon_label.add_theme_font_size_override("font_size", 20)
+	zone_body.add_child(icon_label)
+
+	var icon_scroll = ScrollContainer.new()
+	icon_scroll.custom_minimum_size = Vector2(0, 55)
+	icon_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	icon_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	zone_body.add_child(icon_scroll)
+
+	var icon_grid = HBoxContainer.new()
+	icon_grid.name = "IconGrid"
+	icon_grid.add_theme_constant_override("separation", 6)
+	icon_scroll.add_child(icon_grid)
+
+	var icons = HabitManager.get_available_icons()
+	_selected_habit_icon = "custom"  # Reset selection
+	for icon_key in icons:
+		var icon_data = icons[icon_key]
+		var btn = Button.new()
+		btn.name = "Icon_" + icon_key
+		btn.text = icon_data.emoji
+		btn.tooltip_text = icon_data.label
+		btn.toggle_mode = true
+		btn.button_pressed = (icon_key == "custom")
+		btn.custom_minimum_size = Vector2(45, 45)
+		btn.add_theme_font_size_override("font_size", 22)
+		btn.pressed.connect(_select_habit_icon.bind(icon_key))
+		icon_grid.add_child(btn)
+
+	_add_habit_spacer(12)
+
+	# Tags input
+	var tags_label = Label.new()
+	tags_label.text = "Tags (comma-separated, optional):"
+	tags_label.add_theme_font_size_override("font_size", 18)
+	zone_body.add_child(tags_label)
+
+	var tags_input = LineEdit.new()
+	tags_input.name = "HabitTagsInput"
+	tags_input.placeholder_text = "e.g., morning, quick, energizing"
+	tags_input.custom_minimum_size = Vector2(0, 40)
+	tags_input.add_theme_font_size_override("font_size", 16)
+	zone_body.add_child(tags_input)
+
 	_add_habit_spacer(20)
 
 	# Action buttons
@@ -3389,10 +3499,28 @@ func _show_habit_creation_form() -> void:
 
 # Habit form state
 var _selected_habit_domain: int = 0  # HabitManager.HabitDomain.HEALTH
+var _selected_habit_icon: String = "custom"
+var _selected_habit_tags: Array = []
+var _habit_tag_filter: String = ""  # Current tag filter for habits view
+
+
+func _filter_habits_by_tag(tag: String) -> void:
+	_habit_tag_filter = tag
+	_open_habits_zone()
 
 
 func _select_habit_domain(domain_id: int) -> void:
 	_selected_habit_domain = domain_id
+
+
+func _select_habit_icon(icon_key: String) -> void:
+	_selected_habit_icon = icon_key
+	# Update icon button visuals
+	var icon_grid = zone_body.find_child("IconGrid", true, false)
+	if icon_grid:
+		for child in icon_grid.get_children():
+			if child is Button:
+				child.button_pressed = (child.name == "Icon_" + icon_key)
 
 	# Update button states
 	var grid = zone_body.find_child("DomainGrid", true, false)
@@ -3412,13 +3540,25 @@ func _create_habit_from_form() -> void:
 	var desc_input = zone_body.find_child("HabitDescInput", true, false) as LineEdit
 	var description = desc_input.text.strip_edges() if desc_input else ""
 
+	# Parse tags from input
+	var tags_input = zone_body.find_child("HabitTagsInput", true, false) as LineEdit
+	var tags: Array = []
+	if tags_input and tags_input.text.strip_edges() != "":
+		var tag_strings = tags_input.text.split(",")
+		for tag in tag_strings:
+			var cleaned = tag.strip_edges().to_lower()
+			if cleaned != "":
+				tags.append(cleaned)
+
 	var habit_name = name_input.text.strip_edges()
-	HabitManager.create_custom_habit(habit_name, description, _selected_habit_domain)
+	HabitManager.create_custom_habit(habit_name, description, _selected_habit_domain, _selected_habit_icon, tags)
 
 	_close_zone()
 	var domain_names = ["Health", "Learning", "Mindfulness", "Social", "Productivity", "Custom"]
 	var domain_name = domain_names[_selected_habit_domain] if _selected_habit_domain < domain_names.size() else "Custom"
-	_show_dialogue("Habit Created", "'" + habit_name + "' has been added to your daily rituals!\n\nCategory: " + domain_name + "\n\nComplete it daily to build your streak and grow your aspects.", _open_habits_zone)
+	var icon_emoji = HabitManager.HABIT_ICONS.get(_selected_habit_icon, {}).get("emoji", "⭐")
+	var tags_str = ", ".join(tags) if tags.size() > 0 else "none"
+	_show_dialogue("Habit Created", icon_emoji + " '" + habit_name + "' has been added!\n\nCategory: " + domain_name + "\nTags: " + tags_str + "\n\nComplete it daily to build your streak.", _open_habits_zone)
 
 
 func _archive_habit(habit_id: String) -> void:
@@ -3526,6 +3666,58 @@ func _show_edit_habit_form(habit_id: String) -> void:
 
 	zone_body.add_child(domain_grid)
 
+	_add_habit_spacer(10)
+
+	# Icon selection for edit
+	var icon_label = Label.new()
+	icon_label.text = "Icon"
+	icon_label.add_theme_font_size_override("font_size", 18)
+	zone_body.add_child(icon_label)
+
+	var icon_scroll = ScrollContainer.new()
+	icon_scroll.custom_minimum_size = Vector2(0, 55)
+	icon_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	icon_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	zone_body.add_child(icon_scroll)
+
+	var icon_grid = HBoxContainer.new()
+	icon_grid.name = "IconGrid"
+	icon_grid.add_theme_constant_override("separation", 6)
+	icon_scroll.add_child(icon_grid)
+
+	var icons = HabitManager.get_available_icons()
+	var current_icon = habit.get("icon", "custom")
+	_selected_habit_icon = current_icon
+	for icon_key in icons:
+		var icon_data = icons[icon_key]
+		var btn = Button.new()
+		btn.name = "Icon_" + icon_key
+		btn.text = icon_data.emoji
+		btn.tooltip_text = icon_data.label
+		btn.toggle_mode = true
+		btn.button_pressed = (icon_key == current_icon)
+		btn.custom_minimum_size = Vector2(45, 45)
+		btn.add_theme_font_size_override("font_size", 22)
+		btn.pressed.connect(_select_habit_icon.bind(icon_key))
+		icon_grid.add_child(btn)
+
+	_add_habit_spacer(10)
+
+	# Tags input for edit
+	var tags_label = Label.new()
+	tags_label.text = "Tags (comma-separated)"
+	tags_label.add_theme_font_size_override("font_size", 18)
+	zone_body.add_child(tags_label)
+
+	var tags_input = LineEdit.new()
+	tags_input.name = "EditHabitTags"
+	var current_tags = habit.get("tags", [])
+	tags_input.text = ", ".join(current_tags) if current_tags.size() > 0 else ""
+	tags_input.placeholder_text = "e.g., morning, quick, energizing"
+	tags_input.custom_minimum_size = Vector2(0, 40)
+	tags_input.add_theme_font_size_override("font_size", 16)
+	zone_body.add_child(tags_input)
+
 	_add_habit_spacer(20)
 
 	# Action buttons
@@ -3557,6 +3749,7 @@ func _save_habit_edits() -> void:
 
 	var name_input = zone_body.find_child("EditHabitName", true, false) as LineEdit
 	var desc_input = zone_body.find_child("EditHabitDesc", true, false) as LineEdit
+	var tags_input = zone_body.find_child("EditHabitTags", true, false) as LineEdit
 
 	if not name_input or name_input.text.strip_edges() == "":
 		_show_dialogue("Error", "Please enter a habit name.")
@@ -3566,6 +3759,24 @@ func _save_habit_edits() -> void:
 	habit.name = name_input.text.strip_edges()
 	habit.description = desc_input.text.strip_edges() if desc_input else ""
 	habit.domain = _selected_habit_domain
+	habit.icon = _selected_habit_icon
+
+	# Update tags
+	var new_tags: Array = []
+	if tags_input and tags_input.text.strip_edges() != "":
+		var tag_strings = tags_input.text.split(",")
+		for tag in tag_strings:
+			var cleaned = tag.strip_edges().to_lower()
+			if cleaned != "":
+				new_tags.append(cleaned)
+
+	# Remove old tags and add new ones
+	var old_tags = habit.get("tags", [])
+	for old_tag in old_tags:
+		HabitManager.remove_tag_from_habit(_editing_habit_id, old_tag)
+	habit.tags = new_tags
+	for new_tag in new_tags:
+		HabitManager.add_habit_to_tag(_editing_habit_id, new_tag)
 
 	SaveManager.save_game()
 
@@ -4062,6 +4273,16 @@ func _show_progress_tab() -> void:
 	_select_menu_tab("progress")
 	_clear_menu_body()
 
+	# Story/Chapter Progress
+	_add_story_section()
+
+	_add_menu_spacer()
+
+	# Character Bonds section
+	_add_character_bonds_section()
+
+	_add_menu_spacer()
+
 	# Achievements summary
 	if AchievementManager:
 		var unlocked = AchievementManager.get_unlocked_achievements()
@@ -4448,6 +4669,12 @@ func _show_settings_tab() -> void:
 
 	_add_menu_spacer()
 
+	# Accessibility Settings
+	_add_menu_section_label("Accessibility")
+	_add_accessibility_settings(menu_body)
+
+	_add_menu_spacer()
+
 	# Reset options
 	_add_menu_section_label("Reset Options")
 
@@ -4516,6 +4743,869 @@ func _add_menu_spacer() -> void:
 	var spacer = Control.new()
 	spacer.custom_minimum_size = Vector2(0, 15)
 	menu_body.add_child(spacer)
+
+
+func _add_accessibility_settings(container: VBoxContainer) -> void:
+	# Font Size
+	var font_row = HBoxContainer.new()
+	font_row.add_theme_constant_override("separation", 15)
+	container.add_child(font_row)
+
+	var font_label = Label.new()
+	font_label.text = "Font Size:"
+	font_label.add_theme_font_size_override("font_size", 18)
+	font_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	font_row.add_child(font_label)
+
+	var current_font_size = "medium"
+	if SaveManager:
+		var settings = SaveManager.load_settings()
+		current_font_size = settings.get("font_size", "medium")
+
+	var font_options = OptionButton.new()
+	font_options.add_item("Small", 0)
+	font_options.add_item("Medium", 1)
+	font_options.add_item("Large", 2)
+	match current_font_size:
+		"small": font_options.select(0)
+		"medium": font_options.select(1)
+		"large": font_options.select(2)
+	font_options.custom_minimum_size = Vector2(120, 40)
+	font_options.add_theme_font_size_override("font_size", 16)
+	font_options.item_selected.connect(func(idx):
+		var sizes = ["small", "medium", "large"]
+		GameManager.set_accessibility_option("font_size", sizes[idx])
+	)
+	font_row.add_child(font_options)
+
+	# High Contrast Toggle
+	var contrast_row = HBoxContainer.new()
+	contrast_row.add_theme_constant_override("separation", 15)
+	container.add_child(contrast_row)
+
+	var contrast_label = Label.new()
+	contrast_label.text = "High Contrast Mode:"
+	contrast_label.add_theme_font_size_override("font_size", 18)
+	contrast_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	contrast_row.add_child(contrast_label)
+
+	var contrast_check = CheckButton.new()
+	if SaveManager:
+		var settings = SaveManager.load_settings()
+		contrast_check.button_pressed = settings.get("high_contrast", false)
+	contrast_check.toggled.connect(func(pressed):
+		GameManager.set_accessibility_option("high_contrast", pressed)
+	)
+	contrast_row.add_child(contrast_check)
+
+	# Reduced Motion Toggle
+	var motion_row = HBoxContainer.new()
+	motion_row.add_theme_constant_override("separation", 15)
+	container.add_child(motion_row)
+
+	var motion_label = Label.new()
+	motion_label.text = "Reduced Motion:"
+	motion_label.add_theme_font_size_override("font_size", 18)
+	motion_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	motion_row.add_child(motion_label)
+
+	var motion_check = CheckButton.new()
+	if SaveManager:
+		var settings = SaveManager.load_settings()
+		motion_check.button_pressed = settings.get("reduced_motion", false)
+	motion_check.toggled.connect(func(pressed):
+		GameManager.set_accessibility_option("reduced_motion", pressed)
+	)
+	motion_row.add_child(motion_check)
+
+	# Colorblind Mode
+	var cb_row = HBoxContainer.new()
+	cb_row.add_theme_constant_override("separation", 15)
+	container.add_child(cb_row)
+
+	var cb_label = Label.new()
+	cb_label.text = "Colorblind Mode:"
+	cb_label.add_theme_font_size_override("font_size", 18)
+	cb_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cb_row.add_child(cb_label)
+
+	var current_cb_mode = "none"
+	if SaveManager:
+		var settings = SaveManager.load_settings()
+		current_cb_mode = settings.get("colorblind_mode", "none")
+
+	var cb_options = OptionButton.new()
+	cb_options.add_item("None", 0)
+	cb_options.add_item("Deuteranopia", 1)
+	cb_options.add_item("Protanopia", 2)
+	cb_options.add_item("Tritanopia", 3)
+	match current_cb_mode:
+		"none": cb_options.select(0)
+		"deuteranopia": cb_options.select(1)
+		"protanopia": cb_options.select(2)
+		"tritanopia": cb_options.select(3)
+	cb_options.custom_minimum_size = Vector2(140, 40)
+	cb_options.add_theme_font_size_override("font_size", 16)
+	cb_options.item_selected.connect(func(idx):
+		var modes = ["none", "deuteranopia", "protanopia", "tritanopia"]
+		GameManager.set_accessibility_option("colorblind_mode", modes[idx])
+	)
+	cb_row.add_child(cb_options)
+
+	# Hint text
+	var hint = Label.new()
+	hint.text = "Note: Some changes may require restarting the scene."
+	hint.add_theme_font_size_override("font_size", 14)
+	hint.add_theme_color_override("font_color", Color(0.5, 0.55, 0.6))
+	container.add_child(hint)
+
+
+# ============ STORY/CHAPTER SECTION ============
+
+func _add_story_section() -> void:
+	if not CampaignManager:
+		return
+
+	var current_chapter = CampaignManager.get_current_chapter()
+	if current_chapter.is_empty():
+		return
+
+	# Section header with book icon
+	var header_row = HBoxContainer.new()
+	header_row.add_theme_constant_override("separation", 10)
+	menu_body.add_child(header_row)
+
+	var book_icon = Label.new()
+	book_icon.text = "📖"
+	book_icon.add_theme_font_size_override("font_size", 28)
+	header_row.add_child(book_icon)
+
+	var header = Label.new()
+	header.text = "Your Journey"
+	header.add_theme_font_size_override("font_size", 28)
+	header.add_theme_color_override("font_color", Color(0.7, 0.6, 0.85))
+	header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header_row.add_child(header)
+
+	var view_btn = Button.new()
+	view_btn.text = "Full Story"
+	view_btn.custom_minimum_size = Vector2(90, 35)
+	view_btn.add_theme_font_size_override("font_size", 16)
+	view_btn.pressed.connect(_show_story_panel)
+	header_row.add_child(view_btn)
+
+	# Current chapter card
+	var chapter_card = PanelContainer.new()
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.12, 0.1, 0.18, 0.9)
+	style.corner_radius_top_left = 8
+	style.corner_radius_top_right = 8
+	style.corner_radius_bottom_left = 8
+	style.corner_radius_bottom_right = 8
+	style.border_color = Color(0.5, 0.4, 0.7, 0.4)
+	style.border_width_left = 2
+	style.border_width_right = 2
+	style.border_width_top = 2
+	style.border_width_bottom = 2
+	chapter_card.add_theme_stylebox_override("panel", style)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 15)
+	margin.add_theme_constant_override("margin_right", 15)
+	margin.add_theme_constant_override("margin_top", 12)
+	margin.add_theme_constant_override("margin_bottom", 12)
+	chapter_card.add_child(margin)
+
+	var card_vbox = VBoxContainer.new()
+	card_vbox.add_theme_constant_override("separation", 6)
+	margin.add_child(card_vbox)
+
+	# Chapter title and act
+	var title_row = HBoxContainer.new()
+	title_row.add_theme_constant_override("separation", 10)
+	card_vbox.add_child(title_row)
+
+	var act_label = Label.new()
+	act_label.text = "Act %d" % current_chapter.get("act", 1)
+	act_label.add_theme_font_size_override("font_size", 14)
+	act_label.add_theme_color_override("font_color", Color(0.5, 0.55, 0.65))
+	title_row.add_child(act_label)
+
+	var chapter_title = Label.new()
+	chapter_title.text = current_chapter.get("name", "Unknown Chapter")
+	chapter_title.add_theme_font_size_override("font_size", 22)
+	chapter_title.add_theme_color_override("font_color", Color(0.9, 0.85, 0.7))
+	title_row.add_child(chapter_title)
+
+	# Description
+	var desc = Label.new()
+	desc.text = current_chapter.get("description", "")
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD
+	desc.add_theme_font_size_override("font_size", 16)
+	desc.add_theme_color_override("font_color", Color(0.6, 0.65, 0.7))
+	card_vbox.add_child(desc)
+
+	# Progress bar
+	var progress = CampaignManager.get_chapter_progress()
+	var progress_container = VBoxContainer.new()
+	progress_container.add_theme_constant_override("separation", 4)
+	card_vbox.add_child(progress_container)
+
+	var progress_label = Label.new()
+	progress_label.text = "Progress: %d%%" % int(progress * 100)
+	progress_label.add_theme_font_size_override("font_size", 14)
+	progress_label.add_theme_color_override("font_color", Color(0.5, 0.6, 0.5))
+	progress_container.add_child(progress_label)
+
+	# Visual progress bar
+	var bar_bg = ColorRect.new()
+	bar_bg.custom_minimum_size = Vector2(0, 8)
+	bar_bg.color = Color(0.15, 0.12, 0.2)
+	progress_container.add_child(bar_bg)
+
+	var bar_fill = ColorRect.new()
+	bar_fill.custom_minimum_size = Vector2(0, 8)
+	bar_fill.color = Color(0.5, 0.7, 0.4)
+	bar_fill.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	bar_fill.custom_minimum_size.x = max(1, progress * 300)  # Scale to container width
+	progress_container.add_child(bar_fill)
+
+	menu_body.add_child(chapter_card)
+
+
+func _add_character_bonds_section() -> void:
+	if not GameManager:
+		return
+
+	var bonds = GameManager.get_all_character_bonds()
+	if bonds.is_empty():
+		return
+
+	# Section header
+	var header_row = HBoxContainer.new()
+	header_row.add_theme_constant_override("separation", 10)
+	menu_body.add_child(header_row)
+
+	var bond_icon = Label.new()
+	bond_icon.text = "💫"
+	bond_icon.add_theme_font_size_override("font_size", 28)
+	header_row.add_child(bond_icon)
+
+	var header = Label.new()
+	header.text = "Character Bonds"
+	header.add_theme_font_size_override("font_size", 28)
+	header.add_theme_color_override("font_color", Color(0.85, 0.7, 0.5))
+	header_row.add_child(header)
+
+	# Mom bond (featured)
+	var mom_bond = bonds.filter(func(b): return b.id == "mom")
+	if mom_bond.size() > 0:
+		var mom = mom_bond[0]
+		_add_bond_card(mom, true)
+
+	# Aspect bonds (compact grid)
+	var aspects_grid = GridContainer.new()
+	aspects_grid.columns = 3
+	aspects_grid.add_theme_constant_override("h_separation", 8)
+	aspects_grid.add_theme_constant_override("v_separation", 8)
+	menu_body.add_child(aspects_grid)
+
+	for bond in bonds:
+		if bond.id == "mom":
+			continue  # Already shown
+
+		var aspect_card = PanelContainer.new()
+		aspect_card.custom_minimum_size = Vector2(130, 70)
+
+		var style = StyleBoxFlat.new()
+		style.bg_color = Color(0.08, 0.08, 0.12, 0.9)
+		style.corner_radius_top_left = 6
+		style.corner_radius_top_right = 6
+		style.corner_radius_bottom_left = 6
+		style.corner_radius_bottom_right = 6
+		style.border_color = Color(bond.color.r, bond.color.g, bond.color.b, 0.4)
+		style.border_width_left = 1
+		style.border_width_right = 1
+		style.border_width_top = 1
+		style.border_width_bottom = 1
+		aspect_card.add_theme_stylebox_override("panel", style)
+
+		var margin = MarginContainer.new()
+		margin.add_theme_constant_override("margin_left", 8)
+		margin.add_theme_constant_override("margin_right", 8)
+		margin.add_theme_constant_override("margin_top", 6)
+		margin.add_theme_constant_override("margin_bottom", 6)
+		aspect_card.add_child(margin)
+
+		var vbox = VBoxContainer.new()
+		vbox.add_theme_constant_override("separation", 4)
+		margin.add_child(vbox)
+
+		var name_label = Label.new()
+		name_label.text = bond.name
+		name_label.add_theme_font_size_override("font_size", 14)
+		name_label.add_theme_color_override("font_color", bond.color)
+		vbox.add_child(name_label)
+
+		var title_label = Label.new()
+		title_label.text = bond.bond_title
+		title_label.add_theme_font_size_override("font_size", 11)
+		title_label.add_theme_color_override("font_color", Color(0.5, 0.55, 0.6))
+		vbox.add_child(title_label)
+
+		# Progress bar
+		var bar_bg = ColorRect.new()
+		bar_bg.custom_minimum_size = Vector2(0, 4)
+		bar_bg.color = Color(0.15, 0.15, 0.2)
+		vbox.add_child(bar_bg)
+
+		var progress = GameManager.get_bond_progress(bond.id)
+		var bar_fill = ColorRect.new()
+		bar_fill.custom_minimum_size = Vector2(progress * 110, 4)
+		bar_fill.color = bond.color
+		bar_fill.position = Vector2(0, 0)
+		bar_bg.add_child(bar_fill)
+
+		aspects_grid.add_child(aspect_card)
+
+
+func _add_bond_card(bond: Dictionary, featured: bool = false) -> void:
+	var card = PanelContainer.new()
+
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.1, 0.08, 0.12, 0.9)
+	style.corner_radius_top_left = 10
+	style.corner_radius_top_right = 10
+	style.corner_radius_bottom_left = 10
+	style.corner_radius_bottom_right = 10
+	style.border_color = Color(bond.color.r, bond.color.g, bond.color.b, 0.5)
+	style.border_width_left = 2
+	style.border_width_right = 2
+	style.border_width_top = 2
+	style.border_width_bottom = 2
+	card.add_theme_stylebox_override("panel", style)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 15)
+	margin.add_theme_constant_override("margin_right", 15)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_bottom", 10)
+	card.add_child(margin)
+
+	var hbox = HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 15)
+	margin.add_child(hbox)
+
+	# Character info
+	var info_vbox = VBoxContainer.new()
+	info_vbox.add_theme_constant_override("separation", 4)
+	info_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hbox.add_child(info_vbox)
+
+	var name_label = Label.new()
+	name_label.text = bond.name
+	name_label.add_theme_font_size_override("font_size", 20)
+	name_label.add_theme_color_override("font_color", bond.color)
+	info_vbox.add_child(name_label)
+
+	var title_label = Label.new()
+	title_label.text = bond.bond_title + " (Lv " + str(bond.bond_level) + ")"
+	title_label.add_theme_font_size_override("font_size", 14)
+	title_label.add_theme_color_override("font_color", Color(0.6, 0.65, 0.7))
+	info_vbox.add_child(title_label)
+
+	# Progress
+	var progress_vbox = VBoxContainer.new()
+	progress_vbox.add_theme_constant_override("separation", 4)
+	hbox.add_child(progress_vbox)
+
+	var points_label = Label.new()
+	points_label.text = str(bond.bond_points) + " pts"
+	points_label.add_theme_font_size_override("font_size", 16)
+	points_label.add_theme_color_override("font_color", Color(0.7, 0.75, 0.8))
+	points_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	progress_vbox.add_child(points_label)
+
+	var bar_bg = ColorRect.new()
+	bar_bg.custom_minimum_size = Vector2(100, 6)
+	bar_bg.color = Color(0.15, 0.15, 0.2)
+	progress_vbox.add_child(bar_bg)
+
+	var progress = GameManager.get_bond_progress(bond.id)
+	var bar_fill = ColorRect.new()
+	bar_fill.custom_minimum_size = Vector2(progress * 100, 6)
+	bar_fill.color = bond.color
+	bar_bg.add_child(bar_fill)
+
+	menu_body.add_child(card)
+
+
+var story_panel: PanelContainer = null
+
+func _show_story_panel() -> void:
+	if story_panel:
+		return
+
+	_close_pause_menu()
+
+	story_panel = PanelContainer.new()
+	story_panel.name = "StoryPanel"
+	story_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.06, 0.05, 0.1, 0.98)
+	story_panel.add_theme_stylebox_override("panel", style)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 40)
+	margin.add_theme_constant_override("margin_right", 40)
+	margin.add_theme_constant_override("margin_top", 30)
+	margin.add_theme_constant_override("margin_bottom", 30)
+	story_panel.add_child(margin)
+
+	var main_vbox = VBoxContainer.new()
+	main_vbox.add_theme_constant_override("separation", 15)
+	margin.add_child(main_vbox)
+
+	# Header
+	var header_row = HBoxContainer.new()
+	header_row.add_theme_constant_override("separation", 15)
+	main_vbox.add_child(header_row)
+
+	var title = Label.new()
+	title.text = "📖 Your Journey"
+	title.add_theme_font_size_override("font_size", 36)
+	title.add_theme_color_override("font_color", Color(0.7, 0.6, 0.85))
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header_row.add_child(title)
+
+	var close_btn = Button.new()
+	close_btn.text = "Close"
+	close_btn.custom_minimum_size = Vector2(100, 45)
+	close_btn.add_theme_font_size_override("font_size", 18)
+	close_btn.pressed.connect(_close_story_panel)
+	header_row.add_child(close_btn)
+
+	# Overall progress
+	var completed_chapters = CampaignManager.campaign_state.chapters_completed.size()
+	var total_chapters = CampaignManager.CHAPTERS.size()
+
+	var overall = Label.new()
+	overall.text = "Chapters Completed: %d / %d" % [completed_chapters, total_chapters]
+	overall.add_theme_font_size_override("font_size", 20)
+	overall.add_theme_color_override("font_color", Color(0.6, 0.65, 0.7))
+	main_vbox.add_child(overall)
+
+	# Scrollable chapter list
+	var scroll = ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.mouse_filter = Control.MOUSE_FILTER_STOP  # Capture scroll events
+	main_vbox.add_child(scroll)
+
+	var chapter_list = VBoxContainer.new()
+	chapter_list.add_theme_constant_override("separation", 12)
+	chapter_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	chapter_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.add_child(chapter_list)
+
+	# Build chapter cards
+	for chapter_id in _get_sorted_chapter_ids():
+		var chapter = CampaignManager.CHAPTERS[chapter_id]
+		_add_chapter_card(chapter_list, chapter)
+
+	# Cutscene Theater button
+	var spacer = Control.new()
+	spacer.custom_minimum_size = Vector2(0, 10)
+	main_vbox.add_child(spacer)
+
+	var theater_btn = Button.new()
+	theater_btn.text = "🎬 Cutscene Theater - Replay Past Scenes"
+	theater_btn.custom_minimum_size = Vector2(0, 50)
+	theater_btn.add_theme_font_size_override("font_size", 18)
+	theater_btn.pressed.connect(_show_cutscene_theater)
+	main_vbox.add_child(theater_btn)
+
+	add_child(story_panel)
+
+
+func _get_sorted_chapter_ids() -> Array:
+	var ids = CampaignManager.CHAPTERS.keys()
+	ids.sort_custom(func(a, b):
+		var num_a = int(a.replace("chapter_", ""))
+		var num_b = int(b.replace("chapter_", ""))
+		return num_a < num_b
+	)
+	return ids
+
+
+func _add_chapter_card(container: Control, chapter: Dictionary) -> void:
+	var chapter_id = chapter.get("id", "")
+	var is_unlocked = CampaignManager.is_chapter_unlocked(chapter_id)
+	var is_completed = CampaignManager.is_chapter_completed(chapter_id)
+	var is_current = CampaignManager.campaign_state.current_chapter == chapter_id
+
+	var card = PanelContainer.new()
+	var style = StyleBoxFlat.new()
+	style.corner_radius_top_left = 8
+	style.corner_radius_top_right = 8
+	style.corner_radius_bottom_left = 8
+	style.corner_radius_bottom_right = 8
+
+	if is_completed:
+		style.bg_color = Color(0.12, 0.15, 0.12, 0.9)
+		style.border_color = Color(0.4, 0.6, 0.4, 0.5)
+	elif is_current:
+		style.bg_color = Color(0.15, 0.12, 0.2, 0.95)
+		style.border_color = Color(0.6, 0.5, 0.8, 0.6)
+	elif is_unlocked:
+		style.bg_color = Color(0.1, 0.1, 0.15, 0.8)
+		style.border_color = Color(0.4, 0.4, 0.5, 0.4)
+	else:
+		style.bg_color = Color(0.08, 0.08, 0.1, 0.6)
+		style.border_color = Color(0.25, 0.25, 0.3, 0.3)
+
+	style.border_width_left = 2
+	style.border_width_right = 2
+	style.border_width_top = 2
+	style.border_width_bottom = 2
+	card.add_theme_stylebox_override("panel", style)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 15)
+	margin.add_theme_constant_override("margin_right", 15)
+	margin.add_theme_constant_override("margin_top", 12)
+	margin.add_theme_constant_override("margin_bottom", 12)
+	card.add_child(margin)
+
+	var hbox = HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 15)
+	margin.add_child(hbox)
+
+	# Status icon
+	var status_icon = Label.new()
+	if is_completed:
+		status_icon.text = "✓"
+		status_icon.add_theme_color_override("font_color", Color(0.5, 0.8, 0.5))
+	elif is_current:
+		status_icon.text = "▶"
+		status_icon.add_theme_color_override("font_color", Color(0.7, 0.6, 0.9))
+	elif is_unlocked:
+		status_icon.text = "○"
+		status_icon.add_theme_color_override("font_color", Color(0.5, 0.5, 0.6))
+	else:
+		status_icon.text = "🔒"
+		status_icon.add_theme_color_override("font_color", Color(0.4, 0.4, 0.45))
+	status_icon.add_theme_font_size_override("font_size", 24)
+	hbox.add_child(status_icon)
+
+	# Chapter info
+	var info_vbox = VBoxContainer.new()
+	info_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hbox.add_child(info_vbox)
+
+	var title_row = HBoxContainer.new()
+	title_row.add_theme_constant_override("separation", 10)
+	info_vbox.add_child(title_row)
+
+	var act_label = Label.new()
+	act_label.text = "Act %d •" % chapter.get("act", 1)
+	act_label.add_theme_font_size_override("font_size", 14)
+	act_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.6) if is_unlocked else Color(0.35, 0.35, 0.4))
+	title_row.add_child(act_label)
+
+	var chapter_title = Label.new()
+	chapter_title.text = chapter.get("name", "Unknown")
+	chapter_title.add_theme_font_size_override("font_size", 20)
+	if is_completed:
+		chapter_title.add_theme_color_override("font_color", Color(0.7, 0.85, 0.7))
+	elif is_current:
+		chapter_title.add_theme_color_override("font_color", Color(0.9, 0.85, 0.7))
+	elif is_unlocked:
+		chapter_title.add_theme_color_override("font_color", Color(0.7, 0.7, 0.75))
+	else:
+		chapter_title.add_theme_color_override("font_color", Color(0.4, 0.4, 0.45))
+	title_row.add_child(chapter_title)
+
+	# Description (only for unlocked)
+	if is_unlocked:
+		var desc = Label.new()
+		desc.text = chapter.get("description", "")
+		desc.add_theme_font_size_override("font_size", 16)
+		desc.add_theme_color_override("font_color", Color(0.55, 0.55, 0.6))
+		info_vbox.add_child(desc)
+
+	# Current chapter shows objectives
+	if is_current and not is_completed:
+		var objectives_label = Label.new()
+		objectives_label.text = "Objectives:"
+		objectives_label.add_theme_font_size_override("font_size", 14)
+		objectives_label.add_theme_color_override("font_color", Color(0.6, 0.55, 0.7))
+		info_vbox.add_child(objectives_label)
+
+		for req in chapter.get("completion_requirements", []):
+			var obj_text = _format_requirement(req)
+			var is_done = CampaignManager._check_requirement(req)
+
+			var obj_row = HBoxContainer.new()
+			obj_row.add_theme_constant_override("separation", 8)
+			info_vbox.add_child(obj_row)
+
+			var check = Label.new()
+			check.text = "✓" if is_done else "○"
+			check.add_theme_font_size_override("font_size", 14)
+			check.add_theme_color_override("font_color", Color(0.5, 0.8, 0.5) if is_done else Color(0.5, 0.5, 0.55))
+			obj_row.add_child(check)
+
+			var obj_label = Label.new()
+			obj_label.text = obj_text
+			obj_label.add_theme_font_size_override("font_size", 14)
+			obj_label.add_theme_color_override("font_color", Color(0.5, 0.7, 0.5) if is_done else Color(0.6, 0.6, 0.65))
+			obj_row.add_child(obj_label)
+
+	container.add_child(card)
+
+
+func _format_requirement(req: Dictionary) -> String:
+	match req.type:
+		"focus_sessions":
+			return "Complete %d focus sessions" % req.count
+		"habits_created":
+			return "Create %d habits" % req.count
+		"streak_days":
+			return "Reach a %d-day streak" % req.count
+		"journal_entries":
+			return "Write %d journal entries" % req.count
+		"goals_created":
+			return "Set %d goals" % req.count
+		"goals_completed":
+			return "Complete %d goals" % req.count
+		"aspect_level":
+			var aspect = req.get("aspect", "any")
+			if aspect == "any":
+				return "Reach level %d in any aspect" % req.level
+			return "Reach level %d in %s" % [req.level, aspect.capitalize()]
+		"scripts_created":
+			return "Create %d scripts" % req.count
+		"scripts_executed":
+			return "Execute %d scripts" % req.count
+		"combat_victories":
+			var enemy = req.get("enemy", "any")
+			return "Defeat %s" % enemy.capitalize() if enemy != "any" else "Win a battle"
+		"streak_recovered":
+			return "Recover a broken streak"
+		"aspects_talked_to":
+			return "Commune with %d aspects" % req.count
+		"weekly_goal_set":
+			return "Set a weekly goal"
+		"all_resistance_defeated":
+			return "Defeat all resistance types"
+		"weekly_goals_complete":
+			return "Complete %d weekly goals" % req.count
+		"milestone_goal_complete":
+			return "Complete a milestone goal"
+		_:
+			return "Complete objective"
+
+
+func _close_story_panel() -> void:
+	if story_panel:
+		story_panel.queue_free()
+		story_panel = null
+
+
+# ============ CUTSCENE THEATER ============
+
+var cutscene_theater_panel: PanelContainer = null
+
+func _show_cutscene_theater() -> void:
+	if cutscene_theater_panel:
+		return
+
+	_close_story_panel()
+
+	cutscene_theater_panel = PanelContainer.new()
+	cutscene_theater_panel.name = "CutsceneTheater"
+	cutscene_theater_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.04, 0.04, 0.08, 0.98)
+	cutscene_theater_panel.add_theme_stylebox_override("panel", style)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 30)
+	margin.add_theme_constant_override("margin_right", 30)
+	margin.add_theme_constant_override("margin_top", 30)
+	margin.add_theme_constant_override("margin_bottom", 30)
+	cutscene_theater_panel.add_child(margin)
+
+	var main_vbox = VBoxContainer.new()
+	main_vbox.add_theme_constant_override("separation", 20)
+	margin.add_child(main_vbox)
+
+	# Header
+	var header_row = HBoxContainer.new()
+	header_row.add_theme_constant_override("separation", 15)
+	main_vbox.add_child(header_row)
+
+	var title = Label.new()
+	title.text = "🎬 Cutscene Theater"
+	title.add_theme_font_size_override("font_size", 36)
+	title.add_theme_color_override("font_color", Color(0.9, 0.8, 0.6))
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header_row.add_child(title)
+
+	var close_btn = Button.new()
+	close_btn.text = "Back"
+	close_btn.custom_minimum_size = Vector2(100, 45)
+	close_btn.add_theme_font_size_override("font_size", 18)
+	close_btn.pressed.connect(_close_cutscene_theater)
+	header_row.add_child(close_btn)
+
+	var subtitle = Label.new()
+	subtitle.text = "Replay scenes from your journey. Only scenes you've experienced are available."
+	subtitle.add_theme_font_size_override("font_size", 16)
+	subtitle.add_theme_color_override("font_color", Color(0.5, 0.5, 0.55))
+	main_vbox.add_child(subtitle)
+
+	# Scrollable cutscene list
+	var scroll = ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.mouse_filter = Control.MOUSE_FILTER_STOP
+	main_vbox.add_child(scroll)
+
+	var cutscene_grid = GridContainer.new()
+	cutscene_grid.columns = 5  # More columns to span width
+	cutscene_grid.add_theme_constant_override("h_separation", 15)
+	cutscene_grid.add_theme_constant_override("v_separation", 15)
+	cutscene_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cutscene_grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.add_child(cutscene_grid)
+
+	# Get cutscenes from the cutscene script
+	var cutscene_data = _get_available_cutscenes()
+
+	for cs in cutscene_data:
+		_add_cutscene_card(cutscene_grid, cs)
+
+	add_child(cutscene_theater_panel)
+
+
+func _get_available_cutscenes() -> Array:
+	# Define cutscene metadata for theater display
+	var cutscenes = [
+		{"id": "intro", "title": "First Contact", "chapter": "Chapter 1", "icon": "🚀"},
+		{"id": "discipline_awakens", "title": "Discipline Awakens", "chapter": "Chapter 2", "icon": "⚔️"},
+		{"id": "growth_begins", "title": "Growth Begins", "chapter": "Chapter 3", "icon": "🌱"},
+		{"id": "vitality_awakens", "title": "Vitality Awakens", "chapter": "Chapter 3", "icon": "💪"},
+		{"id": "family_dinner", "title": "Family Dinner", "chapter": "Chapter 3", "icon": "🍽️"},
+		{"id": "need_direction", "title": "Need Direction", "chapter": "Chapter 4", "icon": "🧭"},
+		{"id": "wisdom_awakens", "title": "Wisdom Awakens", "chapter": "Chapter 4", "icon": "🦉"},
+		{"id": "arctis_navigation", "title": "Star Navigation", "chapter": "Chapter 4", "icon": "⭐"},
+		{"id": "darkness_stirs", "title": "Darkness Stirs", "chapter": "Chapter 5", "icon": "🌑"},
+		{"id": "courage_awakens", "title": "Courage Awakens", "chapter": "Chapter 7", "icon": "🦁"},
+		{"id": "creativity_awakens", "title": "Creativity Awakens", "chapter": "Chapter 8", "icon": "🎨"},
+		{"id": "compassion_awakens", "title": "Compassion Awakens", "chapter": "Chapter 6", "icon": "💗"},
+		{"id": "certification_ceremony", "title": "Certification", "chapter": "Chapter 10", "icon": "🏆"}
+	]
+	return cutscenes
+
+
+func _add_cutscene_card(container: Control, cs: Dictionary) -> void:
+	var is_seen = CampaignManager.has_seen_cutscene(cs.id)
+
+	var card = PanelContainer.new()
+	card.custom_minimum_size = Vector2(240, 140)
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+	var style = StyleBoxFlat.new()
+	style.corner_radius_top_left = 10
+	style.corner_radius_top_right = 10
+	style.corner_radius_bottom_left = 10
+	style.corner_radius_bottom_right = 10
+
+	if is_seen:
+		style.bg_color = Color(0.12, 0.12, 0.18, 0.95)
+		style.border_color = Color(0.5, 0.45, 0.6, 0.5)
+	else:
+		style.bg_color = Color(0.08, 0.08, 0.1, 0.6)
+		style.border_color = Color(0.3, 0.3, 0.35, 0.3)
+
+	style.border_width_left = 2
+	style.border_width_right = 2
+	style.border_width_top = 2
+	style.border_width_bottom = 2
+	card.add_theme_stylebox_override("panel", style)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 12)
+	margin.add_theme_constant_override("margin_right", 12)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_bottom", 10)
+	card.add_child(margin)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 6)
+	margin.add_child(vbox)
+
+	# Icon
+	var icon = Label.new()
+	icon.text = cs.icon if is_seen else "🔒"
+	icon.add_theme_font_size_override("font_size", 32)
+	icon.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	if not is_seen:
+		icon.modulate = Color(0.5, 0.5, 0.55)
+	vbox.add_child(icon)
+
+	# Title
+	var title = Label.new()
+	title.text = cs.title if is_seen else "???"
+	title.add_theme_font_size_override("font_size", 16)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	if is_seen:
+		title.add_theme_color_override("font_color", Color(0.9, 0.85, 0.7))
+	else:
+		title.add_theme_color_override("font_color", Color(0.4, 0.4, 0.45))
+	vbox.add_child(title)
+
+	# Chapter
+	var chapter = Label.new()
+	chapter.text = cs.chapter
+	chapter.add_theme_font_size_override("font_size", 12)
+	chapter.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	chapter.add_theme_color_override("font_color", Color(0.5, 0.5, 0.55))
+	vbox.add_child(chapter)
+
+	# Play button (only if seen)
+	if is_seen:
+		var play_btn = Button.new()
+		play_btn.text = "▶ Play"
+		play_btn.custom_minimum_size = Vector2(0, 30)
+		play_btn.add_theme_font_size_override("font_size", 14)
+		play_btn.pressed.connect(_play_cutscene.bind(cs.id))
+		vbox.add_child(play_btn)
+
+	container.add_child(card)
+
+
+func _play_cutscene(cutscene_id: String) -> void:
+	_close_cutscene_theater()
+
+	# Set replay mode and pending cutscene
+	GameManager.player_data["cutscene_replay_mode"] = true
+	GameManager.player_data["pending_cutscene"] = cutscene_id
+	GameManager.previous_scene_path = "res://scenes/mindscape/mindscape_hub.tscn"
+
+	GameManager.goto_scene("res://scenes/cutscene/cutscene.tscn")
+
+
+func _close_cutscene_theater() -> void:
+	if cutscene_theater_panel:
+		cutscene_theater_panel.queue_free()
+		cutscene_theater_panel = null
 
 
 func _export_progress_data() -> void:
@@ -6482,6 +7572,34 @@ func _add_achievement_card(container: Control, achievement: Dictionary) -> void:
 		desc_label.add_theme_color_override("font_color", Color(0.4, 0.4, 0.45))
 	text_vbox.add_child(desc_label)
 
+	# XP reward and progress row
+	var info_row = HBoxContainer.new()
+	info_row.add_theme_constant_override("separation", 15)
+	text_vbox.add_child(info_row)
+
+	# XP reward
+	var xp_reward = achievement.get("xp_reward", 0)
+	if xp_reward > 0:
+		var xp_label = Label.new()
+		if is_unlocked:
+			xp_label.text = "+%d XP earned" % xp_reward
+			xp_label.add_theme_color_override("font_color", Color(0.4, 0.8, 0.4))
+		else:
+			xp_label.text = "+%d XP" % xp_reward
+			xp_label.add_theme_color_override("font_color", Color(0.5, 0.6, 0.5))
+		xp_label.add_theme_font_size_override("font_size", 14)
+		info_row.add_child(xp_label)
+
+	# Progress for locked achievements
+	if not is_unlocked and AchievementManager:
+		var progress = AchievementManager.get_achievement_progress(achievement.id)
+		if progress and progress.target > 0:
+			var progress_label = Label.new()
+			progress_label.text = "Progress: %d/%d" % [progress.current, progress.target]
+			progress_label.add_theme_font_size_override("font_size", 14)
+			progress_label.add_theme_color_override("font_color", Color(0.5, 0.55, 0.6))
+			info_row.add_child(progress_label)
+
 	# Unlock indicator
 	if is_unlocked:
 		var check = Label.new()
@@ -6585,6 +7703,15 @@ func _show_achievement_notification(achievement: Dictionary) -> void:
 	desc_label.add_theme_font_size_override("font_size", 14)
 	desc_label.add_theme_color_override("font_color", Color(0.6, 0.65, 0.7))
 	vbox.add_child(desc_label)
+
+	# XP Reward display
+	var xp_reward = achievement.get("xp_reward", 0)
+	if xp_reward > 0:
+		var xp_label = Label.new()
+		xp_label.text = "+%d XP" % xp_reward
+		xp_label.add_theme_font_size_override("font_size", 16)
+		xp_label.add_theme_color_override("font_color", Color(0.4, 0.9, 0.4))
+		vbox.add_child(xp_label)
 
 	# Position at top center
 	achievement_notification.custom_minimum_size = Vector2(350, 0)
@@ -8240,6 +9367,19 @@ func _save_checkin() -> void:
 		xp_text = "+20 Wisdom XP (includes gratitude bonus!)"
 	GameManager.add_aspect_experience("wisdom", xp_amount)
 
+	# Track for aspect quests
+	if GameManager:
+		GameManager.check_quests_for_trigger("checkin_completed", {
+			"mood": current_checkin_mood,
+			"energy": current_checkin_energy
+		})
+		if gratitude != "":
+			var gratitude_streak = _get_gratitude_streak(checkins)
+			GameManager.check_quests_for_trigger("journal_entry", {
+				"type": "gratitude",
+				"streak": gratitude_streak
+			})
+
 	# Show confirmation and return to tab
 	var confirm_text = "Your daily check-in has been recorded.\n\n" + MOOD_EMOJIS[current_checkin_mood - 1] + " Mood: " + _get_mood_label(current_checkin_mood) + "\n" + _get_energy_icon(current_checkin_energy) + " Energy: " + ENERGY_LABELS[current_checkin_energy - 1]
 	if gratitude != "":
@@ -8281,6 +9421,39 @@ func _save_checkins(checkins: Array) -> void:
 	if file:
 		file.store_string(JSON.stringify(checkins, "\t"))
 		file.close()
+
+
+## Get consecutive days with gratitude entries
+func _get_gratitude_streak(checkins: Array) -> int:
+	# Sort by date descending
+	var sorted = checkins.duplicate()
+	sorted.sort_custom(func(a, b): return a.get("date", "") > b.get("date", ""))
+
+	var streak = 0
+	var today = Time.get_date_string_from_system()
+	var expected_date = today
+
+	for checkin in sorted:
+		var checkin_date = checkin.get("date", "")
+		var has_gratitude = checkin.get("gratitude", "") != ""
+
+		if checkin_date == expected_date and has_gratitude:
+			streak += 1
+			# Calculate previous day
+			var date_parts = expected_date.split("-")
+			if date_parts.size() == 3:
+				var dt = {"year": int(date_parts[0]), "month": int(date_parts[1]), "day": int(date_parts[2])}
+				var unix = Time.get_unix_time_from_datetime_dict(dt)
+				unix -= 86400  # Previous day
+				var prev_dt = Time.get_datetime_dict_from_unix_time(unix)
+				expected_date = "%04d-%02d-%02d" % [prev_dt.year, prev_dt.month, prev_dt.day]
+			else:
+				break
+		elif checkin_date != expected_date:
+			# Gap in dates or no gratitude for expected date
+			break
+
+	return streak
 
 
 func _show_checkin_history() -> void:
@@ -8956,6 +10129,10 @@ func _save_weekly_synthesis() -> void:
 	# Award XP for completing weekly review
 	var xp_reward = 50
 	GameManager.add_aspect_experience("wisdom", xp_reward)
+
+	# Track for aspect quests
+	if GameManager:
+		GameManager.check_quests_for_trigger("weekly_synthesis", {})
 
 	_show_dialogue("Weekly Synthesis Complete", "Your weekly review has been saved!\n\nReflecting on your progress builds wisdom and clarity.\n\n+50 Wisdom XP")
 
@@ -11332,3 +12509,641 @@ func _save_affirmations(data: Dictionary) -> void:
 	if file:
 		file.store_string(JSON.stringify(data, "\t"))
 		file.close()
+
+
+# =============================================================================
+# MINDSCAPE EVOLUTION STAGES
+# =============================================================================
+# Visual transformation of the mindscape based on evolution level
+# 5 tiers that progressively enhance the environment
+
+var evolution_stage_container: Node2D = null
+var current_evolution_tier: int = 0
+var evolution_stage_elements: Array = []
+var floating_islands: Array = []
+var platform_crystals: Array = []
+var ancient_runes: Array = []
+var mystical_aura: Node2D = null
+
+# Evolution tier thresholds
+const EVOLUTION_TIERS = {
+	1: {"min_level": 1, "name": "Awakening", "color": Color(0.4, 0.35, 0.5)},
+	2: {"min_level": 3, "name": "Growing", "color": Color(0.5, 0.4, 0.6)},
+	3: {"min_level": 5, "name": "Flourishing", "color": Color(0.6, 0.5, 0.7)},
+	4: {"min_level": 7, "name": "Transcending", "color": Color(0.7, 0.6, 0.8)},
+	5: {"min_level": 9, "name": "Ascended", "color": Color(0.85, 0.75, 0.95)}
+}
+
+# Tier-specific visual configurations
+const TIER_VISUALS = {
+	1: {  # Awakening - Basic platform
+		"edge_crystals": 0,
+		"floating_islands": 0,
+		"rune_count": 0,
+		"aura_intensity": 0.0,
+		"particle_density": 0.2
+	},
+	2: {  # Growing - Edge crystals emerge
+		"edge_crystals": 4,
+		"floating_islands": 0,
+		"rune_count": 0,
+		"aura_intensity": 0.1,
+		"particle_density": 0.4
+	},
+	3: {  # Flourishing - Floating islands appear
+		"edge_crystals": 6,
+		"floating_islands": 3,
+		"rune_count": 0,
+		"aura_intensity": 0.2,
+		"particle_density": 0.6
+	},
+	4: {  # Transcending - Ancient runes manifest
+		"edge_crystals": 8,
+		"floating_islands": 4,
+		"rune_count": 6,
+		"aura_intensity": 0.35,
+		"particle_density": 0.8
+	},
+	5: {  # Ascended - Full mystical transformation
+		"edge_crystals": 12,
+		"floating_islands": 6,
+		"rune_count": 12,
+		"aura_intensity": 0.5,
+		"particle_density": 1.0
+	}
+}
+
+
+func _setup_evolution_stages() -> void:
+	## Initialize the evolution stage visual system
+	var evolution_level = GameManager.get_evolution_level() if GameManager else 1
+
+	# Determine current tier
+	current_evolution_tier = 1
+	for tier in range(5, 0, -1):
+		if evolution_level >= EVOLUTION_TIERS[tier]["min_level"]:
+			current_evolution_tier = tier
+			break
+
+	# Create container for evolution stage visuals
+	evolution_stage_container = Node2D.new()
+	evolution_stage_container.name = "EvolutionStages"
+	isometric_base.add_child(evolution_stage_container)
+	isometric_base.move_child(evolution_stage_container, 2)  # After platform
+
+	# Build visuals for current tier
+	_build_evolution_tier_visuals(current_evolution_tier)
+
+	print("[MindscapeHub] Evolution stage initialized: Tier %d (%s)" % [
+		current_evolution_tier,
+		EVOLUTION_TIERS[current_evolution_tier]["name"]
+	])
+
+
+func _build_evolution_tier_visuals(tier: int) -> void:
+	## Build all visual elements for the given evolution tier
+	var config = TIER_VISUALS.get(tier, TIER_VISUALS[1])
+	var tier_color = EVOLUTION_TIERS[tier]["color"]
+
+	# Create edge crystals
+	if config["edge_crystals"] > 0:
+		_create_platform_edge_crystals(config["edge_crystals"], tier_color)
+
+	# Create floating islands
+	if config["floating_islands"] > 0:
+		_create_floating_islands(config["floating_islands"], tier_color)
+
+	# Create ancient runes
+	if config["rune_count"] > 0:
+		_create_ancient_runes(config["rune_count"], tier_color)
+
+	# Create mystical aura
+	if config["aura_intensity"] > 0:
+		_create_mystical_aura(config["aura_intensity"], tier_color)
+
+	# Enhance existing elements based on tier
+	_enhance_platform_for_tier(tier, tier_color)
+
+
+func _create_platform_edge_crystals(count: int, base_color: Color) -> void:
+	## Create crystals around the platform edge
+	var platform_radius = 450  # Main platform radius
+
+	for i in range(count):
+		var angle = (float(i) / count) * TAU
+		var distance = platform_radius + randf_range(-20, 20)
+		var pos = Vector2(cos(angle) * distance, sin(angle) * distance * 0.5)  # Isometric adjustment
+
+		var crystal = Node2D.new()
+		crystal.name = "EdgeCrystal_" + str(i)
+		crystal.position = pos
+
+		# Crystal body - tall hexagonal shape
+		var body = Polygon2D.new()
+		var height = randf_range(25, 45)
+		var width = randf_range(8, 15)
+		body.polygon = PackedVector2Array([
+			Vector2(0, -height),
+			Vector2(width * 0.6, -height * 0.7),
+			Vector2(width, -height * 0.2),
+			Vector2(width * 0.8, height * 0.3),
+			Vector2(0, height * 0.5),
+			Vector2(-width * 0.8, height * 0.3),
+			Vector2(-width, -height * 0.2),
+			Vector2(-width * 0.6, -height * 0.7)
+		])
+		body.color = base_color.lightened(randf_range(0.1, 0.3))
+		body.color.a = 0.85
+		crystal.add_child(body)
+
+		# Crystal glow
+		var glow = Polygon2D.new()
+		glow.polygon = body.polygon
+		glow.scale = Vector2(1.3, 1.3)
+		glow.color = base_color.lightened(0.4)
+		glow.color.a = 0.2
+		glow.z_index = -1
+		crystal.add_child(glow)
+
+		# Inner highlight
+		var highlight = Polygon2D.new()
+		highlight.polygon = PackedVector2Array([
+			Vector2(-width * 0.3, -height * 0.6),
+			Vector2(width * 0.2, -height * 0.4),
+			Vector2(width * 0.1, -height * 0.1),
+			Vector2(-width * 0.2, -height * 0.3)
+		])
+		highlight.color = Color(1, 1, 1, 0.3)
+		crystal.add_child(highlight)
+
+		evolution_stage_container.add_child(crystal)
+		platform_crystals.append({
+			"node": crystal,
+			"glow": glow,
+			"base_height": height,
+			"phase": randf() * TAU
+		})
+
+
+func _create_floating_islands(count: int, base_color: Color) -> void:
+	## Create small floating islands around the main platform
+	var positions = [
+		Vector2(-550, -200),
+		Vector2(550, -150),
+		Vector2(-480, 300),
+		Vector2(520, 280),
+		Vector2(-300, -350),
+		Vector2(350, -320)
+	]
+
+	for i in range(mini(count, positions.size())):
+		var island = Node2D.new()
+		island.name = "FloatingIsland_" + str(i)
+		island.position = positions[i]
+
+		# Island base - irregular rocky platform
+		var base = Polygon2D.new()
+		var size = randf_range(40, 70)
+		var points = PackedVector2Array()
+		var segments = randi_range(6, 10)
+		for j in range(segments):
+			var a = (float(j) / segments) * TAU
+			var r = size * randf_range(0.7, 1.0)
+			points.append(Vector2(cos(a) * r, sin(a) * r * 0.5))
+		base.polygon = points
+		base.color = Color(0.25, 0.2, 0.3, 0.9)
+		island.add_child(base)
+
+		# Top surface - grass/energy layer
+		var surface = Polygon2D.new()
+		var surface_points = PackedVector2Array()
+		for j in range(segments):
+			var a = (float(j) / segments) * TAU
+			var r = size * 0.8 * randf_range(0.8, 1.0)
+			surface_points.append(Vector2(cos(a) * r, sin(a) * r * 0.5 - 5))
+		surface.polygon = surface_points
+		surface.color = base_color.darkened(0.2)
+		surface.color.a = 0.8
+		island.add_child(surface)
+
+		# Small crystal or plant on top
+		if randf() > 0.3:
+			var decoration = Polygon2D.new()
+			var dec_height = randf_range(15, 25)
+			decoration.polygon = PackedVector2Array([
+				Vector2(0, -dec_height),
+				Vector2(5, -dec_height * 0.3),
+				Vector2(3, 5),
+				Vector2(-3, 5),
+				Vector2(-5, -dec_height * 0.3)
+			])
+			decoration.color = base_color.lightened(0.3)
+			decoration.color.a = 0.7
+			decoration.position = Vector2(randf_range(-10, 10), -8)
+			island.add_child(decoration)
+
+		# Shadow beneath island
+		var shadow = Polygon2D.new()
+		shadow.polygon = base.polygon
+		shadow.scale = Vector2(1.2, 0.3)
+		shadow.position = Vector2(0, 40)
+		shadow.color = Color(0, 0, 0, 0.15)
+		shadow.z_index = -2
+		island.add_child(shadow)
+
+		evolution_stage_container.add_child(island)
+		floating_islands.append({
+			"node": island,
+			"base_y": island.position.y,
+			"phase": randf() * TAU,
+			"amplitude": randf_range(8, 15),
+			"speed": randf_range(0.3, 0.6)
+		})
+
+
+func _create_ancient_runes(count: int, base_color: Color) -> void:
+	## Create glowing ancient runes on the platform surface
+	var rune_patterns = [
+		# Rune 1: Diamond with cross
+		[Vector2(0, -15), Vector2(10, 0), Vector2(0, 15), Vector2(-10, 0)],
+		# Rune 2: Triangle
+		[Vector2(0, -12), Vector2(12, 10), Vector2(-12, 10)],
+		# Rune 3: Circle with dot (represented as hexagon)
+		[Vector2(8, 0), Vector2(4, 7), Vector2(-4, 7), Vector2(-8, 0), Vector2(-4, -7), Vector2(4, -7)],
+		# Rune 4: Arrow pointing up
+		[Vector2(0, -15), Vector2(8, -5), Vector2(3, -5), Vector2(3, 12), Vector2(-3, 12), Vector2(-3, -5), Vector2(-8, -5)],
+		# Rune 5: Infinity-like shape
+		[Vector2(-8, 0), Vector2(-4, -6), Vector2(0, 0), Vector2(4, -6), Vector2(8, 0), Vector2(4, 6), Vector2(0, 0), Vector2(-4, 6)],
+		# Rune 6: Star
+		[Vector2(0, -12), Vector2(3, -4), Vector2(12, -4), Vector2(5, 2), Vector2(7, 12), Vector2(0, 6), Vector2(-7, 12), Vector2(-5, 2), Vector2(-12, -4), Vector2(-3, -4)]
+	]
+
+	# Position runes in a circular pattern on the platform
+	var radius = 280
+	for i in range(count):
+		var angle = (float(i) / count) * TAU + PI / 6  # Offset to avoid portals
+		var pos = Vector2(cos(angle) * radius, sin(angle) * radius * 0.5)
+
+		var rune = Node2D.new()
+		rune.name = "AncientRune_" + str(i)
+		rune.position = pos
+
+		# Rune symbol
+		var symbol = Polygon2D.new()
+		var pattern_idx = i % rune_patterns.size()
+		symbol.polygon = PackedVector2Array(rune_patterns[pattern_idx])
+		symbol.color = base_color.lightened(0.5)
+		symbol.color.a = 0.6
+		rune.add_child(symbol)
+
+		# Outer glow
+		var glow = Polygon2D.new()
+		glow.polygon = symbol.polygon
+		glow.scale = Vector2(1.5, 1.5)
+		glow.color = base_color.lightened(0.3)
+		glow.color.a = 0.2
+		glow.z_index = -1
+		rune.add_child(glow)
+
+		# Ground circle beneath rune
+		var circle = Polygon2D.new()
+		circle.polygon = _create_soft_circle(18, 12)
+		circle.color = base_color.darkened(0.3)
+		circle.color.a = 0.15
+		circle.z_index = -2
+		rune.add_child(circle)
+
+		evolution_stage_container.add_child(rune)
+		ancient_runes.append({
+			"node": rune,
+			"symbol": symbol,
+			"glow": glow,
+			"phase": randf() * TAU,
+			"pulse_speed": randf_range(0.8, 1.5)
+		})
+
+
+func _create_mystical_aura(intensity: float, base_color: Color) -> void:
+	## Create a mystical aura effect around the center of the platform
+	mystical_aura = Node2D.new()
+	mystical_aura.name = "MysticalAura"
+	mystical_aura.position = Vector2.ZERO
+
+	# Multiple aura rings at different sizes
+	var ring_count = int(intensity * 6) + 1
+	for i in range(ring_count):
+		var ring = Polygon2D.new()
+		ring.name = "AuraRing_" + str(i)
+
+		var radius = 150 + i * 80
+		ring.polygon = _create_evolution_ring_polygon(radius, radius - 8, 32)
+
+		var ring_color = base_color.lightened(0.2 - i * 0.03)
+		ring_color.a = intensity * 0.15 * (1.0 - float(i) / ring_count * 0.5)
+		ring.color = ring_color
+		ring.z_index = -3
+
+		mystical_aura.add_child(ring)
+
+	# Central glow spot
+	var center_glow = Polygon2D.new()
+	center_glow.polygon = _create_soft_circle(100, 24)
+	center_glow.color = base_color.lightened(0.4)
+	center_glow.color.a = intensity * 0.1
+	center_glow.z_index = -4
+	mystical_aura.add_child(center_glow)
+
+	evolution_stage_container.add_child(mystical_aura)
+
+
+func _create_evolution_ring_polygon(outer_radius: float, inner_radius: float, segments: int) -> PackedVector2Array:
+	## Create a ring shape polygon for evolution stages
+	var points = PackedVector2Array()
+
+	# Outer edge
+	for i in range(segments + 1):
+		var angle = (float(i) / segments) * TAU
+		points.append(Vector2(cos(angle) * outer_radius, sin(angle) * outer_radius * 0.5))
+
+	# Inner edge (reverse direction)
+	for i in range(segments, -1, -1):
+		var angle = (float(i) / segments) * TAU
+		points.append(Vector2(cos(angle) * inner_radius, sin(angle) * inner_radius * 0.5))
+
+	return points
+
+
+func _enhance_platform_for_tier(tier: int, tier_color: Color) -> void:
+	## Enhance existing platform elements based on evolution tier
+
+	# Add edge glow to platform at higher tiers
+	if tier >= 3:
+		var edge_glow = Polygon2D.new()
+		edge_glow.name = "PlatformEdgeGlow"
+
+		var radius = 460
+		var points = PackedVector2Array()
+		var segments = 48
+		for i in range(segments + 1):
+			var angle = (float(i) / segments) * TAU
+			points.append(Vector2(cos(angle) * radius, sin(angle) * radius * 0.5))
+		for i in range(segments, -1, -1):
+			var angle = (float(i) / segments) * TAU
+			var inner_r = radius - 15
+			points.append(Vector2(cos(angle) * inner_r, sin(angle) * inner_r * 0.5))
+
+		edge_glow.polygon = points
+		edge_glow.color = tier_color.lightened(0.3)
+		edge_glow.color.a = 0.15 + (tier - 3) * 0.05
+		edge_glow.z_index = -1
+
+		evolution_stage_container.add_child(edge_glow)
+		evolution_stage_elements.append(edge_glow)
+
+	# Add center pillar enhancement at tier 4+
+	if tier >= 4:
+		var pillar_glow = Polygon2D.new()
+		pillar_glow.name = "CenterPillarGlow"
+		pillar_glow.polygon = _create_soft_circle(80, 16)
+		pillar_glow.position = Vector2(0, -40)
+		pillar_glow.color = tier_color.lightened(0.5)
+		pillar_glow.color.a = 0.2 + (tier - 4) * 0.1
+		pillar_glow.z_index = 5
+
+		evolution_stage_container.add_child(pillar_glow)
+		evolution_stage_elements.append(pillar_glow)
+
+
+func _animate_evolution_stages(delta: float) -> void:
+	## Animate all evolution stage elements
+	var time = hub_env_time
+
+	# Animate platform crystals
+	for crystal_data in platform_crystals:
+		if not is_instance_valid(crystal_data.node):
+			continue
+
+		var crystal = crystal_data.node
+		var glow = crystal_data.glow
+		var phase = crystal_data.phase
+
+		# Gentle vertical bob
+		crystal.position.y += sin(time * 1.5 + phase) * 0.1
+
+		# Glow pulsing
+		if is_instance_valid(glow):
+			var pulse = sin(time * 2.0 + phase) * 0.1 + 0.9
+			glow.modulate.a = pulse
+
+	# Animate floating islands
+	for island_data in floating_islands:
+		if not is_instance_valid(island_data.node):
+			continue
+
+		var island = island_data.node
+		var base_y = island_data.base_y
+		var phase = island_data.phase
+		var amp = island_data.amplitude
+		var speed = island_data.speed
+
+		# Gentle floating motion
+		island.position.y = base_y + sin(time * speed + phase) * amp
+
+		# Slight rotation
+		island.rotation = sin(time * speed * 0.5 + phase) * 0.03
+
+	# Animate ancient runes
+	for rune_data in ancient_runes:
+		if not is_instance_valid(rune_data.node):
+			continue
+
+		var symbol = rune_data.symbol
+		var glow = rune_data.glow
+		var phase = rune_data.phase
+		var speed = rune_data.pulse_speed
+
+		# Symbol brightness pulsing
+		if is_instance_valid(symbol):
+			var pulse = sin(time * speed + phase) * 0.3 + 0.7
+			symbol.modulate.a = pulse
+
+		# Glow expansion/contraction
+		if is_instance_valid(glow):
+			var scale_pulse = sin(time * speed * 0.7 + phase) * 0.1 + 1.0
+			glow.scale = Vector2(1.5 * scale_pulse, 1.5 * scale_pulse)
+			glow.modulate.a = sin(time * speed + phase) * 0.15 + 0.85
+
+	# Animate mystical aura
+	if is_instance_valid(mystical_aura):
+		for ring in mystical_aura.get_children():
+			var idx = ring.get_index()
+			var ring_pulse = sin(time * 0.5 + idx * 0.5) * 0.1 + 1.0
+			ring.scale = Vector2(ring_pulse, ring_pulse)
+			ring.rotation = time * 0.05 * (1 if idx % 2 == 0 else -1)
+
+
+func check_evolution_tier_change() -> void:
+	## Check if player has reached a new evolution tier and trigger celebration
+	var evolution_level = GameManager.get_evolution_level() if GameManager else 1
+
+	var new_tier = 1
+	for tier in range(5, 0, -1):
+		if evolution_level >= EVOLUTION_TIERS[tier]["min_level"]:
+			new_tier = tier
+			break
+
+	if new_tier > current_evolution_tier:
+		_trigger_evolution_tier_celebration(new_tier)
+		current_evolution_tier = new_tier
+
+		# Rebuild visuals for new tier
+		_clear_evolution_visuals()
+		_build_evolution_tier_visuals(new_tier)
+
+
+func _trigger_evolution_tier_celebration(new_tier: int) -> void:
+	## Trigger a celebration effect when reaching a new evolution tier
+	var tier_info = EVOLUTION_TIERS[new_tier]
+	var tier_color = tier_info["color"]
+
+	# Flash effect
+	var flash = ColorRect.new()
+	flash.name = "TierCelebrationFlash"
+	flash.color = tier_color.lightened(0.5)
+	flash.color.a = 0.4
+	flash.set_anchors_preset(Control.PRESET_FULL_RECT)
+	flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	flash.z_index = 200
+	add_child(flash)
+
+	# Fade out flash
+	var tween = create_tween()
+	tween.tween_property(flash, "color:a", 0.0, 1.5)
+	tween.tween_callback(flash.queue_free)
+
+	# Show tier announcement
+	var announcement = _create_tier_announcement(new_tier, tier_info)
+	add_child(announcement)
+
+	# Play celebration sound (use achievement unlock sound)
+	_play_sfx("res://audio/sfx/achievement_unlock.wav")
+
+	# Trigger achievement audio moment
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("trigger_achievement_moment"):
+		audio.trigger_achievement_moment(4.0)
+
+	print("[MindscapeHub] Evolution tier up! Now at Tier %d: %s" % [new_tier, tier_info["name"]])
+
+
+func _create_tier_announcement(tier: int, tier_info: Dictionary) -> Control:
+	## Create the tier-up announcement UI
+	var container = Control.new()
+	container.name = "TierAnnouncement"
+	container.set_anchors_preset(Control.PRESET_CENTER)
+	container.z_index = 150
+
+	var panel = PanelContainer.new()
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.08, 0.06, 0.12, 0.95)
+	style.border_color = tier_info["color"]
+	style.set_border_width_all(3)
+	style.set_corner_radius_all(16)
+	panel.add_theme_stylebox_override("panel", style)
+	panel.position = Vector2(-180, -100)
+	panel.custom_minimum_size = Vector2(360, 200)
+	container.add_child(panel)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 25)
+	margin.add_theme_constant_override("margin_right", 25)
+	margin.add_theme_constant_override("margin_top", 20)
+	margin.add_theme_constant_override("margin_bottom", 20)
+	panel.add_child(margin)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 12)
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	margin.add_child(vbox)
+
+	# Header
+	var header = Label.new()
+	header.text = "MINDSCAPE EVOLUTION"
+	header.add_theme_font_size_override("font_size", 14)
+	header.add_theme_color_override("font_color", tier_info["color"].lightened(0.3))
+	header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(header)
+
+	# Tier name
+	var tier_label = Label.new()
+	tier_label.text = "Tier %d: %s" % [tier, tier_info["name"]]
+	tier_label.add_theme_font_size_override("font_size", 28)
+	tier_label.add_theme_color_override("font_color", tier_info["color"])
+	tier_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(tier_label)
+
+	# Description
+	var descriptions = {
+		1: "Your mindscape begins to take form...",
+		2: "Crystals emerge from the depths!",
+		3: "New islands rise from the void!",
+		4: "Ancient wisdom reveals itself!",
+		5: "You have achieved full ascension!"
+	}
+	var desc = Label.new()
+	desc.text = descriptions.get(tier, "Your mindscape evolves!")
+	desc.add_theme_font_size_override("font_size", 16)
+	desc.add_theme_color_override("font_color", Color(0.75, 0.75, 0.8))
+	desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD
+	vbox.add_child(desc)
+
+	# Dismiss button
+	var dismiss_btn = Button.new()
+	dismiss_btn.text = "Continue"
+	dismiss_btn.custom_minimum_size = Vector2(120, 40)
+	dismiss_btn.pressed.connect(func(): container.queue_free())
+	vbox.add_child(dismiss_btn)
+
+	# Center the button
+	var btn_container = CenterContainer.new()
+	vbox.remove_child(dismiss_btn)
+	btn_container.add_child(dismiss_btn)
+	vbox.add_child(btn_container)
+
+	# Animate in
+	panel.modulate.a = 0
+	panel.scale = Vector2(0.8, 0.8)
+	var intro_tween = container.create_tween()
+	intro_tween.set_parallel(true)
+	intro_tween.tween_property(panel, "modulate:a", 1.0, 0.4)
+	intro_tween.tween_property(panel, "scale", Vector2(1, 1), 0.4).set_trans(Tween.TRANS_BACK)
+
+	return container
+
+
+func _clear_evolution_visuals() -> void:
+	## Remove all current evolution stage visuals for rebuild
+	for crystal_data in platform_crystals:
+		if is_instance_valid(crystal_data.node):
+			crystal_data.node.queue_free()
+	platform_crystals.clear()
+
+	for island_data in floating_islands:
+		if is_instance_valid(island_data.node):
+			island_data.node.queue_free()
+	floating_islands.clear()
+
+	for rune_data in ancient_runes:
+		if is_instance_valid(rune_data.node):
+			rune_data.node.queue_free()
+	ancient_runes.clear()
+
+	if is_instance_valid(mystical_aura):
+		mystical_aura.queue_free()
+		mystical_aura = null
+
+	for element in evolution_stage_elements:
+		if is_instance_valid(element):
+			element.queue_free()
+	evolution_stage_elements.clear()

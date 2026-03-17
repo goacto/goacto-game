@@ -1167,9 +1167,17 @@ func _create_template_card(template: Dictionary) -> PanelContainer:
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header_row.add_child(name_label)
 
+	# Preview button - see all lines
+	var preview_btn = Button.new()
+	preview_btn.text = "View All Lines"
+	preview_btn.add_theme_font_size_override("font_size", 12)
+	preview_btn.add_theme_color_override("font_color", Color(0.65, 0.7, 0.75))
+	preview_btn.pressed.connect(_show_template_detail.bind(template))
+	header_row.add_child(preview_btn)
+
 	# Use button
 	var use_btn = Button.new()
-	use_btn.text = "Use Template"
+	use_btn.text = "Use"
 	use_btn.add_theme_font_size_override("font_size", 13)
 	use_btn.add_theme_color_override("font_color", ACCENT_COLOR)
 	use_btn.pressed.connect(_use_template.bind(template.id))
@@ -1188,6 +1196,10 @@ func _create_template_card(template: Dictionary) -> PanelContainer:
 	var op_tag = _create_tag(template.operational_layer.capitalize(), op_color)
 	tags_row.add_child(op_tag)
 
+	# Line count
+	var line_count_tag = _create_tag(str(template.lines.size()) + " lines", Color(0.5, 0.5, 0.6))
+	tags_row.add_child(line_count_tag)
+
 	# Description
 	var desc_label = Label.new()
 	desc_label.text = template.description
@@ -1202,6 +1214,8 @@ func _create_template_card(template: Dictionary) -> PanelContainer:
 	var preview_text = ""
 	for i in range(mini(3, template.lines.size())):
 		preview_text += str(i + 1) + ". " + template.lines[i] + "\n"
+	if template.lines.size() > 3:
+		preview_text += "..."
 	preview.text = preview_text.strip_edges()
 	preview.add_theme_font_size_override("font_size", 11)
 	preview.add_theme_color_override("font_color", Color(0.45, 0.5, 0.55))
@@ -1287,6 +1301,159 @@ func _use_template(template_id: String) -> void:
 
 		# Show confirmation
 		print("[ScriptLab] Created script from template: ", script_id)
+
+
+func _show_template_detail(template: Dictionary) -> void:
+	_play_sfx("res://audio/sfx/ui_click.wav")
+
+	# Create detail overlay
+	var detail_panel = Control.new()
+	detail_panel.name = "TemplateDetailPanel"
+	detail_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(detail_panel)
+
+	# Dim background
+	var dim = ColorRect.new()
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.color = Color(0, 0, 0, 0.85)
+	detail_panel.add_child(dim)
+
+	# Main card
+	var card = PanelContainer.new()
+	card.set_anchors_preset(Control.PRESET_CENTER)
+	card.offset_left = -400
+	card.offset_right = 400
+	card.offset_top = -350
+	card.offset_bottom = 350
+	var card_style = StyleBoxFlat.new()
+	card_style.bg_color = Color(0.08, 0.09, 0.12, 0.98)
+	card_style.set_corner_radius_all(12)
+	card_style.border_color = _get_domain_color(template.layer_id)
+	card_style.set_border_width_all(2)
+	card.add_theme_stylebox_override("panel", card_style)
+	detail_panel.add_child(card)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 25)
+	margin.add_theme_constant_override("margin_right", 25)
+	margin.add_theme_constant_override("margin_top", 20)
+	margin.add_theme_constant_override("margin_bottom", 20)
+	card.add_child(margin)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 12)
+	margin.add_child(vbox)
+
+	# Header row
+	var header_row = HBoxContainer.new()
+	vbox.add_child(header_row)
+
+	var title = Label.new()
+	title.text = template.name
+	title.add_theme_font_size_override("font_size", 24)
+	title.add_theme_color_override("font_color", _get_domain_color(template.layer_id))
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header_row.add_child(title)
+
+	var close_btn = Button.new()
+	close_btn.text = "X"
+	close_btn.custom_minimum_size = Vector2(40, 40)
+	close_btn.add_theme_font_size_override("font_size", 18)
+	close_btn.pressed.connect(func(): detail_panel.queue_free())
+	header_row.add_child(close_btn)
+
+	# Tags row
+	var tags_row = HBoxContainer.new()
+	tags_row.add_theme_constant_override("separation", 10)
+	vbox.add_child(tags_row)
+
+	var domain_tag = _create_tag(template.layer_id.capitalize(), _get_domain_color(template.layer_id))
+	tags_row.add_child(domain_tag)
+
+	var op_tag = _create_tag(template.operational_layer.capitalize(), _get_operational_color(template.operational_layer))
+	tags_row.add_child(op_tag)
+
+	var lines_tag = _create_tag(str(template.lines.size()) + " lines", Color(0.5, 0.6, 0.7))
+	tags_row.add_child(lines_tag)
+
+	# Description
+	var desc = Label.new()
+	desc.text = template.description
+	desc.add_theme_font_size_override("font_size", 14)
+	desc.add_theme_color_override("font_color", MUTED_COLOR)
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD
+	vbox.add_child(desc)
+
+	var sep = HSeparator.new()
+	vbox.add_child(sep)
+
+	# All lines header
+	var lines_header = Label.new()
+	lines_header.text = "FULL SCRIPT (%d minutes)" % template.lines.size()
+	lines_header.add_theme_font_size_override("font_size", 12)
+	lines_header.add_theme_color_override("font_color", MUTED_COLOR)
+	vbox.add_child(lines_header)
+
+	# Scrollable lines list
+	var scroll = ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	vbox.add_child(scroll)
+
+	var lines_vbox = VBoxContainer.new()
+	lines_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	lines_vbox.add_theme_constant_override("separation", 4)
+	scroll.add_child(lines_vbox)
+
+	# Display all lines with line numbers
+	for i in range(template.lines.size()):
+		var line_row = HBoxContainer.new()
+		line_row.add_theme_constant_override("separation", 12)
+		lines_vbox.add_child(line_row)
+
+		# Line number
+		var line_num = Label.new()
+		line_num.text = "%02d" % (i + 1)
+		line_num.add_theme_font_size_override("font_size", 13)
+		line_num.add_theme_color_override("font_color", Color(0.4, 0.45, 0.5))
+		line_num.custom_minimum_size.x = 28
+		line_row.add_child(line_num)
+
+		# Line content
+		var line_text = Label.new()
+		line_text.text = template.lines[i]
+		line_text.add_theme_font_size_override("font_size", 14)
+		line_text.add_theme_color_override("font_color", TEXT_COLOR)
+		line_text.autowrap_mode = TextServer.AUTOWRAP_WORD
+		line_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		line_row.add_child(line_text)
+
+	var sep2 = HSeparator.new()
+	vbox.add_child(sep2)
+
+	# Action buttons
+	var btn_row = HBoxContainer.new()
+	btn_row.add_theme_constant_override("separation", 15)
+	btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_child(btn_row)
+
+	var cancel_btn = Button.new()
+	cancel_btn.text = "Close"
+	cancel_btn.custom_minimum_size = Vector2(120, 45)
+	cancel_btn.add_theme_font_size_override("font_size", 16)
+	cancel_btn.pressed.connect(func(): detail_panel.queue_free())
+	btn_row.add_child(cancel_btn)
+
+	var use_btn = Button.new()
+	use_btn.text = "Use This Template"
+	use_btn.custom_minimum_size = Vector2(180, 45)
+	use_btn.add_theme_font_size_override("font_size", 16)
+	use_btn.add_theme_color_override("font_color", ACCENT_COLOR)
+	use_btn.pressed.connect(func():
+		detail_panel.queue_free()
+		_use_template(template.id)
+	)
+	btn_row.add_child(use_btn)
 
 
 func _close_templates_browser() -> void:

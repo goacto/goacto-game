@@ -1075,8 +1075,15 @@ func _check_chapter_progress() -> void:
 
 # ============ SIGNAL HANDLERS ============
 
-func _on_aspect_leveled(_aspect_name: String, _new_level: int) -> void:
+func _on_aspect_leveled(aspect_name: String, new_level: int) -> void:
 	_check_chapter_progress()
+	# Trigger awakening ceremony for significant levels
+	if new_level in [2, 3, 5, 7, 10]:
+		_show_aspect_awakening_ceremony(aspect_name, new_level)
+		# Record bond increase on awakening
+		if GameManager:
+			var aspect_id = aspect_name.to_lower()
+			GameManager.record_aspect_interaction(aspect_id, "awakening")
 
 
 func _on_world_evolved(_amount: float) -> void:
@@ -1093,6 +1100,217 @@ func _on_habit_completed(_habit_id: String, _habit: Dictionary) -> void:
 func _on_goal_created(_goal: Dictionary) -> void:
 	# Check cutscene triggers when a goal is created
 	check_cutscene_triggers()
+
+
+# ============ ASPECT AWAKENING CEREMONIES ============
+
+const ASPECT_AWAKENING_SPEECHES = {
+	"Discipline": {
+		2: "The foundations strengthen. Each day you choose consistency, your Discipline grows deeper roots.",
+		3: "Mastery emerges not from perfection, but from returning to the practice again and again.",
+		5: "You have learned the secret: small actions, repeated with intention, build mountains.",
+		7: "Your commitment speaks louder than words. Discipline has become part of who you are.",
+		10: "Awakened Discipline stands within you—unshakeable, steady, a pillar of your growth."
+	},
+	"Courage": {
+		2: "Fear still whispers, but you've learned to walk forward anyway. This is true Courage.",
+		3: "Every challenge faced makes the next one smaller. Your bravery compounds.",
+		5: "You no longer wait for fear to leave—you invite it along for the journey.",
+		7: "The bold path is now your natural way. Courage has become instinct.",
+		10: "Awakened Courage blazes within you—fearless not because danger is absent, but because you are greater."
+	},
+	"Creativity": {
+		2: "Ideas flow more freely now. Your mind has learned to play without judgment.",
+		3: "You see connections others miss. The world reveals its hidden patterns to the creative eye.",
+		5: "Creation has become as natural as breathing. Every moment holds possibility.",
+		7: "Your imagination shapes reality. What you envision, you can manifest.",
+		10: "Awakened Creativity dances within you—infinite, playful, the spark of new worlds."
+	},
+	"Compassion": {
+		2: "Your heart expands. In seeing others' struggles, you've found unexpected strength.",
+		3: "Kindness given freely returns multiplied. You understand this truth now.",
+		5: "You carry others' burdens lightly because your own heart has grown vast.",
+		7: "Love flows through you like water—healing, connecting, transforming.",
+		10: "Awakened Compassion radiates from you—a warmth that touches all who near."
+	},
+	"Wisdom": {
+		2: "Reflection reveals what haste obscures. You're learning to see beneath the surface.",
+		3: "Patterns emerge from chaos. Your discernment sharpens with each contemplation.",
+		5: "You speak less, understand more. Wisdom grows in the spaces between thoughts.",
+		7: "Others seek your counsel. Your insight illuminates paths they cannot see.",
+		10: "Awakened Wisdom glows within you—ancient knowing meeting present awareness."
+	},
+	"Vitality": {
+		2: "Your body remembers its power. Energy flows where attention goes.",
+		3: "Rest and action find their balance. You honor the rhythms of your physical being.",
+		5: "Health is not a destination but a practice. You've made it your way of life.",
+		7: "Your vitality inspires others. The body that was burden has become ally.",
+		10: "Awakened Vitality surges through you—radiant life force, grounded and boundless."
+	}
+}
+
+var ceremony_overlay: CanvasLayer = null
+
+
+func _show_aspect_awakening_ceremony(aspect_name: String, new_level: int) -> void:
+	# Don't show if already showing or in a cutscene
+	if ceremony_overlay:
+		return
+
+	# Get aspect data from GameManager
+	var aspect_color = Color(0.7, 0.5, 0.9)  # Default purple
+	for aspect_key in GameManager.ASPECTS:
+		if GameManager.ASPECTS[aspect_key].name == aspect_name:
+			aspect_color = GameManager.ASPECTS[aspect_key].color
+			break
+
+	# Get awakening speech
+	var speeches = ASPECT_AWAKENING_SPEECHES.get(aspect_name, {})
+	var speech = speeches.get(new_level, "Your %s grows stronger." % aspect_name)
+
+	# Create overlay
+	ceremony_overlay = CanvasLayer.new()
+	ceremony_overlay.layer = 100
+	add_child(ceremony_overlay)
+
+	# Background with fade
+	var bg = ColorRect.new()
+	bg.color = Color(0.02, 0.02, 0.05, 0.0)
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.mouse_filter = Control.MOUSE_FILTER_STOP
+	ceremony_overlay.add_child(bg)
+
+	# Center container
+	var center = CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	ceremony_overlay.add_child(center)
+
+	# Main panel
+	var panel = PanelContainer.new()
+	panel.custom_minimum_size = Vector2(500, 350)
+
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.08, 0.1, 0.15, 0.95)
+	style.corner_radius_top_left = 20
+	style.corner_radius_top_right = 20
+	style.corner_radius_bottom_left = 20
+	style.corner_radius_bottom_right = 20
+	style.border_color = aspect_color
+	style.border_width_left = 3
+	style.border_width_right = 3
+	style.border_width_top = 3
+	style.border_width_bottom = 3
+	style.shadow_color = Color(aspect_color.r, aspect_color.g, aspect_color.b, 0.3)
+	style.shadow_size = 15
+	panel.add_theme_stylebox_override("panel", style)
+	center.add_child(panel)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 30)
+	margin.add_theme_constant_override("margin_top", 25)
+	margin.add_theme_constant_override("margin_right", 30)
+	margin.add_theme_constant_override("margin_bottom", 25)
+	panel.add_child(margin)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 20)
+	margin.add_child(vbox)
+
+	# "AWAKENING" header
+	var awakening_label = Label.new()
+	awakening_label.text = "✦ AWAKENING ✦"
+	awakening_label.add_theme_font_size_override("font_size", 14)
+	awakening_label.add_theme_color_override("font_color", aspect_color)
+	awakening_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(awakening_label)
+
+	# Aspect name and level
+	var title_hbox = HBoxContainer.new()
+	title_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_child(title_hbox)
+
+	var aspect_label = Label.new()
+	aspect_label.text = aspect_name
+	aspect_label.add_theme_font_size_override("font_size", 32)
+	aspect_label.add_theme_color_override("font_color", aspect_color)
+	title_hbox.add_child(aspect_label)
+
+	var level_label = Label.new()
+	level_label.text = "  Level %d" % new_level
+	level_label.add_theme_font_size_override("font_size", 24)
+	level_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.75))
+	title_hbox.add_child(level_label)
+
+	# Decorative line
+	var line = ColorRect.new()
+	line.color = aspect_color
+	line.custom_minimum_size = Vector2(0, 2)
+	line.modulate.a = 0.5
+	vbox.add_child(line)
+
+	# Speech text
+	var speech_label = Label.new()
+	speech_label.text = speech
+	speech_label.add_theme_font_size_override("font_size", 16)
+	speech_label.add_theme_color_override("font_color", Color(0.85, 0.85, 0.9))
+	speech_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	speech_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	speech_label.custom_minimum_size = Vector2(420, 0)
+	vbox.add_child(speech_label)
+
+	# Spacer
+	var spacer = Control.new()
+	spacer.custom_minimum_size = Vector2(0, 10)
+	vbox.add_child(spacer)
+
+	# Continue hint
+	var hint = Label.new()
+	hint.text = "[ Click or press any key to continue ]"
+	hint.add_theme_font_size_override("font_size", 12)
+	hint.add_theme_color_override("font_color", Color(0.5, 0.5, 0.55))
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(hint)
+
+	# Animate in
+	panel.modulate.a = 0.0
+	panel.scale = Vector2(0.9, 0.9)
+	panel.pivot_offset = panel.size / 2
+
+	var tween = create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(bg, "color:a", 0.85, 0.4)
+	tween.tween_property(panel, "modulate:a", 1.0, 0.4)
+	tween.tween_property(panel, "scale", Vector2.ONE, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+	# Play sound if available
+	if AudioManager and AudioManager.has_method("play_aspect_awaken"):
+		AudioManager.play_aspect_awaken()
+
+	# Connect input to dismiss
+	bg.gui_input.connect(_on_ceremony_input)
+
+	# Emit signal
+	aspect_awakened.emit(aspect_name.to_lower())
+
+
+func _on_ceremony_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed:
+		_close_ceremony()
+	elif event is InputEventKey and event.pressed:
+		_close_ceremony()
+
+
+func _close_ceremony() -> void:
+	if not ceremony_overlay:
+		return
+
+	var tween = create_tween()
+	tween.tween_property(ceremony_overlay, "modulate:a", 0.0, 0.3)
+	tween.tween_callback(func():
+		if ceremony_overlay:
+			ceremony_overlay.queue_free()
+			ceremony_overlay = null
+	)
 
 
 # ============ PERSISTENCE ============
