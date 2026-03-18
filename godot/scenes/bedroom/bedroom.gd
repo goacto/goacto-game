@@ -154,10 +154,10 @@ const INTERACTIVE_OBJECTS = {
 # Object positions for proximity detection (expanded plus-shaped layout)
 var object_positions: Dictionary = {
 	# Left wing
-	"Window": Vector2(-550, -80),
+	"Window": Vector2(-450, 0),
 	"Door": Vector2(-550, 100),
 	# Top wing
-	"Plant": Vector2(0, -420),
+	"Plant": Vector2(-80, -420),
 	"FocusAnalytics": Vector2(0, -300),
 	# Center area
 	"Console": Vector2(0, 0),
@@ -165,7 +165,7 @@ var object_positions: Dictionary = {
 	# Right wing
 	"Closet": Vector2(580, -100),
 	"Mirror": Vector2(580, 100),
-	"Bookshelf": Vector2(480, 0),
+	"Bookshelf": Vector2(130, -380),
 	# Bottom wing
 	"Bed": Vector2(0, 400),
 	"PhotoAlbum": Vector2(0, 500),
@@ -453,9 +453,8 @@ func _handle_movement(delta: float) -> void:
 
 		var new_pos = player.position + iso_movement * player_speed * delta
 
-		# Clamp to room bounds
-		new_pos.x = clamp(new_pos.x, player_bounds.position.x, player_bounds.position.x + player_bounds.size.x)
-		new_pos.y = clamp(new_pos.y, player_bounds.position.y, player_bounds.position.y + player_bounds.size.y)
+		# Clamp to plus-shaped room bounds
+		new_pos = _clamp_to_plus_bounds(new_pos)
 
 		player.position = new_pos
 
@@ -476,14 +475,31 @@ func _play_sfx(sfx_path: String, volume_db: float = 0.0) -> void:
 		var stream = load(sfx_path)
 		if stream:
 			audio.play_sfx(stream, volume_db)
+
+
+func _clamp_to_plus_bounds(pos: Vector2) -> Vector2:
+	# Plus-shaped floor bounds (matching the floor polygon)
+	# Top arm: x from -180 to 180, y from -540 to -180
+	# Center bar: x from -680 to 680, y from -180 to 180
+	# Bottom arm: x from -180 to 180, y from 180 to 540
+
+	var result = pos
+
+	# Check which region the player should be in
+	if pos.y < -180:
+		# Top arm - constrain x to narrow width
+		result.x = clamp(pos.x, -180, 180)
+		result.y = clamp(pos.y, -540, -180)
+	elif pos.y > 180:
+		# Bottom arm - constrain x to narrow width
+		result.x = clamp(pos.x, -180, 180)
+		result.y = clamp(pos.y, 180, 540)
 	else:
-		var sfx_player = AudioStreamPlayer.new()
-		sfx_player.stream = load(sfx_path)
-		sfx_player.volume_db = volume_db
-		sfx_player.bus = "SFX" if AudioServer.get_bus_index("SFX") >= 0 else "Master"
-		add_child(sfx_player)
-		sfx_player.play()
-		sfx_player.finished.connect(func(): sfx_player.queue_free())
+		# Center bar - allow full width
+		result.x = clamp(pos.x, -680, 680)
+		result.y = clamp(pos.y, -180, 180)
+
+	return result
 
 
 func _update_camera() -> void:
@@ -885,7 +901,7 @@ func _apply_bedroom_item_visibility() -> void:
 			bookshelf_visual.modulate = Color(0.5, 0.5, 0.6, 0.7)
 			_create_lock_icon("bookshelf", Vector2(400, 250))
 		if "Bookshelf" not in object_positions:
-			object_positions["Bookshelf"] = Vector2(480, 0)
+			object_positions["Bookshelf"] = Vector2(130, -380)
 
 	# Photo Album - create visual if doesn't exist, manage lock state
 	if not photo_album_visual:
@@ -1332,6 +1348,10 @@ func _show_space_view() -> void:
 	interaction_prompt.visible = false
 	space_view_time = 0.0
 
+	# Hide the room while viewing space
+	if isometric_base:
+		isometric_base.visible = false
+
 	# Create fullscreen space view
 	space_view_panel = Control.new()
 	space_view_panel.name = "SpaceView"
@@ -1668,6 +1688,10 @@ func _cleanup_space_view() -> void:
 	if space_view_panel:
 		space_view_panel.queue_free()
 		space_view_panel = null
+
+	# Show the room again
+	if isometric_base:
+		isometric_base.visible = true
 
 	space_stars.clear()
 	asteroid_field.clear()
@@ -2674,7 +2698,7 @@ func _setup_personal_items() -> void:
 
 	# Holographic photo frame near bookshelf - only if bookshelf is unlocked
 	if bookshelf_unlocked and "Bookshelf" in object_positions:
-		var bookshelf_pos = object_positions.get("Bookshelf", Vector2(480, 0))
+		var bookshelf_pos = object_positions.get("Bookshelf", Vector2(130, -380))
 		_create_photo_frame(bookshelf_pos + Vector2(-60, -30))
 
 	# Floating trinket near bed

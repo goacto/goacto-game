@@ -1327,3 +1327,269 @@ func get_completed_quests_for_aspect(aspect_id: String) -> Array:
 			result.append(completed)
 
 	return result
+
+
+# ============================================
+# DAILY LOGIN REWARDS SYSTEM
+# ============================================
+
+signal daily_reward_available(day: int, reward: Dictionary)
+signal daily_reward_claimed(day: int, reward: Dictionary)
+signal milestone_reached(milestone_id: String, days: int)
+
+const DAILY_REWARDS = [
+	# Day 1-7 (Week 1)
+	{"day": 1, "type": "xp", "amount": 25, "description": "Welcome back, Traveler!"},
+	{"day": 2, "type": "xp", "amount": 30, "description": "Building momentum..."},
+	{"day": 3, "type": "xp", "amount": 35, "description": "Three days strong!"},
+	{"day": 4, "type": "xp", "amount": 40, "description": "Consistency is key."},
+	{"day": 5, "type": "xp", "amount": 50, "description": "Halfway through the week!"},
+	{"day": 6, "type": "xp", "amount": 60, "description": "Almost there..."},
+	{"day": 7, "type": "special", "amount": 100, "bonus": "lore_fragment", "description": "Week complete! Bonus lore unlocked."},
+	# Day 8-14 (Week 2)
+	{"day": 8, "type": "xp", "amount": 35, "description": "A new week begins."},
+	{"day": 9, "type": "xp", "amount": 40, "description": "Keep going!"},
+	{"day": 10, "type": "xp", "amount": 45, "description": "Double digits!"},
+	{"day": 11, "type": "xp", "amount": 50, "description": "Your dedication inspires."},
+	{"day": 12, "type": "xp", "amount": 55, "description": "Growth takes time."},
+	{"day": 13, "type": "xp", "amount": 65, "description": "Nearly two weeks!"},
+	{"day": 14, "type": "special", "amount": 150, "bonus": "cosmetic_color", "description": "Two weeks! New avatar color unlocked."},
+	# Day 15-21 (Week 3)
+	{"day": 15, "type": "xp", "amount": 50, "description": "Week three warrior!"},
+	{"day": 16, "type": "xp", "amount": 55, "description": "Habits forming..."},
+	{"day": 17, "type": "xp", "amount": 60, "description": "You're remarkable."},
+	{"day": 18, "type": "xp", "amount": 65, "description": "The journey continues."},
+	{"day": 19, "type": "xp", "amount": 70, "description": "Almost three weeks!"},
+	{"day": 20, "type": "xp", "amount": 75, "description": "20 days of growth!"},
+	{"day": 21, "type": "special", "amount": 200, "bonus": "companion_accessory", "description": "21 days! Companion accessory unlocked."},
+	# Day 22-30 (Month 1)
+	{"day": 22, "type": "xp", "amount": 60, "description": "The final stretch..."},
+	{"day": 23, "type": "xp", "amount": 65, "description": "One week to go!"},
+	{"day": 24, "type": "xp", "amount": 70, "description": "You've come so far."},
+	{"day": 25, "type": "xp", "amount": 75, "description": "25 days of dedication!"},
+	{"day": 26, "type": "xp", "amount": 80, "description": "Nearly a month..."},
+	{"day": 27, "type": "xp", "amount": 85, "description": "Three more days!"},
+	{"day": 28, "type": "xp", "amount": 90, "description": "The summit approaches."},
+	{"day": 29, "type": "xp", "amount": 95, "description": "Tomorrow is special..."},
+	{"day": 30, "type": "milestone", "amount": 300, "bonus": "title_dedicated", "description": "ONE MONTH! Title 'The Dedicated' earned!"},
+]
+
+# Personal milestones (major celebrations)
+const PERSONAL_MILESTONES = {
+	7: {"title": "Week Warrior", "message": "One week of showing up for yourself!", "xp": 100, "unlocks": "milestone_badge_week"},
+	14: {"title": "Fortnight Fighter", "message": "Two weeks of consistent growth!", "xp": 150, "unlocks": "milestone_badge_fortnight"},
+	30: {"title": "Monthly Master", "message": "A full month of transformation!", "xp": 300, "unlocks": "milestone_badge_month"},
+	60: {"title": "Dual Moon Devotee", "message": "60 days of unwavering commitment!", "xp": 500, "unlocks": "milestone_badge_60days"},
+	90: {"title": "Quarter Champion", "message": "90 days - habits are now part of you!", "xp": 750, "unlocks": "milestone_badge_quarter"},
+	180: {"title": "Half-Year Hero", "message": "Six months of incredible dedication!", "xp": 1000, "unlocks": "milestone_badge_halfyear"},
+	365: {"title": "Yearly Legend", "message": "One full year! You are unstoppable!", "xp": 2000, "unlocks": "milestone_badge_year", "special": "legendary_companion_form"}
+}
+
+
+func _ensure_login_data() -> void:
+	if not player_data.has("last_login_date"):
+		player_data["last_login_date"] = ""
+	if not player_data.has("login_streak"):
+		player_data["login_streak"] = 0
+	if not player_data.has("total_login_days"):
+		player_data["total_login_days"] = 0
+	if not player_data.has("claimed_daily_rewards"):
+		player_data["claimed_daily_rewards"] = []
+	if not player_data.has("unlocked_milestones"):
+		player_data["unlocked_milestones"] = []
+	if not player_data.has("companion_evolution_stage"):
+		player_data["companion_evolution_stage"] = 0
+	if not player_data.has("companion_accessories"):
+		player_data["companion_accessories"] = []
+
+
+## Check and process daily login
+func check_daily_login() -> Dictionary:
+	_ensure_login_data()
+
+	var today = Time.get_date_string_from_system()
+	var last_login = player_data.last_login_date
+	var result = {"is_new_day": false, "reward": null, "milestone": null, "streak_broken": false}
+
+	if today == last_login:
+		return result  # Already logged in today
+
+	result.is_new_day = true
+
+	# Check if streak continues or breaks
+	if last_login != "":
+		var last_date = Time.get_datetime_dict_from_datetime_string(last_login + "T00:00:00", false)
+		var today_date = Time.get_datetime_dict_from_datetime_string(today + "T00:00:00", false)
+
+		# Convert to unix timestamps for comparison
+		var last_unix = Time.get_unix_time_from_datetime_dict(last_date)
+		var today_unix = Time.get_unix_time_from_datetime_dict(today_date)
+		var days_diff = int((today_unix - last_unix) / 86400)
+
+		if days_diff == 1:
+			# Consecutive day - continue streak
+			player_data.login_streak += 1
+		elif days_diff > 1:
+			# Streak broken
+			result.streak_broken = true
+			player_data.login_streak = 1
+		# days_diff == 0 handled above (same day)
+	else:
+		# First login ever
+		player_data.login_streak = 1
+
+	player_data.total_login_days += 1
+	player_data.last_login_date = today
+
+	# Get today's reward (cycle through rewards after 30 days)
+	var reward_day = ((player_data.total_login_days - 1) % 30) + 1
+	var reward = _get_daily_reward(reward_day)
+	if reward:
+		result.reward = reward
+		daily_reward_available.emit(reward_day, reward)
+
+	# Check for personal milestones
+	var milestone = _check_milestone(player_data.total_login_days)
+	if milestone:
+		result.milestone = milestone
+
+	# Update companion evolution based on total days
+	_update_companion_evolution()
+
+	SaveManager.save_game()
+	return result
+
+
+func _get_daily_reward(day: int) -> Dictionary:
+	for reward in DAILY_REWARDS:
+		if reward.day == day:
+			return reward.duplicate()
+	return {}
+
+
+func _check_milestone(total_days: int) -> Dictionary:
+	_ensure_login_data()
+
+	if PERSONAL_MILESTONES.has(total_days):
+		if total_days not in player_data.unlocked_milestones:
+			var milestone = PERSONAL_MILESTONES[total_days].duplicate()
+			milestone["days"] = total_days
+			player_data.unlocked_milestones.append(total_days)
+			milestone_reached.emit(milestone.title, total_days)
+			return milestone
+	return {}
+
+
+## Claim the daily reward
+func claim_daily_reward(day: int) -> bool:
+	_ensure_login_data()
+
+	if day in player_data.claimed_daily_rewards:
+		return false  # Already claimed
+
+	var reward = _get_daily_reward(day)
+	if reward.is_empty():
+		return false
+
+	# Grant XP
+	if reward.has("amount"):
+		add_aspect_xp("all", reward.amount)
+
+	# Handle special bonuses
+	if reward.has("bonus"):
+		match reward.bonus:
+			"lore_fragment":
+				if not player_data.has("unlocked_lore"):
+					player_data["unlocked_lore"] = []
+				player_data.unlocked_lore.append("daily_lore_" + str(day))
+			"cosmetic_color":
+				if not player_data.has("unlocked_colors"):
+					player_data["unlocked_colors"] = []
+				player_data.unlocked_colors.append("streak_gold")
+			"companion_accessory":
+				player_data.companion_accessories.append("star_trail")
+			"title_dedicated":
+				if not player_data.has("unlocked_titles"):
+					player_data["unlocked_titles"] = []
+				player_data.unlocked_titles.append("The Dedicated")
+
+	player_data.claimed_daily_rewards.append(day)
+	daily_reward_claimed.emit(day, reward)
+	SaveManager.save_game()
+	return true
+
+
+# ============================================
+# COMPANION EVOLUTION SYSTEM
+# ============================================
+
+signal companion_evolved(new_stage: int, stage_name: String)
+
+const COMPANION_STAGES = {
+	0: {"name": "Spark", "description": "A tiny glowing orb, curious about you.", "unlock_days": 0},
+	1: {"name": "Ember", "description": "Growing brighter with your dedication.", "unlock_days": 7},
+	2: {"name": "Flame", "description": "A warm presence that follows you loyally.", "unlock_days": 14},
+	3: {"name": "Blaze", "description": "Radiating encouragement and wisdom.", "unlock_days": 30},
+	4: {"name": "Nova", "description": "A brilliant companion reflecting your growth.", "unlock_days": 60},
+	5: {"name": "Celestial", "description": "A magnificent spirit of pure potential.", "unlock_days": 90},
+	6: {"name": "Eternal", "description": "An ancient form, achieved by true dedication.", "unlock_days": 180},
+	7: {"name": "Legendary", "description": "The ultimate evolution - you are one.", "unlock_days": 365}
+}
+
+
+func _update_companion_evolution() -> void:
+	_ensure_login_data()
+
+	var total_days = player_data.total_login_days
+	var current_stage = player_data.companion_evolution_stage
+
+	# Find the highest stage unlocked
+	var new_stage = 0
+	for stage_num in COMPANION_STAGES:
+		if total_days >= COMPANION_STAGES[stage_num].unlock_days:
+			new_stage = max(new_stage, stage_num)
+
+	if new_stage > current_stage:
+		player_data.companion_evolution_stage = new_stage
+		var stage_info = COMPANION_STAGES[new_stage]
+		companion_evolved.emit(new_stage, stage_info.name)
+
+
+func get_companion_stage() -> int:
+	_ensure_login_data()
+	return player_data.companion_evolution_stage
+
+
+func get_companion_info() -> Dictionary:
+	_ensure_login_data()
+	var stage = player_data.companion_evolution_stage
+	if COMPANION_STAGES.has(stage):
+		var info = COMPANION_STAGES[stage].duplicate()
+		info["stage"] = stage
+		info["accessories"] = player_data.companion_accessories.duplicate()
+		return info
+	return {"stage": 0, "name": "Spark", "description": "A tiny glowing orb.", "accessories": []}
+
+
+func get_next_companion_evolution() -> Dictionary:
+	_ensure_login_data()
+	var current_stage = player_data.companion_evolution_stage
+	var next_stage = current_stage + 1
+
+	if COMPANION_STAGES.has(next_stage):
+		var info = COMPANION_STAGES[next_stage].duplicate()
+		info["stage"] = next_stage
+		info["days_remaining"] = max(0, info.unlock_days - player_data.total_login_days)
+		return info
+	return {}  # Max stage reached
+
+
+func get_login_stats() -> Dictionary:
+	_ensure_login_data()
+	return {
+		"total_days": player_data.total_login_days,
+		"current_streak": player_data.login_streak,
+		"last_login": player_data.last_login_date,
+		"milestones_unlocked": player_data.unlocked_milestones.size(),
+		"companion_stage": player_data.companion_evolution_stage
+	}

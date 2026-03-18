@@ -82,7 +82,7 @@ color = Color(0.8, 0.95, 1, 0.35)
 polygon = PackedVector2Array(-1.5, 0, 0, -2, 1.5, 0, 0, 2)
 
 [node name="Window" type="Node2D" parent="GameWorld/IsometricBase"]
-position = Vector2(-550, -80)
+position = Vector2(-450, 0)
 
 [node name="Frame" type="Polygon2D" parent="GameWorld/IsometricBase/Window"]
 color = Color(0.25, 0.22, 0.3, 1)
@@ -248,13 +248,14 @@ color = Color(0.83, 0.66, 0.29, 0.8)
 polygon = PackedVector2Array(-20, 12, -22, 0, -15, -15, 15, -15, 22, 0, 20, 12)
 
 [node name="ConsoleLabel" type="Label" parent="GameWorld/IsometricBase/Console"]
+z_index = 10
 offset_left = -80.0
-offset_top = 45.0
+offset_top = 55.0
 offset_right = 80.0
-offset_bottom = 75.0
-theme_override_font_sizes/font_size = 16
+offset_bottom = 85.0
+theme_override_font_sizes/font_size = 14
 theme_override_colors/font_color = Color(0.83, 0.66, 0.29, 1)
-text = "Mindscape by GOACTO"
+text = "Mindscape Headset"
 horizontal_alignment = 1
 
 [node name="Bed" type="Node2D" parent="GameWorld/IsometricBase"]
@@ -290,7 +291,7 @@ text = "Sleep Pod"
 horizontal_alignment = 1
 
 [node name="Bookshelf" type="Node2D" parent="GameWorld/IsometricBase"]
-position = Vector2(480, 0)
+position = Vector2(130, -380)
 
 [node name="Back" type="Polygon2D" parent="GameWorld/IsometricBase/Bookshelf"]
 color = Color(0.2, 0.16, 0.14, 1)
@@ -347,7 +348,7 @@ text = "Data Archive"
 horizontal_alignment = 1
 
 [node name="Plant" type="Node2D" parent="GameWorld/IsometricBase"]
-position = Vector2(0, -420)
+position = Vector2(-80, -420)
 
 [node name="Pot" type="Polygon2D" parent="GameWorld/IsometricBase/Plant"]
 color = Color(0.35, 0.25, 0.2, 1)
@@ -423,7 +424,7 @@ horizontal_alignment = 1
 [node name="WallDecor" type="Node2D" parent="GameWorld/IsometricBase"]
 
 [node name="Poster" type="Node2D" parent="GameWorld/IsometricBase/WallDecor"]
-position = Vector2(70, -240)
+position = Vector2(100, -450)
 
 [node name="Frame" type="Polygon2D" parent="GameWorld/IsometricBase/WallDecor/Poster"]
 color = Color(0.3, 0.25, 0.2, 1)

@@ -256,6 +256,12 @@ func _ready() -> void:
 	# Setup evolution stages (visual changes based on evolution level)
 	_setup_evolution_stages()
 
+	# Check daily login and show rewards
+	_check_daily_login()
+
+	# Update companion based on evolution
+	_update_companion_evolution_visual()
+
 	print("[MindscapeHub] Hub ready")
 
 
@@ -13147,3 +13153,440 @@ func _clear_evolution_visuals() -> void:
 		if is_instance_valid(element):
 			element.queue_free()
 	evolution_stage_elements.clear()
+
+
+# ============================================
+# DAILY LOGIN REWARDS UI
+# ============================================
+
+var daily_reward_panel: Control = null
+
+func _check_daily_login() -> void:
+	var result = GameManager.check_daily_login()
+
+	if result.is_new_day:
+		# Show daily reward popup
+		if result.reward and not result.reward.is_empty():
+			await get_tree().create_timer(1.0).timeout  # Brief delay after entering
+			_show_daily_reward_popup(result)
+
+
+func _show_daily_reward_popup(login_result: Dictionary) -> void:
+	if daily_reward_panel:
+		return
+
+	var reward = login_result.reward
+	var streak = GameManager.player_data.get("login_streak", 1)
+	var total_days = GameManager.player_data.get("total_login_days", 1)
+
+	# Create fullscreen overlay
+	daily_reward_panel = Control.new()
+	daily_reward_panel.name = "DailyRewardPanel"
+	daily_reward_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(daily_reward_panel)
+
+	# Dim background
+	var dim = ColorRect.new()
+	dim.color = Color(0, 0, 0, 0.7)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	daily_reward_panel.add_child(dim)
+
+	# Main panel
+	var panel = PanelContainer.new()
+	var panel_style = StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.08, 0.06, 0.12, 0.98)
+	panel_style.border_color = Color(0.9, 0.75, 0.3, 0.9)
+	panel_style.border_width_left = 3
+	panel_style.border_width_right = 3
+	panel_style.border_width_top = 3
+	panel_style.border_width_bottom = 3
+	panel_style.corner_radius_top_left = 16
+	panel_style.corner_radius_top_right = 16
+	panel_style.corner_radius_bottom_left = 16
+	panel_style.corner_radius_bottom_right = 16
+	panel.add_theme_stylebox_override("panel", panel_style)
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.custom_minimum_size = Vector2(450, 380)
+	panel.offset_left = -225
+	panel.offset_right = 225
+	panel.offset_top = -190
+	panel.offset_bottom = 190
+	daily_reward_panel.add_child(panel)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 30)
+	margin.add_theme_constant_override("margin_right", 30)
+	margin.add_theme_constant_override("margin_top", 25)
+	margin.add_theme_constant_override("margin_bottom", 25)
+	panel.add_child(margin)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 15)
+	margin.add_child(vbox)
+
+	# Title
+	var title = Label.new()
+	title.text = "Daily Reward!"
+	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_color_override("font_color", Color(0.95, 0.85, 0.4))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(title)
+
+	# Day counter
+	var day_label = Label.new()
+	day_label.text = "Day " + str(total_days) + " • Streak: " + str(streak) + " days"
+	day_label.add_theme_font_size_override("font_size", 16)
+	day_label.add_theme_color_override("font_color", Color(0.7, 0.75, 0.9))
+	day_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(day_label)
+
+	# Reward icon/visual
+	var reward_container = CenterContainer.new()
+	reward_container.custom_minimum_size = Vector2(0, 100)
+	vbox.add_child(reward_container)
+
+	var reward_visual = Node2D.new()
+	reward_container.add_child(reward_visual)
+
+	# XP orb visual
+	var orb = Polygon2D.new()
+	orb.color = Color(0.95, 0.85, 0.4, 0.9)
+	orb.polygon = PackedVector2Array([
+		Vector2(-30, 0), Vector2(-21, -21), Vector2(0, -30),
+		Vector2(21, -21), Vector2(30, 0), Vector2(21, 21),
+		Vector2(0, 30), Vector2(-21, 21)
+	])
+	reward_visual.add_child(orb)
+
+	var orb_glow = Polygon2D.new()
+	orb_glow.color = Color(1.0, 0.9, 0.5, 0.3)
+	orb_glow.polygon = PackedVector2Array([
+		Vector2(-45, 0), Vector2(-32, -32), Vector2(0, -45),
+		Vector2(32, -32), Vector2(45, 0), Vector2(32, 32),
+		Vector2(0, 45), Vector2(-32, 32)
+	])
+	reward_visual.add_child(orb_glow)
+	orb_glow.z_index = -1
+
+	# Reward amount
+	var amount_label = Label.new()
+	amount_label.text = "+" + str(reward.get("amount", 0)) + " XP"
+	amount_label.add_theme_font_size_override("font_size", 32)
+	amount_label.add_theme_color_override("font_color", Color(0.95, 0.9, 0.5))
+	amount_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(amount_label)
+
+	# Description
+	var desc_label = Label.new()
+	desc_label.text = reward.get("description", "Keep coming back!")
+	desc_label.add_theme_font_size_override("font_size", 14)
+	desc_label.add_theme_color_override("font_color", Color(0.6, 0.65, 0.8))
+	desc_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	vbox.add_child(desc_label)
+
+	# Special bonus indicator
+	if reward.has("bonus"):
+		var bonus_label = Label.new()
+		bonus_label.text = "Bonus: " + _format_bonus_name(reward.bonus)
+		bonus_label.add_theme_font_size_override("font_size", 16)
+		bonus_label.add_theme_color_override("font_color", Color(0.5, 0.9, 0.7))
+		bonus_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		vbox.add_child(bonus_label)
+
+	# Claim button
+	var claim_btn = Button.new()
+	claim_btn.text = "Claim Reward"
+	claim_btn.custom_minimum_size = Vector2(200, 50)
+	claim_btn.add_theme_font_size_override("font_size", 18)
+	claim_btn.pressed.connect(_claim_daily_reward.bind(((total_days - 1) % 30) + 1))
+	vbox.add_child(claim_btn)
+
+	# Center the button
+	var btn_container = CenterContainer.new()
+	claim_btn.reparent(btn_container)
+	vbox.add_child(btn_container)
+
+	# Milestone celebration if applicable
+	if login_result.has("milestone") and not login_result.milestone.is_empty():
+		await get_tree().create_timer(0.5).timeout
+		_show_milestone_celebration(login_result.milestone)
+
+	# Fade in
+	daily_reward_panel.modulate.a = 0.0
+	var tween = create_tween()
+	tween.tween_property(daily_reward_panel, "modulate:a", 1.0, 0.4)
+
+
+func _format_bonus_name(bonus: String) -> String:
+	match bonus:
+		"lore_fragment": return "Lore Fragment Unlocked"
+		"cosmetic_color": return "New Avatar Color"
+		"companion_accessory": return "Companion Accessory"
+		"title_dedicated": return "Title: The Dedicated"
+		_: return bonus.capitalize()
+
+
+func _claim_daily_reward(day: int) -> void:
+	GameManager.claim_daily_reward(day)
+
+	# Play reward sound
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("play_sfx_from_path"):
+		audio.play_sfx_from_path("res://audio/sfx/achievement.wav")
+
+	# Close panel with animation
+	if daily_reward_panel:
+		var tween = create_tween()
+		tween.tween_property(daily_reward_panel, "modulate:a", 0.0, 0.3)
+		tween.tween_callback(func():
+			if daily_reward_panel:
+				daily_reward_panel.queue_free()
+				daily_reward_panel = null
+		)
+
+	# Update header stats
+	_update_header()
+
+
+# ============================================
+# MILESTONE CELEBRATION
+# ============================================
+
+var milestone_panel: Control = null
+
+func _show_milestone_celebration(milestone: Dictionary) -> void:
+	if milestone_panel:
+		return
+
+	milestone_panel = Control.new()
+	milestone_panel.name = "MilestoneCelebration"
+	milestone_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(milestone_panel)
+
+	# Golden overlay
+	var overlay = ColorRect.new()
+	overlay.color = Color(0.9, 0.75, 0.2, 0.15)
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	milestone_panel.add_child(overlay)
+
+	# Centered celebration panel
+	var panel = PanelContainer.new()
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.1, 0.08, 0.05, 0.98)
+	style.border_color = Color(1.0, 0.85, 0.3)
+	style.border_width_left = 4
+	style.border_width_right = 4
+	style.border_width_top = 4
+	style.border_width_bottom = 4
+	style.corner_radius_top_left = 20
+	style.corner_radius_top_right = 20
+	style.corner_radius_bottom_left = 20
+	style.corner_radius_bottom_right = 20
+	panel.add_theme_stylebox_override("panel", style)
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.custom_minimum_size = Vector2(500, 350)
+	panel.offset_left = -250
+	panel.offset_right = 250
+	panel.offset_top = -175
+	panel.offset_bottom = 175
+	milestone_panel.add_child(panel)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 40)
+	margin.add_theme_constant_override("margin_right", 40)
+	margin.add_theme_constant_override("margin_top", 30)
+	margin.add_theme_constant_override("margin_bottom", 30)
+	panel.add_child(margin)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 20)
+	margin.add_child(vbox)
+
+	# Milestone badge
+	var badge_label = Label.new()
+	badge_label.text = "MILESTONE ACHIEVED"
+	badge_label.add_theme_font_size_override("font_size", 14)
+	badge_label.add_theme_color_override("font_color", Color(0.8, 0.7, 0.4))
+	badge_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(badge_label)
+
+	# Title
+	var title = Label.new()
+	title.text = milestone.get("title", "Milestone!")
+	title.add_theme_font_size_override("font_size", 32)
+	title.add_theme_color_override("font_color", Color(1.0, 0.9, 0.4))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(title)
+
+	# Days achieved
+	var days_label = Label.new()
+	days_label.text = str(milestone.get("days", 0)) + " Days of Growth"
+	days_label.add_theme_font_size_override("font_size", 20)
+	days_label.add_theme_color_override("font_color", Color(0.95, 0.85, 0.5))
+	days_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(days_label)
+
+	# Message
+	var message = Label.new()
+	message.text = milestone.get("message", "Congratulations on your journey!")
+	message.add_theme_font_size_override("font_size", 16)
+	message.add_theme_color_override("font_color", Color(0.8, 0.82, 0.9))
+	message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	message.autowrap_mode = TextServer.AUTOWRAP_WORD
+	vbox.add_child(message)
+
+	# XP reward
+	var xp_label = Label.new()
+	xp_label.text = "+" + str(milestone.get("xp", 0)) + " Bonus XP"
+	xp_label.add_theme_font_size_override("font_size", 24)
+	xp_label.add_theme_color_override("font_color", Color(0.5, 0.95, 0.6))
+	xp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(xp_label)
+
+	# Continue button
+	var btn_container = CenterContainer.new()
+	vbox.add_child(btn_container)
+
+	var continue_btn = Button.new()
+	continue_btn.text = "Continue Journey"
+	continue_btn.custom_minimum_size = Vector2(200, 50)
+	continue_btn.add_theme_font_size_override("font_size", 18)
+	continue_btn.pressed.connect(_close_milestone_celebration)
+	btn_container.add_child(continue_btn)
+
+	# Grant milestone XP
+	GameManager.add_aspect_xp("all", milestone.get("xp", 0))
+
+	# Fade in with celebration
+	milestone_panel.modulate.a = 0.0
+	var tween = create_tween()
+	tween.tween_property(milestone_panel, "modulate:a", 1.0, 0.5)
+
+	# Play celebration sound
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("play_sfx_from_path"):
+		audio.play_sfx_from_path("res://audio/sfx/level_up.wav")
+
+
+func _close_milestone_celebration() -> void:
+	if milestone_panel:
+		var tween = create_tween()
+		tween.tween_property(milestone_panel, "modulate:a", 0.0, 0.3)
+		tween.tween_callback(func():
+			if milestone_panel:
+				milestone_panel.queue_free()
+				milestone_panel = null
+		)
+
+
+# ============================================
+# COMPANION EVOLUTION VISUALS
+# ============================================
+
+const COMPANION_COLORS = {
+	0: Color(0.6, 0.7, 0.9, 0.7),   # Spark - pale blue
+	1: Color(0.8, 0.6, 0.4, 0.8),   # Ember - orange
+	2: Color(0.9, 0.5, 0.3, 0.85),  # Flame - bright orange
+	3: Color(0.95, 0.7, 0.2, 0.9),  # Blaze - golden
+	4: Color(0.9, 0.4, 0.8, 0.9),   # Nova - magenta
+	5: Color(0.5, 0.9, 0.95, 0.95), # Celestial - cyan
+	6: Color(0.95, 0.95, 0.6, 1.0), # Eternal - bright yellow
+	7: Color(1.0, 1.0, 1.0, 1.0)    # Legendary - pure white
+}
+
+const COMPANION_SIZES = {
+	0: 1.0,   # Spark
+	1: 1.1,   # Ember
+	2: 1.2,   # Flame
+	3: 1.35,  # Blaze
+	4: 1.5,   # Nova
+	5: 1.7,   # Celestial
+	6: 1.9,   # Eternal
+	7: 2.2    # Legendary
+}
+
+
+func _update_companion_evolution_visual() -> void:
+	if not companion_spirit:
+		return
+
+	var stage = GameManager.get_companion_stage()
+	var info = GameManager.get_companion_info()
+
+	# Update color
+	var body = companion_spirit.get_node_or_null("Body")
+	var glow = companion_spirit.get_node_or_null("Glow")
+
+	if body and COMPANION_COLORS.has(stage):
+		body.color = COMPANION_COLORS[stage]
+
+	if glow and COMPANION_COLORS.has(stage):
+		var glow_color = COMPANION_COLORS[stage]
+		glow_color.a = 0.4
+		glow.color = glow_color
+
+	# Update size
+	if COMPANION_SIZES.has(stage):
+		companion_spirit.scale = Vector2.ONE * COMPANION_SIZES[stage]
+
+	# Add accessories if unlocked
+	_update_companion_accessories(info.get("accessories", []))
+
+	# Add special effects for higher stages
+	if stage >= 4:  # Nova and above
+		_add_companion_particles(stage)
+
+
+func _update_companion_accessories(accessories: Array) -> void:
+	# Remove old accessories
+	var old_acc = companion_spirit.get_node_or_null("Accessories")
+	if old_acc:
+		old_acc.queue_free()
+
+	if accessories.is_empty():
+		return
+
+	var acc_container = Node2D.new()
+	acc_container.name = "Accessories"
+	companion_spirit.add_child(acc_container)
+
+	for acc in accessories:
+		match acc:
+			"star_trail":
+				# Add trailing stars effect
+				for i in range(3):
+					var star = Polygon2D.new()
+					star.color = Color(1.0, 0.95, 0.6, 0.6 - i * 0.15)
+					star.polygon = PackedVector2Array([
+						Vector2(-3, 0), Vector2(0, -4), Vector2(3, 0), Vector2(0, 4)
+					])
+					star.position = Vector2(-15 - i * 12, 5 + i * 3)
+					acc_container.add_child(star)
+
+
+func _add_companion_particles(stage: int) -> void:
+	# Check if particles already exist
+	var particles = companion_spirit.get_node_or_null("EvolutionParticles")
+	if particles:
+		return
+
+	particles = Node2D.new()
+	particles.name = "EvolutionParticles"
+	companion_spirit.add_child(particles)
+
+	# Add orbiting sparkles
+	var particle_count = min(stage - 3, 4) * 2  # 2, 4, 6, 8 particles
+	for i in range(particle_count):
+		var sparkle = Polygon2D.new()
+		sparkle.color = COMPANION_COLORS.get(stage, Color.WHITE)
+		sparkle.color.a = 0.7
+		sparkle.polygon = PackedVector2Array([
+			Vector2(-2, 0), Vector2(0, -2), Vector2(2, 0), Vector2(0, 2)
+		])
+		sparkle.name = "Sparkle" + str(i)
+		particles.add_child(sparkle)
+
+		# Position in orbit
+		var angle = (TAU / particle_count) * i
+		sparkle.position = Vector2(cos(angle) * 20, sin(angle) * 15)

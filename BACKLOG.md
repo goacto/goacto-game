@@ -233,6 +233,10 @@
 - [x] Master key photo album unlock (master key holders can view all family photos)
 - [x] Mindscape Evolution Stages (5 tiers: platform crystals, floating islands, ancient runes, mystical aura, tier-up celebrations)
 - [x] Habit Reminders System (per-habit time/day settings, in-app notifications, reminder UI)
+- [x] Daily Login Rewards System (30-day reward cycle, streak tracking, special bonuses at milestones)
+- [x] Personal Milestones Celebrations (7/14/30/60/90/180/365 day achievements with XP rewards and titles)
+- [x] Companion Evolution System (8 evolution stages based on login days, visual changes, accessories)
+- [x] Expanded Bedroom Layout (plus-shaped room with proper bounds, reorganized furniture)
 
 ---
 
