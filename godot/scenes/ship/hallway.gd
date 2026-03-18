@@ -1543,9 +1543,9 @@ func _show_plant_detail() -> void:
 	style.set_border_width_all(2)
 	style.set_corner_radius_all(12)
 	text_panel.add_theme_stylebox_override("panel", style)
-	text_panel.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
-	text_panel.offset_left = -380
-	text_panel.offset_right = -40
+	text_panel.set_anchors_preset(Control.PRESET_CENTER)
+	text_panel.offset_left = 150
+	text_panel.offset_right = 500
 	text_panel.offset_top = -180
 	text_panel.offset_bottom = 180
 	plant_detail_panel.add_child(text_panel)
@@ -1822,9 +1822,9 @@ func _show_family_portrait_detail() -> void:
 	style.set_border_width_all(2)
 	style.set_corner_radius_all(12)
 	text_panel.add_theme_stylebox_override("panel", style)
-	text_panel.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
-	text_panel.offset_left = -380
-	text_panel.offset_right = -40
+	text_panel.set_anchors_preset(Control.PRESET_CENTER)
+	text_panel.offset_left = 150
+	text_panel.offset_right = 500
 	text_panel.offset_top = -200
 	text_panel.offset_bottom = 200
 	family_portrait_panel.add_child(text_panel)
@@ -2091,9 +2091,9 @@ func _show_landscape_detail() -> void:
 	style.set_border_width_all(2)
 	style.set_corner_radius_all(12)
 	text_panel.add_theme_stylebox_override("panel", style)
-	text_panel.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
-	text_panel.offset_left = -380
-	text_panel.offset_right = -40
+	text_panel.set_anchors_preset(Control.PRESET_CENTER)
+	text_panel.offset_left = 150
+	text_panel.offset_right = 500
 	text_panel.offset_top = -200
 	text_panel.offset_bottom = 200
 	landscape_detail_panel.add_child(text_panel)

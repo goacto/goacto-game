@@ -495,15 +495,27 @@ func _clamp_to_plus_bounds(pos: Vector2) -> Vector2:
 
 	var result = pos
 
-	# Check which region the player should be in
+	# Check which region the player is trying to enter
 	if pos.y < -180:
-		# Top arm - constrain x to narrow width
-		result.x = clamp(pos.x, -180, 180)
-		result.y = clamp(pos.y, -540, -180)
+		# Trying to enter top arm
+		if pos.x >= -180 and pos.x <= 180:
+			# Within top arm x bounds - allow entry
+			result.x = clamp(pos.x, -180, 180)
+			result.y = clamp(pos.y, -540, -180)
+		else:
+			# Outside top arm x bounds - block at center bar edge
+			result.x = clamp(pos.x, -680, 680)
+			result.y = -180
 	elif pos.y > 180:
-		# Bottom arm - constrain x to narrow width
-		result.x = clamp(pos.x, -180, 180)
-		result.y = clamp(pos.y, 180, 540)
+		# Trying to enter bottom arm
+		if pos.x >= -180 and pos.x <= 180:
+			# Within bottom arm x bounds - allow entry
+			result.x = clamp(pos.x, -180, 180)
+			result.y = clamp(pos.y, 180, 540)
+		else:
+			# Outside bottom arm x bounds - block at center bar edge
+			result.x = clamp(pos.x, -680, 680)
+			result.y = 180
 	else:
 		# Center bar - allow full width
 		result.x = clamp(pos.x, -680, 680)
