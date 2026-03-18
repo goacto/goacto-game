@@ -248,6 +248,9 @@ func _process(delta: float) -> void:
 	# Animate enhanced elements
 	_animate_environment(delta)
 
+	# Animate detail views if open
+	_update_detail_views(delta)
+
 	if in_dialogue:
 		return
 
@@ -285,6 +288,18 @@ func _input(event: InputEvent) -> void:
 			_close_pause_menu()
 			viewport.set_input_as_handled()
 			return
+		if plant_detail_panel:
+			_close_plant_detail()
+			viewport.set_input_as_handled()
+			return
+		if family_portrait_panel:
+			_close_family_portrait_detail()
+			viewport.set_input_as_handled()
+			return
+		if landscape_detail_panel:
+			_close_landscape_detail()
+			viewport.set_input_as_handled()
+			return
 		if space_view_panel:
 			_close_hallway_space_view()
 			viewport.set_input_as_handled()
@@ -306,6 +321,25 @@ func _input(event: InputEvent) -> void:
 	if space_view_panel:
 		if event.is_action_pressed("ui_accept"):
 			_close_hallway_space_view()
+			viewport.set_input_as_handled()
+		return
+
+	# Close detail views with SPACE
+	if plant_detail_panel:
+		if event.is_action_pressed("ui_accept"):
+			_close_plant_detail()
+			viewport.set_input_as_handled()
+		return
+
+	if family_portrait_panel:
+		if event.is_action_pressed("ui_accept"):
+			_close_family_portrait_detail()
+			viewport.set_input_as_handled()
+		return
+
+	if landscape_detail_panel:
+		if event.is_action_pressed("ui_accept"):
+			_close_landscape_detail()
 			viewport.set_input_as_handled()
 		return
 
@@ -467,13 +501,13 @@ func _interact_with_object(object_id: String) -> void:
 			else:
 				_show_dialogue("Observatory Locked", "The observation deck is currently sealed.\n\n*A soft hum emanates from behind the door*\n\nPerhaps after you've established a connection with your human, this area will open up.")
 		"examine_painting1":
-			_show_dialogue("Family Portrait", "A holographic family portrait from when you were just a hatchling.\n\nMom, Dad, Elder Zyx, and tiny you with your first pair of wings.\n\nThose were simpler times.", Callable(), "res://audio/voice/hallway/painting_family.ogg")
+			_show_family_portrait_detail()
 		"examine_painting2":
-			_show_dialogue("Goactorian Landscape", "A beautiful rendering of the Crystal Valleys back home.\n\nThe bioluminescent forests glow in shades of purple and teal.\n\nYou'll see them again... in 47 years.", Callable(), "res://audio/voice/hallway/painting_landscape.ogg")
+			_show_landscape_detail()
 		"examine_painting3":
 			_show_dialogue("Ancient Star Map", "A detailed map of the Goactorian constellation routes.\n\nYour ancestors charted these paths thousands of years ago.\n\nThe glowing markers show your current position - so far from home.", Callable(), "res://audio/voice/hallway/painting_starmap.ogg")
 		"examine_plant":
-			_show_dialogue("Corridor Plant", "A hardy Stellar Ivy that thrives in artificial light.\n\nIt's been growing since before you were born.\n\nMom waters it every cycle without fail.", Callable(), "res://audio/voice/hallway/plant.ogg")
+			_show_plant_detail()
 		"go_living_room":
 			GameManager.player_data["came_from_hallway"] = true
 			GameManager.goto_scene("res://scenes/ship/living_room.tscn")
@@ -1436,3 +1470,935 @@ func _close_hallway_space_view() -> void:
 		space_view_panel.queue_free()
 		space_view_panel = null
 	in_dialogue = false
+
+
+# =============================================================================
+# DETAIL VIEW PANELS (Split Graphics)
+# =============================================================================
+
+var plant_detail_panel: Control = null
+var plant_detail_time: float = 0.0
+var plant_vines: Array = []
+
+var family_portrait_panel: Control = null
+var portrait_detail_time: float = 0.0
+
+var landscape_detail_panel: Control = null
+var landscape_detail_time: float = 0.0
+
+
+# -----------------------------------------------------------------------------
+# STELLAR IVY (Corridor Plant) Detail View
+# -----------------------------------------------------------------------------
+
+func _show_plant_detail() -> void:
+	if plant_detail_panel:
+		return
+
+	in_dialogue = true
+	interaction_prompt.visible = false
+	plant_detail_time = 0.0
+	plant_vines.clear()
+
+	# Play voice
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("play_voice_from_path"):
+		audio.play_voice_from_path("res://audio/voice/hallway/plant.ogg")
+
+	plant_detail_panel = Control.new()
+	plant_detail_panel.name = "PlantDetailView"
+	plant_detail_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	plant_detail_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(plant_detail_panel)
+
+	# Dark background
+	var bg = ColorRect.new()
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.color = Color(0.03, 0.05, 0.08, 0.98)
+	plant_detail_panel.add_child(bg)
+
+	var viewport_size = get_viewport_rect().size
+
+	# Plant display (left side)
+	var plant_display = Node2D.new()
+	plant_display.name = "PlantDisplay"
+	plant_display.position = Vector2(viewport_size.x * 0.32, viewport_size.y * 0.6)
+	plant_display.scale = Vector2(3.0, 3.0)
+	plant_detail_panel.add_child(plant_display)
+
+	# Create the pot
+	_create_stellar_ivy_pot(plant_display)
+
+	# Create the vines
+	_create_stellar_ivy_vines(plant_display)
+
+	# Create floating spores
+	_create_stellar_ivy_spores(plant_display)
+
+	# Text panel (right side)
+	var text_panel = PanelContainer.new()
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.06, 0.08, 0.12, 0.9)
+	style.border_color = Color(0.3, 0.5, 0.4, 0.5)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(12)
+	text_panel.add_theme_stylebox_override("panel", style)
+	text_panel.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
+	text_panel.offset_left = -380
+	text_panel.offset_right = -40
+	text_panel.offset_top = -180
+	text_panel.offset_bottom = 180
+	plant_detail_panel.add_child(text_panel)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 25)
+	margin.add_theme_constant_override("margin_right", 25)
+	margin.add_theme_constant_override("margin_top", 20)
+	margin.add_theme_constant_override("margin_bottom", 20)
+	text_panel.add_child(margin)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 15)
+	margin.add_child(vbox)
+
+	# Title
+	var title = Label.new()
+	title.text = "Stellar Ivy"
+	title.add_theme_font_size_override("font_size", 32)
+	title.add_theme_color_override("font_color", Color(0.4, 0.8, 0.5))
+	vbox.add_child(title)
+
+	# Subtitle
+	var subtitle = Label.new()
+	subtitle.text = "Goactorian Flora - Luminescent Variety"
+	subtitle.add_theme_font_size_override("font_size", 14)
+	subtitle.add_theme_color_override("font_color", Color(0.5, 0.65, 0.55))
+	vbox.add_child(subtitle)
+
+	var sep = HSeparator.new()
+	vbox.add_child(sep)
+
+	# Description
+	var desc = Label.new()
+	desc.text = "A hardy Stellar Ivy that thrives in artificial light. It's been growing in this corridor since before you were born.\n\nThe bioluminescent tips glow softly in the ship's dim lighting, releasing tiny spores that float through the air.\n\nMom waters it every cycle without fail. She says it reminds her of the hanging gardens back home."
+	desc.add_theme_font_size_override("font_size", 16)
+	desc.add_theme_color_override("font_color", Color(0.75, 0.8, 0.75))
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	vbox.add_child(desc)
+
+	# Close button
+	var close_btn = Button.new()
+	close_btn.text = "Close"
+	close_btn.custom_minimum_size = Vector2(120, 45)
+	close_btn.add_theme_font_size_override("font_size", 18)
+	close_btn.pressed.connect(_close_plant_detail)
+	plant_detail_panel.add_child(close_btn)
+	close_btn.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	close_btn.offset_left = -160
+	close_btn.offset_right = -40
+	close_btn.offset_top = -70
+	close_btn.offset_bottom = -25
+
+	# Close hint
+	var hint = Label.new()
+	hint.text = "[SPACE or ESC to close]"
+	hint.add_theme_font_size_override("font_size", 12)
+	hint.add_theme_color_override("font_color", Color(0.4, 0.5, 0.45))
+	hint.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	hint.offset_left = 30
+	hint.offset_top = -40
+	hint.offset_bottom = -20
+	plant_detail_panel.add_child(hint)
+
+	# Fade in
+	plant_detail_panel.modulate.a = 0.0
+	var tween = create_tween()
+	tween.tween_property(plant_detail_panel, "modulate:a", 1.0, 0.5)
+
+
+func _create_stellar_ivy_pot(parent: Node2D) -> void:
+	# Pot body
+	var pot = Polygon2D.new()
+	pot.polygon = PackedVector2Array([
+		Vector2(-25, 0), Vector2(25, 0),
+		Vector2(20, 35), Vector2(-20, 35)
+	])
+	pot.color = Color(0.35, 0.25, 0.2)
+	parent.add_child(pot)
+
+	# Pot rim
+	var rim = Polygon2D.new()
+	rim.polygon = PackedVector2Array([
+		Vector2(-28, -5), Vector2(28, -5),
+		Vector2(26, 2), Vector2(-26, 2)
+	])
+	rim.color = Color(0.45, 0.35, 0.28)
+	parent.add_child(rim)
+
+	# Soil
+	var soil = Polygon2D.new()
+	soil.polygon = PackedVector2Array([
+		Vector2(-22, 0), Vector2(22, 0),
+		Vector2(20, 8), Vector2(-20, 8)
+	])
+	soil.color = Color(0.2, 0.15, 0.1)
+	parent.add_child(soil)
+
+
+func _create_stellar_ivy_vines(parent: Node2D) -> void:
+	plant_vines.clear()
+
+	# Create multiple cascading vines
+	var vine_data = [
+		{"start": Vector2(-15, -5), "segments": 8, "angle": -0.4, "color": Color(0.25, 0.5, 0.35)},
+		{"start": Vector2(-5, -8), "segments": 10, "angle": -0.1, "color": Color(0.3, 0.55, 0.38)},
+		{"start": Vector2(5, -7), "segments": 9, "angle": 0.15, "color": Color(0.28, 0.52, 0.36)},
+		{"start": Vector2(15, -5), "segments": 7, "angle": 0.35, "color": Color(0.25, 0.48, 0.33)},
+		{"start": Vector2(-10, -6), "segments": 6, "angle": -0.25, "color": Color(0.32, 0.58, 0.4)},
+		{"start": Vector2(10, -6), "segments": 6, "angle": 0.25, "color": Color(0.27, 0.5, 0.35)},
+	]
+
+	for data in vine_data:
+		var vine_container = Node2D.new()
+		vine_container.position = data["start"]
+		parent.add_child(vine_container)
+
+		var segments = []
+		var current_pos = Vector2.ZERO
+		var current_angle = data["angle"]
+
+		for i in range(data["segments"]):
+			# Vine segment
+			var segment = Polygon2D.new()
+			var seg_length = 12 + randf() * 4
+			var next_pos = current_pos + Vector2(sin(current_angle), -cos(current_angle)) * seg_length
+
+			# Tapered segment
+			var thickness = 4 - (i * 0.3)
+			segment.polygon = PackedVector2Array([
+				current_pos + Vector2(-thickness, 0),
+				current_pos + Vector2(thickness, 0),
+				next_pos + Vector2(thickness * 0.7, 0),
+				next_pos + Vector2(-thickness * 0.7, 0)
+			])
+			segment.color = data["color"]
+			vine_container.add_child(segment)
+			segments.append(segment)
+
+			# Add leaves at intervals
+			if i % 2 == 1:
+				var leaf = _create_ivy_leaf(next_pos, current_angle + randf_range(-0.3, 0.3))
+				vine_container.add_child(leaf)
+
+			# Add glowing tip at end
+			if i == data["segments"] - 1:
+				var tip_glow = Polygon2D.new()
+				tip_glow.name = "TipGlow"
+				var tip_size = 5
+				tip_glow.polygon = _create_circle_points(tip_size, 8)
+				tip_glow.position = next_pos
+				tip_glow.color = Color(0.5, 0.9, 0.6, 0.7)
+				vine_container.add_child(tip_glow)
+
+			current_pos = next_pos
+			current_angle += randf_range(-0.2, 0.2)
+
+		plant_vines.append({
+			"container": vine_container,
+			"base_angle": data["angle"],
+			"phase": randf() * TAU
+		})
+
+
+func _create_ivy_leaf(pos: Vector2, angle: float) -> Polygon2D:
+	var leaf = Polygon2D.new()
+	leaf.position = pos
+	leaf.rotation = angle
+
+	# Heart-shaped ivy leaf
+	leaf.polygon = PackedVector2Array([
+		Vector2(0, 0),
+		Vector2(-6, -4),
+		Vector2(-8, -10),
+		Vector2(-4, -14),
+		Vector2(0, -12),
+		Vector2(4, -14),
+		Vector2(8, -10),
+		Vector2(6, -4)
+	])
+	leaf.color = Color(0.2, 0.45, 0.3, 0.9)
+	return leaf
+
+
+func _create_stellar_ivy_spores(parent: Node2D) -> void:
+	# Floating bioluminescent spores
+	for i in range(15):
+		var spore = Polygon2D.new()
+		spore.name = "Spore" + str(i)
+		var size = randf_range(2, 4)
+		spore.polygon = _create_circle_points(size, 6)
+		spore.position = Vector2(randf_range(-50, 50), randf_range(-80, -10))
+		spore.color = Color(0.5, 0.95, 0.65, randf_range(0.3, 0.6))
+		parent.add_child(spore)
+
+
+func _create_circle_points(radius: float, segments: int) -> PackedVector2Array:
+	var points = PackedVector2Array()
+	for i in range(segments):
+		var angle = (i / float(segments)) * TAU
+		points.append(Vector2(cos(angle), sin(angle)) * radius)
+	return points
+
+
+func _close_plant_detail() -> void:
+	if not plant_detail_panel:
+		return
+
+	var tween = create_tween()
+	tween.tween_property(plant_detail_panel, "modulate:a", 0.0, 0.3)
+	tween.tween_callback(_cleanup_plant_detail)
+
+
+func _cleanup_plant_detail() -> void:
+	if plant_detail_panel:
+		plant_detail_panel.queue_free()
+		plant_detail_panel = null
+	plant_vines.clear()
+	in_dialogue = false
+
+
+# -----------------------------------------------------------------------------
+# FAMILY PORTRAIT Detail View
+# -----------------------------------------------------------------------------
+
+func _show_family_portrait_detail() -> void:
+	if family_portrait_panel:
+		return
+
+	in_dialogue = true
+	interaction_prompt.visible = false
+	portrait_detail_time = 0.0
+
+	# Play voice
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("play_voice_from_path"):
+		audio.play_voice_from_path("res://audio/voice/hallway/painting_family.ogg")
+
+	family_portrait_panel = Control.new()
+	family_portrait_panel.name = "FamilyPortraitView"
+	family_portrait_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	family_portrait_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(family_portrait_panel)
+
+	# Dark background with warm tint
+	var bg = ColorRect.new()
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.color = Color(0.05, 0.04, 0.06, 0.98)
+	family_portrait_panel.add_child(bg)
+
+	var viewport_size = get_viewport_rect().size
+
+	# Portrait display (left side)
+	var portrait_display = Node2D.new()
+	portrait_display.name = "PortraitDisplay"
+	portrait_display.position = Vector2(viewport_size.x * 0.32, viewport_size.y * 0.5)
+	portrait_display.scale = Vector2(2.5, 2.5)
+	family_portrait_panel.add_child(portrait_display)
+
+	# Create the holographic frame
+	_create_portrait_frame(portrait_display)
+
+	# Create the family figures
+	_create_family_figures(portrait_display)
+
+	# Create holographic particles
+	_create_portrait_particles(portrait_display)
+
+	# Text panel (right side)
+	var text_panel = PanelContainer.new()
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.08, 0.06, 0.1, 0.9)
+	style.border_color = Color(0.6, 0.5, 0.4, 0.5)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(12)
+	text_panel.add_theme_stylebox_override("panel", style)
+	text_panel.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
+	text_panel.offset_left = -380
+	text_panel.offset_right = -40
+	text_panel.offset_top = -200
+	text_panel.offset_bottom = 200
+	family_portrait_panel.add_child(text_panel)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 25)
+	margin.add_theme_constant_override("margin_right", 25)
+	margin.add_theme_constant_override("margin_top", 20)
+	margin.add_theme_constant_override("margin_bottom", 20)
+	text_panel.add_child(margin)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 12)
+	margin.add_child(vbox)
+
+	# Title
+	var title = Label.new()
+	title.text = "Family Portrait"
+	title.add_theme_font_size_override("font_size", 32)
+	title.add_theme_color_override("font_color", Color(0.9, 0.75, 0.5))
+	vbox.add_child(title)
+
+	# Subtitle
+	var subtitle = Label.new()
+	subtitle.text = "Holographic Memory Capture - Year 2847"
+	subtitle.add_theme_font_size_override("font_size", 14)
+	subtitle.add_theme_color_override("font_color", Color(0.6, 0.55, 0.5))
+	vbox.add_child(subtitle)
+
+	var sep = HSeparator.new()
+	vbox.add_child(sep)
+
+	# Description
+	var desc = Label.new()
+	desc.text = "A holographic family portrait from when you were just a hatchling.\n\nMom stands tall and proud, her wings shimmering with the iridescence of a seasoned explorer. Dad's gentle smile hasn't changed in all these years.\n\nGreat-Elder Zyx towers behind you all, ancient and wise, the crystalline patterns on their scales catching the light.\n\nAnd there you are - tiny you with your first pair of wings, barely able to flutter.\n\nThose were simpler times."
+	desc.add_theme_font_size_override("font_size", 15)
+	desc.add_theme_color_override("font_color", Color(0.8, 0.78, 0.75))
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	vbox.add_child(desc)
+
+	# Close button
+	var close_btn = Button.new()
+	close_btn.text = "Close"
+	close_btn.custom_minimum_size = Vector2(120, 45)
+	close_btn.add_theme_font_size_override("font_size", 18)
+	close_btn.pressed.connect(_close_family_portrait_detail)
+	family_portrait_panel.add_child(close_btn)
+	close_btn.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	close_btn.offset_left = -160
+	close_btn.offset_right = -40
+	close_btn.offset_top = -70
+	close_btn.offset_bottom = -25
+
+	# Close hint
+	var hint = Label.new()
+	hint.text = "[SPACE or ESC to close]"
+	hint.add_theme_font_size_override("font_size", 12)
+	hint.add_theme_color_override("font_color", Color(0.5, 0.45, 0.4))
+	hint.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	hint.offset_left = 30
+	hint.offset_top = -40
+	hint.offset_bottom = -20
+	family_portrait_panel.add_child(hint)
+
+	# Fade in
+	family_portrait_panel.modulate.a = 0.0
+	var tween = create_tween()
+	tween.tween_property(family_portrait_panel, "modulate:a", 1.0, 0.5)
+
+
+func _create_portrait_frame(parent: Node2D) -> void:
+	# Ornate holographic frame
+	var frame_outer = Polygon2D.new()
+	frame_outer.polygon = PackedVector2Array([
+		Vector2(-75, -95), Vector2(75, -95),
+		Vector2(75, 75), Vector2(-75, 75)
+	])
+	frame_outer.color = Color(0.5, 0.4, 0.3, 0.8)
+	parent.add_child(frame_outer)
+
+	# Inner frame border
+	var frame_inner = Polygon2D.new()
+	frame_inner.polygon = PackedVector2Array([
+		Vector2(-70, -90), Vector2(70, -90),
+		Vector2(70, 70), Vector2(-70, 70)
+	])
+	frame_inner.color = Color(0.6, 0.5, 0.35, 0.6)
+	parent.add_child(frame_inner)
+
+	# Portrait background (holographic blue tint)
+	var portrait_bg = Polygon2D.new()
+	portrait_bg.polygon = PackedVector2Array([
+		Vector2(-65, -85), Vector2(65, -85),
+		Vector2(65, 65), Vector2(-65, 65)
+	])
+	portrait_bg.color = Color(0.15, 0.2, 0.3, 0.9)
+	parent.add_child(portrait_bg)
+
+	# Frame corner decorations
+	for corner in [Vector2(-75, -95), Vector2(75, -95), Vector2(75, 75), Vector2(-75, 75)]:
+		var decoration = Polygon2D.new()
+		decoration.polygon = PackedVector2Array([
+			Vector2(0, 0), Vector2(10, 5), Vector2(5, 10), Vector2(-5, 10), Vector2(-10, 5)
+		])
+		decoration.position = corner
+		decoration.color = Color(0.7, 0.6, 0.4, 0.9)
+		parent.add_child(decoration)
+
+
+func _create_family_figures(parent: Node2D) -> void:
+	# Great-Elder Zyx (back center, tall)
+	var elder = _create_goactorian_figure(Vector2(0, -40), 1.3, Color(0.5, 0.55, 0.7), true)
+	parent.add_child(elder)
+
+	# Mom (left)
+	var mom = _create_goactorian_figure(Vector2(-35, -10), 1.0, Color(0.6, 0.5, 0.65))
+	parent.add_child(mom)
+
+	# Dad (right)
+	var dad = _create_goactorian_figure(Vector2(35, -10), 1.0, Color(0.5, 0.6, 0.55))
+	parent.add_child(dad)
+
+	# Baby Goacto (front center, small)
+	var baby = _create_goactorian_figure(Vector2(0, 25), 0.5, Color(0.55, 0.6, 0.75))
+	parent.add_child(baby)
+
+
+func _create_goactorian_figure(pos: Vector2, scale_factor: float, tint: Color, has_crystals: bool = false) -> Node2D:
+	var figure = Node2D.new()
+	figure.position = pos
+	figure.scale = Vector2(scale_factor, scale_factor)
+
+	# Body
+	var body = Polygon2D.new()
+	body.polygon = PackedVector2Array([
+		Vector2(-12, 0), Vector2(12, 0),
+		Vector2(10, 35), Vector2(-10, 35)
+	])
+	body.color = tint
+	figure.add_child(body)
+
+	# Head
+	var head = Polygon2D.new()
+	head.polygon = PackedVector2Array([
+		Vector2(-10, -25), Vector2(10, -25),
+		Vector2(12, -5), Vector2(-12, -5)
+	])
+	head.color = Color(tint.r + 0.1, tint.g + 0.1, tint.b + 0.1)
+	figure.add_child(head)
+
+	# Eyes
+	for x_offset in [-5, 5]:
+		var eye = Polygon2D.new()
+		eye.polygon = _create_circle_points(3, 6)
+		eye.position = Vector2(x_offset, -15)
+		eye.color = Color(0.9, 0.85, 0.5, 0.9)
+		figure.add_child(eye)
+
+	# Wings
+	for side in [-1, 1]:
+		var wing = Polygon2D.new()
+		wing.polygon = PackedVector2Array([
+			Vector2(0, 0), Vector2(side * 25, -15),
+			Vector2(side * 30, -5), Vector2(side * 20, 10)
+		])
+		wing.position = Vector2(side * 8, 5)
+		wing.color = Color(tint.r, tint.g, tint.b + 0.15, 0.6)
+		figure.add_child(wing)
+
+	# Elder crystals
+	if has_crystals:
+		for i in range(3):
+			var crystal = Polygon2D.new()
+			crystal.polygon = PackedVector2Array([
+				Vector2(0, -8), Vector2(4, 0), Vector2(0, 4), Vector2(-4, 0)
+			])
+			crystal.position = Vector2(-8 + i * 8, -30)
+			crystal.color = Color(0.6, 0.7, 0.9, 0.8)
+			figure.add_child(crystal)
+
+	return figure
+
+
+func _create_portrait_particles(parent: Node2D) -> void:
+	# Holographic scan lines and particles
+	for i in range(12):
+		var particle = Polygon2D.new()
+		particle.name = "HoloParticle" + str(i)
+		var size = randf_range(1, 3)
+		particle.polygon = _create_circle_points(size, 4)
+		particle.position = Vector2(randf_range(-60, 60), randf_range(-80, 60))
+		particle.color = Color(0.5, 0.6, 0.9, randf_range(0.2, 0.5))
+		parent.add_child(particle)
+
+
+func _close_family_portrait_detail() -> void:
+	if not family_portrait_panel:
+		return
+
+	var tween = create_tween()
+	tween.tween_property(family_portrait_panel, "modulate:a", 0.0, 0.3)
+	tween.tween_callback(_cleanup_family_portrait_detail)
+
+
+func _cleanup_family_portrait_detail() -> void:
+	if family_portrait_panel:
+		family_portrait_panel.queue_free()
+		family_portrait_panel = null
+	in_dialogue = false
+
+
+# -----------------------------------------------------------------------------
+# GOACTORIAN LANDSCAPE Detail View
+# -----------------------------------------------------------------------------
+
+func _show_landscape_detail() -> void:
+	if landscape_detail_panel:
+		return
+
+	in_dialogue = true
+	interaction_prompt.visible = false
+	landscape_detail_time = 0.0
+
+	# Play voice
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("play_voice_from_path"):
+		audio.play_voice_from_path("res://audio/voice/hallway/painting_landscape.ogg")
+
+	landscape_detail_panel = Control.new()
+	landscape_detail_panel.name = "LandscapeDetailView"
+	landscape_detail_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	landscape_detail_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(landscape_detail_panel)
+
+	# Dark background
+	var bg = ColorRect.new()
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.color = Color(0.02, 0.03, 0.06, 0.98)
+	landscape_detail_panel.add_child(bg)
+
+	var viewport_size = get_viewport_rect().size
+
+	# Landscape display (left side)
+	var landscape_display = Node2D.new()
+	landscape_display.name = "LandscapeDisplay"
+	landscape_display.position = Vector2(viewport_size.x * 0.32, viewport_size.y * 0.5)
+	landscape_display.scale = Vector2(2.2, 2.2)
+	landscape_detail_panel.add_child(landscape_display)
+
+	# Create the painting frame
+	_create_landscape_frame(landscape_display)
+
+	# Create the landscape scene
+	_create_crystal_valleys(landscape_display)
+
+	# Create glowing particles
+	_create_landscape_particles(landscape_display)
+
+	# Text panel (right side)
+	var text_panel = PanelContainer.new()
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.06, 0.05, 0.1, 0.9)
+	style.border_color = Color(0.5, 0.4, 0.6, 0.5)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(12)
+	text_panel.add_theme_stylebox_override("panel", style)
+	text_panel.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
+	text_panel.offset_left = -380
+	text_panel.offset_right = -40
+	text_panel.offset_top = -200
+	text_panel.offset_bottom = 200
+	landscape_detail_panel.add_child(text_panel)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 25)
+	margin.add_theme_constant_override("margin_right", 25)
+	margin.add_theme_constant_override("margin_top", 20)
+	margin.add_theme_constant_override("margin_bottom", 20)
+	text_panel.add_child(margin)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 12)
+	margin.add_child(vbox)
+
+	# Title
+	var title = Label.new()
+	title.text = "Crystal Valleys of Goactora"
+	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_color_override("font_color", Color(0.7, 0.5, 0.9))
+	vbox.add_child(title)
+
+	# Subtitle
+	var subtitle = Label.new()
+	subtitle.text = "Traditional Goactorian Rendering - Artist Unknown"
+	subtitle.add_theme_font_size_override("font_size", 14)
+	subtitle.add_theme_color_override("font_color", Color(0.55, 0.5, 0.65))
+	vbox.add_child(subtitle)
+
+	var sep = HSeparator.new()
+	vbox.add_child(sep)
+
+	# Description
+	var desc = Label.new()
+	desc.text = "A beautiful rendering of the Crystal Valleys back home.\n\nThe bioluminescent forests glow in shades of purple and teal, casting ethereal light across the crystalline formations that gave the valleys their name.\n\nAt dusk, the twin moons rise over the peaks, and the whole landscape comes alive with color.\n\nEvery Goactorian child grows up playing in those glowing groves, chasing light-moths and collecting prismatic pebbles.\n\nYou'll see them again... in 47 years."
+	desc.add_theme_font_size_override("font_size", 15)
+	desc.add_theme_color_override("font_color", Color(0.78, 0.75, 0.85))
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	vbox.add_child(desc)
+
+	# Close button
+	var close_btn = Button.new()
+	close_btn.text = "Close"
+	close_btn.custom_minimum_size = Vector2(120, 45)
+	close_btn.add_theme_font_size_override("font_size", 18)
+	close_btn.pressed.connect(_close_landscape_detail)
+	landscape_detail_panel.add_child(close_btn)
+	close_btn.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	close_btn.offset_left = -160
+	close_btn.offset_right = -40
+	close_btn.offset_top = -70
+	close_btn.offset_bottom = -25
+
+	# Close hint
+	var hint = Label.new()
+	hint.text = "[SPACE or ESC to close]"
+	hint.add_theme_font_size_override("font_size", 12)
+	hint.add_theme_color_override("font_color", Color(0.45, 0.4, 0.55))
+	hint.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	hint.offset_left = 30
+	hint.offset_top = -40
+	hint.offset_bottom = -20
+	landscape_detail_panel.add_child(hint)
+
+	# Fade in
+	landscape_detail_panel.modulate.a = 0.0
+	var tween = create_tween()
+	tween.tween_property(landscape_detail_panel, "modulate:a", 1.0, 0.5)
+
+
+func _create_landscape_frame(parent: Node2D) -> void:
+	# Elegant frame
+	var frame = Polygon2D.new()
+	frame.polygon = PackedVector2Array([
+		Vector2(-90, -70), Vector2(90, -70),
+		Vector2(90, 70), Vector2(-90, 70)
+	])
+	frame.color = Color(0.3, 0.25, 0.35, 0.9)
+	parent.add_child(frame)
+
+	# Inner border
+	var inner = Polygon2D.new()
+	inner.polygon = PackedVector2Array([
+		Vector2(-85, -65), Vector2(85, -65),
+		Vector2(85, 65), Vector2(-85, 65)
+	])
+	inner.color = Color(0.4, 0.35, 0.5, 0.7)
+	parent.add_child(inner)
+
+	# Sky background
+	var sky = Polygon2D.new()
+	sky.polygon = PackedVector2Array([
+		Vector2(-80, -60), Vector2(80, -60),
+		Vector2(80, 60), Vector2(-80, 60)
+	])
+	sky.color = Color(0.08, 0.1, 0.2)
+	parent.add_child(sky)
+
+
+func _create_crystal_valleys(parent: Node2D) -> void:
+	# Mountains in background
+	var mountains = Polygon2D.new()
+	mountains.polygon = PackedVector2Array([
+		Vector2(-80, 20), Vector2(-50, -30), Vector2(-20, -10),
+		Vector2(10, -45), Vector2(40, -15), Vector2(70, -35), Vector2(80, 20)
+	])
+	mountains.color = Color(0.2, 0.15, 0.3)
+	parent.add_child(mountains)
+
+	# Crystal formations
+	var crystal_positions = [
+		Vector2(-60, 10), Vector2(-35, 5), Vector2(-10, 15),
+		Vector2(20, 8), Vector2(45, 12), Vector2(65, 5)
+	]
+
+	for pos in crystal_positions:
+		var crystal = Polygon2D.new()
+		var height = randf_range(20, 40)
+		var width = randf_range(8, 15)
+		crystal.polygon = PackedVector2Array([
+			Vector2(0, -height), Vector2(width/2, 0), Vector2(-width/2, 0)
+		])
+		crystal.position = pos
+		crystal.color = Color(0.5, 0.4, 0.7, 0.8)
+		parent.add_child(crystal)
+
+		# Crystal glow
+		var glow = Polygon2D.new()
+		glow.polygon = PackedVector2Array([
+			Vector2(0, -height - 5), Vector2(width/2 + 3, 3), Vector2(-width/2 - 3, 3)
+		])
+		glow.position = pos
+		glow.color = Color(0.6, 0.5, 0.9, 0.25)
+		parent.add_child(glow)
+
+	# Bioluminescent forest
+	for i in range(12):
+		var tree = Node2D.new()
+		tree.position = Vector2(randf_range(-70, 70), randf_range(25, 55))
+		parent.add_child(tree)
+
+		# Tree trunk
+		var trunk = Polygon2D.new()
+		trunk.polygon = PackedVector2Array([
+			Vector2(-3, 0), Vector2(3, 0), Vector2(2, -20), Vector2(-2, -20)
+		])
+		trunk.color = Color(0.25, 0.2, 0.3)
+		tree.add_child(trunk)
+
+		# Glowing canopy
+		var canopy = Polygon2D.new()
+		canopy.polygon = _create_circle_points(randf_range(10, 18), 8)
+		canopy.position = Vector2(0, -25)
+		# Alternate between purple and teal
+		if i % 2 == 0:
+			canopy.color = Color(0.5, 0.3, 0.6, 0.7)
+		else:
+			canopy.color = Color(0.2, 0.5, 0.5, 0.7)
+		tree.add_child(canopy)
+
+	# Twin moons
+	var moon1 = Polygon2D.new()
+	moon1.polygon = _create_circle_points(12, 16)
+	moon1.position = Vector2(50, -45)
+	moon1.color = Color(0.9, 0.85, 0.7, 0.9)
+	parent.add_child(moon1)
+
+	var moon2 = Polygon2D.new()
+	moon2.polygon = _create_circle_points(8, 12)
+	moon2.position = Vector2(35, -38)
+	moon2.color = Color(0.7, 0.75, 0.9, 0.8)
+	parent.add_child(moon2)
+
+	# Ground
+	var ground = Polygon2D.new()
+	ground.polygon = PackedVector2Array([
+		Vector2(-80, 60), Vector2(80, 60),
+		Vector2(80, 45), Vector2(-80, 50)
+	])
+	ground.color = Color(0.15, 0.12, 0.2)
+	parent.add_child(ground)
+
+
+func _create_landscape_particles(parent: Node2D) -> void:
+	# Floating light particles (light-moths)
+	for i in range(20):
+		var particle = Polygon2D.new()
+		particle.name = "LightMoth" + str(i)
+		var size = randf_range(1.5, 3)
+		particle.polygon = _create_circle_points(size, 5)
+		particle.position = Vector2(randf_range(-75, 75), randf_range(-55, 55))
+		# Alternate colors
+		if i % 3 == 0:
+			particle.color = Color(0.6, 0.4, 0.8, randf_range(0.3, 0.6))
+		elif i % 3 == 1:
+			particle.color = Color(0.3, 0.7, 0.6, randf_range(0.3, 0.6))
+		else:
+			particle.color = Color(0.8, 0.7, 0.4, randf_range(0.3, 0.6))
+		parent.add_child(particle)
+
+
+func _close_landscape_detail() -> void:
+	if not landscape_detail_panel:
+		return
+
+	var tween = create_tween()
+	tween.tween_property(landscape_detail_panel, "modulate:a", 0.0, 0.3)
+	tween.tween_callback(_cleanup_landscape_detail)
+
+
+func _cleanup_landscape_detail() -> void:
+	if landscape_detail_panel:
+		landscape_detail_panel.queue_free()
+		landscape_detail_panel = null
+	in_dialogue = false
+
+
+# -----------------------------------------------------------------------------
+# DETAIL VIEW ANIMATIONS (called from _process)
+# -----------------------------------------------------------------------------
+
+func _update_detail_views(delta: float) -> void:
+	if plant_detail_panel:
+		_update_plant_detail(delta)
+	if family_portrait_panel:
+		_update_portrait_detail(delta)
+	if landscape_detail_panel:
+		_update_landscape_detail(delta)
+
+
+func _update_plant_detail(delta: float) -> void:
+	plant_detail_time += delta
+
+	var display = plant_detail_panel.get_node_or_null("PlantDisplay")
+	if not display:
+		return
+
+	# Animate vines swaying
+	for vine_data in plant_vines:
+		var container = vine_data["container"] as Node2D
+		if container:
+			var sway = sin(plant_detail_time * 1.5 + vine_data["phase"]) * 0.08
+			container.rotation = vine_data["base_angle"] * 0.1 + sway
+
+	# Animate spores floating
+	for i in range(15):
+		var spore = display.get_node_or_null("Spore" + str(i))
+		if spore:
+			spore.position.y += sin(plant_detail_time * 2.0 + i * 0.5) * delta * 3
+			spore.position.x += cos(plant_detail_time * 1.2 + i * 0.7) * delta * 2
+			spore.color.a = 0.35 + sin(plant_detail_time * 3.0 + i) * 0.25
+
+	# Animate glowing tips
+	for vine_data in plant_vines:
+		var container = vine_data["container"] as Node2D
+		if container:
+			for child in container.get_children():
+				if child.name == "TipGlow":
+					child.color.a = 0.5 + sin(plant_detail_time * 4.0 + vine_data["phase"]) * 0.3
+
+
+func _update_portrait_detail(delta: float) -> void:
+	portrait_detail_time += delta
+
+	var display = family_portrait_panel.get_node_or_null("PortraitDisplay")
+	if not display:
+		return
+
+	# Animate holographic particles
+	for i in range(12):
+		var particle = display.get_node_or_null("HoloParticle" + str(i))
+		if particle:
+			# Drift upward slowly
+			particle.position.y -= delta * 5
+			if particle.position.y < -85:
+				particle.position.y = 65
+				particle.position.x = randf_range(-60, 60)
+
+			# Pulse alpha
+			particle.color.a = 0.25 + sin(portrait_detail_time * 2.5 + i * 0.8) * 0.2
+
+			# Slight horizontal drift
+			particle.position.x += sin(portrait_detail_time + i) * delta * 2
+
+
+func _update_landscape_detail(delta: float) -> void:
+	landscape_detail_time += delta
+
+	var display = landscape_detail_panel.get_node_or_null("LandscapeDisplay")
+	if not display:
+		return
+
+	# Animate light-moths
+	for i in range(20):
+		var moth = display.get_node_or_null("LightMoth" + str(i))
+		if moth:
+			# Gentle floating movement
+			moth.position.x += sin(landscape_detail_time * 1.5 + i * 0.6) * delta * 8
+			moth.position.y += cos(landscape_detail_time * 1.2 + i * 0.8) * delta * 6
+
+			# Wrap around
+			if moth.position.x > 80:
+				moth.position.x = -80
+			elif moth.position.x < -80:
+				moth.position.x = 80
+
+			# Pulse
+			moth.color.a = 0.3 + sin(landscape_detail_time * 3.5 + i * 0.5) * 0.25

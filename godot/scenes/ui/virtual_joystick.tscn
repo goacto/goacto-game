@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://c8vj2qk4mpnxl"]
+[gd_scene format=3 uid="uid://c8vj2qk4mpnxl"]
 
 [ext_resource type="Script" path="res://scenes/ui/virtual_joystick.gd" id="1_joystick"]
 
