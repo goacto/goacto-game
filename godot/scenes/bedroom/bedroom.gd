@@ -709,6 +709,7 @@ func _show_dialogue(title: String, text: String, voice_path: String = "") -> voi
 	dialogue_panel.visible = true
 	in_dialogue = true
 	interaction_prompt.visible = false
+	_update_mobile_controls_visibility()
 
 	# Play voice if provided
 	if voice_path != "":
@@ -720,6 +721,19 @@ func _show_dialogue(title: String, text: String, voice_path: String = "") -> voi
 func _close_dialogue() -> void:
 	dialogue_panel.visible = false
 	in_dialogue = false
+	_update_mobile_controls_visibility()
+
+
+func _update_mobile_controls_visibility() -> void:
+	if not virtual_joystick:
+		return
+
+	# Hide mobile controls when any panel is open
+	var should_show = not in_dialogue
+	if virtual_joystick.has_method("set_controls_visible"):
+		virtual_joystick.set_controls_visible(should_show)
+	else:
+		virtual_joystick.visible = should_show
 
 
 func _enter_mindscape() -> void:

@@ -1,9 +1,10 @@
 extends Control
 class_name VirtualJoystick
-## Touch-based virtual joystick for mobile controls
+## Touch-based virtual joystick + interaction button for mobile controls
 
 signal joystick_input(direction: Vector2)
 signal joystick_released
+signal interact_pressed
 
 @export var joystick_radius: float = 75.0
 @export var knob_radius: float = 30.0
@@ -15,6 +16,10 @@ var _touch_index: int = -1
 var _joystick_center: Vector2 = Vector2.ZERO
 var _current_output: Vector2 = Vector2.ZERO
 
+# Interaction button
+var interact_button: Control = null
+var _interact_touch_index: int = -1
+
 @onready var base: Polygon2D = $Base
 @onready var knob: Polygon2D = $Knob
 
@@ -22,6 +27,7 @@ var _current_output: Vector2 = Vector2.ZERO
 func _ready() -> void:
 	_joystick_center = size / 2
 	_create_joystick_graphics()
+	_create_interact_button()
 	_reset_knob_position()
 
 	# Hide on desktop
@@ -72,6 +78,7 @@ func _input(event: InputEvent) -> void:
 		return
 
 	if event is InputEventScreenTouch:
+		_handle_interact_touch(event)
 		_handle_touch(event)
 	elif event is InputEventScreenDrag:
 		_handle_drag(event)
@@ -152,3 +159,93 @@ func hide_joystick() -> void:
 	var tween = create_tween()
 	tween.tween_property(self, "modulate:a", 0.0, 0.2)
 	tween.tween_callback(func(): visible = false)
+
+
+func _create_interact_button() -> void:
+	# Create interact button on the right side of the screen
+	interact_button = Control.new()
+	interact_button.name = "InteractButton"
+	interact_button.custom_minimum_size = Vector2(80, 80)
+	interact_button.size = Vector2(80, 80)
+
+	# Position in bottom-right corner
+	var viewport_size = get_viewport_rect().size
+	interact_button.position = Vector2(viewport_size.x - 130, viewport_size.y - 130)
+
+	# Create button background
+	var bg = Polygon2D.new()
+	bg.name = "ButtonBg"
+	bg.polygon = _create_circle(40, 24)
+	bg.position = Vector2(40, 40)
+	bg.color = Color(0.25, 0.35, 0.5, 0.7)
+	interact_button.add_child(bg)
+
+	# Create button glow
+	var glow = Polygon2D.new()
+	glow.name = "ButtonGlow"
+	glow.polygon = _create_circle(45, 24)
+	glow.position = Vector2(40, 40)
+	glow.color = Color(0.4, 0.5, 0.7, 0.3)
+	glow.z_index = -1
+	interact_button.add_child(glow)
+
+	# Create "A" label or hand icon
+	var label = Label.new()
+	label.name = "ButtonLabel"
+	label.text = "A"
+	label.add_theme_font_size_override("font_size", 32)
+	label.add_theme_color_override("font_color", Color(0.9, 0.9, 1.0))
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.position = Vector2(0, 10)
+	label.size = Vector2(80, 60)
+	interact_button.add_child(label)
+
+	get_parent().call_deferred("add_child", interact_button)
+
+
+func _handle_interact_touch(event: InputEventScreenTouch) -> void:
+	if not interact_button or not interact_button.visible:
+		return
+
+	var button_rect = Rect2(interact_button.global_position, interact_button.size)
+
+	if event.pressed:
+		if button_rect.has_point(event.position):
+			_interact_touch_index = event.index
+			# Visual feedback
+			var bg = interact_button.get_node_or_null("ButtonBg") as Polygon2D
+			if bg:
+				bg.color = Color(0.4, 0.5, 0.7, 0.9)
+			interact_pressed.emit()
+			# Simulate keyboard interact
+			var input_event = InputEventAction.new()
+			input_event.action = "ui_accept"
+			input_event.pressed = true
+			Input.parse_input_event(input_event)
+	else:
+		if event.index == _interact_touch_index:
+			_interact_touch_index = -1
+			# Reset visual
+			var bg = interact_button.get_node_or_null("ButtonBg") as Polygon2D
+			if bg:
+				bg.color = Color(0.25, 0.35, 0.5, 0.7)
+
+
+## Call this when UI panels open to hide mobile controls
+func set_controls_visible(show: bool) -> void:
+	if show:
+		show_joystick()
+		if interact_button:
+			interact_button.visible = true
+	else:
+		hide_joystick()
+		if interact_button:
+			interact_button.visible = false
+
+
+## Update interact button position when viewport changes
+func update_button_position() -> void:
+	if interact_button:
+		var viewport_size = get_viewport_rect().size
+		interact_button.position = Vector2(viewport_size.x - 130, viewport_size.y - 130)

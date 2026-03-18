@@ -1940,6 +1940,7 @@ func _show_dialogue(title: String, text: String, callback: Callable = Callable()
 	_hide_interaction_prompt()
 	dialogue_panel.visible = true
 	dialogue_callback = callback
+	_update_mobile_controls_visibility()
 
 	# Play voice if provided
 	if voice_path != "":
@@ -1961,11 +1962,13 @@ func _close_dialogue_with_callback() -> void:
 	if dialogue_callback.is_valid():
 		dialogue_callback.call()
 		dialogue_callback = Callable()
+	_update_mobile_controls_visibility()
 
 
 func _close_dialogue() -> void:
 	dialogue_panel.visible = false
 	dialogue_callback = Callable()
+	_update_mobile_controls_visibility()
 
 
 var selected_focus_difficulty: int = 0  # 0 = EASY, 1 = HARD
@@ -4147,15 +4150,30 @@ func _clear_zone_body() -> void:
 func _close_zone() -> void:
 	zone_panel.visible = false
 	in_zone_panel = false
+	_update_mobile_controls_visibility()
 
 
 func _open_pause_menu() -> void:
 	pause_menu.visible = true
 	_show_character_tab()
+	_update_mobile_controls_visibility()
 
 
 func _close_pause_menu() -> void:
 	pause_menu.visible = false
+	_update_mobile_controls_visibility()
+
+
+func _update_mobile_controls_visibility() -> void:
+	if not virtual_joystick:
+		return
+
+	# Hide mobile controls when any panel is open
+	var should_show = not (zone_panel.visible or dialogue_panel.visible or pause_menu.visible)
+	if virtual_joystick.has_method("set_controls_visible"):
+		virtual_joystick.set_controls_visible(should_show)
+	else:
+		virtual_joystick.visible = should_show
 
 
 # ============ PAUSE MENU TABS ============
@@ -6981,18 +6999,20 @@ func _update_onboarding_slide() -> void:
 
 	var slide = ONBOARDING_SLIDES[onboarding_slide_index]
 
-	# Find the VBox - it's inside MarginContainer
-	var vbox: VBoxContainer = null
-	for child in onboarding_panel.get_children():
-		if child is MarginContainer:
-			for inner in child.get_children():
-				if inner is VBoxContainer:
-					vbox = inner
-					break
-			break
+	# Find the VBox using path-based lookup (more reliable)
+	var vbox = onboarding_panel.get_node_or_null("MarginContainer/VBox") as VBoxContainer
+	if not vbox:
+		# Fallback: try searching by type
+		for child in onboarding_panel.get_children():
+			if child is MarginContainer:
+				for inner in child.get_children():
+					if inner is VBoxContainer:
+						vbox = inner
+						break
+				break
 
 	if not vbox:
-		push_error("[MindscapeHub] Could not find VBox in onboarding panel")
+		push_warning("[MindscapeHub] Could not find VBox in onboarding panel - skipping slide update")
 		return
 
 	var title = vbox.get_node_or_null("SlideTitle")

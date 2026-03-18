@@ -153,8 +153,8 @@
 - [ ] Save data compression
 
 ### Platform Support
-- [ ] Mobile touch controls optimization
-- [ ] iOS/Android export setup
+- [x] Mobile touch controls optimization (interact button, auto-hide on panels)
+- [x] iOS/Android export setup (export presets configured)
 - [ ] Desktop window management
 - [ ] Steam/itch.io integration
 
@@ -162,9 +162,9 @@
 
 ## Known Bugs to Fix
 
-- [ ] Mindscape onboarding panel node lookup error (mitigated)
-- [ ] Check for null references in animation callbacks
-- [ ] Verify all voice file paths exist before playing
+- [x] Mindscape onboarding panel node lookup error (fixed: path-based lookup with fallback)
+- [x] Check for null references in animation callbacks (verified: is_instance_valid used)
+- [x] Verify all voice file paths exist before playing (verified: ResourceLoader.exists checks)
 - [x] TextEdit autowrap parser error (fixed: use TextEdit.LINE_WRAPPING_BOUNDARY)
 - [x] Southern Peaks invisible terrain (fixed: container ordering, not negative z_index)
 - [x] Portal transition off-center (fixed: dynamic viewport centering)
