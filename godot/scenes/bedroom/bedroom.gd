@@ -35,6 +35,8 @@ var is_muted: bool = false
 # Player movement
 var player_speed: float = 280.0
 var player_bounds: Rect2 = Rect2(-680, -540, 1360, 1080)  # Expanded plus-shaped bedroom
+var virtual_joystick: Control = null
+var joystick_input: Vector2 = Vector2.ZERO
 
 # Camera
 var camera_zoom: float = 0.85
@@ -247,6 +249,9 @@ func _ready() -> void:
 		_show_dialogue("Console Ready", "You have Great-Elder Zyx's Mindscape Console!\n\n*The console hums eagerly in your inventory*\n\nFind the pedestal in your room to place it.")
 		GameManager.player_data.erase("needs_console_placement")
 
+	# Setup virtual joystick for mobile
+	_setup_virtual_joystick()
+
 	print("[Bedroom] Goacto's cabin ready - Welcome aboard the Stellar Wanderer")
 
 
@@ -433,6 +438,7 @@ func _input(event: InputEvent) -> void:
 func _handle_movement(delta: float) -> void:
 	var input_dir = Vector2.ZERO
 
+	# Check keyboard input
 	if Input.is_action_pressed("move_up"):
 		input_dir.y -= 1
 	if Input.is_action_pressed("move_down"):
@@ -441,6 +447,10 @@ func _handle_movement(delta: float) -> void:
 		input_dir.x -= 1
 	if Input.is_action_pressed("move_right"):
 		input_dir.x += 1
+
+	# Add virtual joystick input (for mobile)
+	if joystick_input != Vector2.ZERO:
+		input_dir = joystick_input
 
 	if input_dir != Vector2.ZERO:
 		input_dir = input_dir.normalized()
@@ -500,6 +510,33 @@ func _clamp_to_plus_bounds(pos: Vector2) -> Vector2:
 		result.y = clamp(pos.y, -180, 180)
 
 	return result
+
+
+func _setup_virtual_joystick() -> void:
+	# Only show on mobile devices
+	if not MobileUIManager.is_mobile:
+		return
+
+	# Load and instantiate the virtual joystick
+	var joystick_scene = load("res://scenes/ui/virtual_joystick.tscn")
+	if joystick_scene:
+		virtual_joystick = joystick_scene.instantiate()
+		virtual_joystick.name = "VirtualJoystick"
+		add_child(virtual_joystick)
+
+		# Connect joystick signals
+		if virtual_joystick.has_signal("joystick_input"):
+			virtual_joystick.joystick_input.connect(_on_joystick_input)
+		if virtual_joystick.has_signal("joystick_released"):
+			virtual_joystick.joystick_released.connect(_on_joystick_released)
+
+
+func _on_joystick_input(direction: Vector2) -> void:
+	joystick_input = direction
+
+
+func _on_joystick_released() -> void:
+	joystick_input = Vector2.ZERO
 
 
 func _update_camera() -> void:

@@ -72,6 +72,8 @@ var is_muted: bool = false
 
 # Player movement
 var player_speed: float = 320.0
+var virtual_joystick: Control = null
+var joystick_input: Vector2 = Vector2.ZERO
 # Diamond platform bounds (half-widths) - expanded 65% for more exploration
 var platform_half_width: float = 1400.0  # X extent
 var platform_half_height: float = 700.0  # Y extent
@@ -259,6 +261,9 @@ func _ready() -> void:
 	# Check daily login and show rewards
 	_check_daily_login()
 
+	# Setup virtual joystick for mobile
+	_setup_virtual_joystick()
+
 	# Update companion based on evolution
 	_update_companion_evolution_visual()
 
@@ -433,8 +438,10 @@ func _process(delta: float) -> void:
 	_check_zone_portal_proximity()
 	_check_exit_crystal_proximity()
 
-	# WASD movement
+	# WASD movement + virtual joystick
 	var input_dir = Vector2.ZERO
+
+	# Check keyboard input
 	if Input.is_action_pressed("move_up"):
 		input_dir.y -= 1
 	if Input.is_action_pressed("move_down"):
@@ -443,6 +450,10 @@ func _process(delta: float) -> void:
 		input_dir.x -= 1
 	if Input.is_action_pressed("move_right"):
 		input_dir.x += 1
+
+	# Add virtual joystick input (for mobile)
+	if joystick_input != Vector2.ZERO:
+		input_dir = joystick_input
 
 	if input_dir != Vector2.ZERO:
 		input_dir = input_dir.normalized()
@@ -776,6 +787,33 @@ func _animate_zones() -> void:
 			left_crystal.modulate.a = 0.75 + sin(crystal_pulse_time * 2.0) * 0.15
 		if right_crystal:
 			right_crystal.modulate.a = 0.75 + sin(crystal_pulse_time * 2.0 + PI) * 0.15
+
+
+func _setup_virtual_joystick() -> void:
+	# Only show on mobile devices
+	if not MobileUIManager.is_mobile:
+		return
+
+	# Load and instantiate the virtual joystick
+	var joystick_scene = load("res://scenes/ui/virtual_joystick.tscn")
+	if joystick_scene:
+		virtual_joystick = joystick_scene.instantiate()
+		virtual_joystick.name = "VirtualJoystick"
+		add_child(virtual_joystick)
+
+		# Connect joystick signals
+		if virtual_joystick.has_signal("joystick_input"):
+			virtual_joystick.joystick_input.connect(_on_joystick_input)
+		if virtual_joystick.has_signal("joystick_released"):
+			virtual_joystick.joystick_released.connect(_on_joystick_released)
+
+
+func _on_joystick_input(direction: Vector2) -> void:
+	joystick_input = direction
+
+
+func _on_joystick_released() -> void:
+	joystick_input = Vector2.ZERO
 
 
 func _setup_progress_indicators() -> void:
