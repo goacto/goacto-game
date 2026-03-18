@@ -1493,7 +1493,7 @@ func claim_daily_reward(day: int) -> bool:
 
 	# Grant XP
 	if reward.has("amount"):
-		add_aspect_xp("all", reward.amount)
+		add_aspect_experience("all", reward.amount)
 
 	# Handle special bonuses
 	if reward.has("bonus"):

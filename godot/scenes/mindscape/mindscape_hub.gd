@@ -3517,6 +3517,13 @@ func _filter_habits_by_tag(tag: String) -> void:
 
 func _select_habit_domain(domain_id: int) -> void:
 	_selected_habit_domain = domain_id
+	# Update domain button states
+	var grid = zone_body.find_child("DomainGrid", true, false)
+	if grid:
+		for i in range(6):
+			var btn = grid.get_node_or_null("Domain" + str(i) + "Btn")
+			if btn:
+				btn.button_pressed = (i == domain_id)
 
 
 func _select_habit_icon(icon_key: String) -> void:
@@ -3527,14 +3534,6 @@ func _select_habit_icon(icon_key: String) -> void:
 		for child in icon_grid.get_children():
 			if child is Button:
 				child.button_pressed = (child.name == "Icon_" + icon_key)
-
-	# Update button states
-	var grid = zone_body.find_child("DomainGrid", true, false)
-	if grid:
-		for i in range(6):
-			var btn = grid.get_node_or_null("Domain" + str(i) + "Btn")
-			if btn:
-				btn.button_pressed = (i == domain_id)
 
 
 func _create_habit_from_form() -> void:
@@ -13456,7 +13455,7 @@ func _show_milestone_celebration(milestone: Dictionary) -> void:
 	btn_container.add_child(continue_btn)
 
 	# Grant milestone XP
-	GameManager.add_aspect_xp("all", milestone.get("xp", 0))
+	GameManager.add_aspect_experience("all", milestone.get("xp", 0))
 
 	# Fade in with celebration
 	milestone_panel.modulate.a = 0.0
