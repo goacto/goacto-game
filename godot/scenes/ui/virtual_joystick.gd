@@ -27,12 +27,14 @@ var _interact_touch_index: int = -1
 func _ready() -> void:
 	_joystick_center = size / 2
 	_create_joystick_graphics()
-	_create_interact_button()
 	_reset_knob_position()
 
-	# Hide on desktop
+	# Hide on desktop, create interact button only on mobile
 	if not MobileUIManager.is_mobile:
 		visible = false
+	else:
+		# Defer button creation to ensure parent is ready
+		call_deferred("_create_interact_button")
 
 
 func _create_joystick_graphics() -> void:
@@ -162,6 +164,10 @@ func hide_joystick() -> void:
 
 
 func _create_interact_button() -> void:
+	# Only create on mobile
+	if not MobileUIManager.is_mobile:
+		return
+
 	# Create interact button on the right side of the screen
 	interact_button = Control.new()
 	interact_button.name = "InteractButton"
@@ -201,7 +207,10 @@ func _create_interact_button() -> void:
 	label.size = Vector2(80, 60)
 	interact_button.add_child(label)
 
-	get_parent().call_deferred("add_child", interact_button)
+	# Add to parent (the scene containing the joystick)
+	var parent = get_parent()
+	if parent:
+		parent.add_child(interact_button)
 
 
 func _handle_interact_touch(event: InputEventScreenTouch) -> void:
