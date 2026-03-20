@@ -82,7 +82,8 @@ color = Color(0.8, 0.95, 1, 0.35)
 polygon = PackedVector2Array(-1.5, 0, 0, -2, 1.5, 0, 0, 2)
 
 [node name="Window" type="Node2D" parent="GameWorld/IsometricBase"]
-position = Vector2(-450, 0)
+z_index = 1
+position = Vector2(-450, -120)
 
 [node name="Frame" type="Polygon2D" parent="GameWorld/IsometricBase/Window"]
 color = Color(0.25, 0.22, 0.3, 1)

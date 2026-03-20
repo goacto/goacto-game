@@ -5,6 +5,9 @@ signal device_orientation_changed(is_portrait: bool)
 signal screen_size_changed(size: Vector2)
 signal platform_detected(platform: String)
 
+# Debug flag - set to true in editor to test mobile controls on desktop
+var DEBUG_FORCE_MOBILE: bool = false
+
 # Platform detection
 enum Platform { DESKTOP, IOS, ANDROID, WEB }
 var current_platform: Platform = Platform.DESKTOP
@@ -46,6 +49,14 @@ func _ready() -> void:
 
 
 func _detect_platform() -> void:
+	# Debug override for testing mobile controls on desktop
+	if DEBUG_FORCE_MOBILE:
+		current_platform = Platform.ANDROID  # Simulate Android
+		is_mobile = true
+		print("[MobileUIManager] DEBUG: Forcing mobile mode for testing")
+		platform_detected.emit("android (debug)")
+		return
+
 	var os_name = OS.get_name()
 
 	match os_name:
@@ -276,3 +287,18 @@ func get_device_info() -> Dictionary:
 		"ui_scale": ui_scale,
 		"safe_area": safe_area
 	}
+
+
+## Toggle mobile mode at runtime (for debugging)
+func toggle_mobile_mode() -> void:
+	is_mobile = not is_mobile
+	virtual_joystick_enabled = is_mobile
+	print("[MobileUIManager] Mobile mode: ", is_mobile)
+	platform_detected.emit(_get_platform_string() + (" (forced)" if is_mobile and current_platform == Platform.DESKTOP else ""))
+
+
+## Set mobile mode explicitly (for debugging)
+func set_mobile_mode(enabled: bool) -> void:
+	is_mobile = enabled
+	virtual_joystick_enabled = enabled
+	print("[MobileUIManager] Mobile mode set to: ", enabled)

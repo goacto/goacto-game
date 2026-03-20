@@ -153,10 +153,11 @@ func _handle_movement(delta: float) -> void:
 	if input_dir != Vector2.ZERO:
 		input_dir = input_dir.normalized()
 
+		# Isometric movement (W=up-left, S=down-right, A=down-left, D=up-right)
 		var iso_factor = _get_iso_movement_factor()
 		var iso_movement = Vector2(
-			input_dir.x - input_dir.y * iso_factor,
-			(input_dir.x + input_dir.y) * iso_factor
+			input_dir.x + input_dir.y * iso_factor,
+			(input_dir.y - input_dir.x) * iso_factor
 		)
 
 		var new_pos = player.position + iso_movement * player_speed * delta

@@ -627,10 +627,10 @@ func _process(delta: float) -> void:
 	if input_dir != Vector2.ZERO:
 		input_dir = input_dir.normalized()
 
-		# Convert cartesian to isometric movement
+		# Isometric movement (W=up-left, S=down-right, A=down-left, D=up-right)
 		var iso_movement = Vector2(
-			input_dir.x - input_dir.y,
-			(input_dir.x + input_dir.y) * 0.5
+			input_dir.x + input_dir.y,
+			(input_dir.y - input_dir.x) * 0.5
 		)
 
 		# Move player

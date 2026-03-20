@@ -156,7 +156,7 @@ const INTERACTIVE_OBJECTS = {
 # Object positions for proximity detection (expanded plus-shaped layout)
 var object_positions: Dictionary = {
 	# Left wing
-	"Window": Vector2(-450, 0),
+	"Window": Vector2(-450, -120),
 	"Door": Vector2(-550, 100),
 	# Top wing
 	"Plant": Vector2(-80, -420),
@@ -455,16 +455,16 @@ func _handle_movement(delta: float) -> void:
 	if input_dir != Vector2.ZERO:
 		input_dir = input_dir.normalized()
 
-		# Convert to isometric movement
+		# Convert to isometric movement (W=up-left, S=down-right, A=down-left, D=up-right)
 		var iso_movement = Vector2(
-			input_dir.x - input_dir.y,
-			(input_dir.x + input_dir.y) * 0.5
+			input_dir.x + input_dir.y,
+			(input_dir.y - input_dir.x) * 0.5
 		)
 
 		var new_pos = player.position + iso_movement * player_speed * delta
 
-		# Clamp to plus-shaped room bounds
-		new_pos = _clamp_to_plus_bounds(new_pos)
+		# Clamp to plus-shaped room bounds (pass current position to track region)
+		new_pos = _clamp_to_plus_bounds(new_pos, player.position)
 
 		player.position = new_pos
 
@@ -487,7 +487,7 @@ func _play_sfx(sfx_path: String, volume_db: float = 0.0) -> void:
 			audio.play_sfx(stream, volume_db)
 
 
-func _clamp_to_plus_bounds(pos: Vector2) -> Vector2:
+func _clamp_to_plus_bounds(pos: Vector2, current_pos: Vector2 = Vector2.ZERO) -> Vector2:
 	# Plus-shaped floor bounds (matching the floor polygon)
 	# Top arm: x from -180 to 180, y from -540 to -180
 	# Center bar: x from -680 to 680, y from -180 to 180
@@ -495,31 +495,49 @@ func _clamp_to_plus_bounds(pos: Vector2) -> Vector2:
 
 	var result = pos
 
-	# Check which region the player is trying to enter
-	if pos.y < -180:
-		# Trying to enter top arm
-		if pos.x >= -180 and pos.x <= 180:
-			# Within top arm x bounds - allow entry
-			result.x = clamp(pos.x, -180, 180)
-			result.y = clamp(pos.y, -540, -180)
-		else:
-			# Outside top arm x bounds - block at center bar edge
-			result.x = clamp(pos.x, -680, 680)
-			result.y = -180
-	elif pos.y > 180:
-		# Trying to enter bottom arm
-		if pos.x >= -180 and pos.x <= 180:
-			# Within bottom arm x bounds - allow entry
-			result.x = clamp(pos.x, -180, 180)
-			result.y = clamp(pos.y, 180, 540)
-		else:
-			# Outside bottom arm x bounds - block at center bar edge
-			result.x = clamp(pos.x, -680, 680)
-			result.y = 180
-	else:
-		# Center bar - allow full width
-		result.x = clamp(pos.x, -680, 680)
-		result.y = clamp(pos.y, -180, 180)
+	# Determine which region the player is currently in
+	var current_region = "center"
+	if current_pos.y < -180 and current_pos.x >= -180 and current_pos.x <= 180:
+		current_region = "top"
+	elif current_pos.y > 180 and current_pos.x >= -180 and current_pos.x <= 180:
+		current_region = "bottom"
+
+	# Clamp based on current region and desired position
+	match current_region:
+		"top":
+			# In top arm - can move within arm or transition to center
+			if pos.y >= -180:
+				# Moving into center bar - allow full x
+				result.x = clamp(pos.x, -680, 680)
+				result.y = clamp(pos.y, -180, 180)
+			else:
+				# Staying in top arm - narrow x
+				result.x = clamp(pos.x, -180, 180)
+				result.y = clamp(pos.y, -540, -180)
+		"bottom":
+			# In bottom arm - can move within arm or transition to center
+			if pos.y <= 180:
+				# Moving into center bar - allow full x
+				result.x = clamp(pos.x, -680, 680)
+				result.y = clamp(pos.y, -180, 180)
+			else:
+				# Staying in bottom arm - narrow x
+				result.x = clamp(pos.x, -180, 180)
+				result.y = clamp(pos.y, 180, 540)
+		"center":
+			# In center bar - can move anywhere valid
+			if pos.y < -180 and pos.x >= -180 and pos.x <= 180:
+				# Can enter top arm
+				result.x = clamp(pos.x, -180, 180)
+				result.y = clamp(pos.y, -540, -180)
+			elif pos.y > 180 and pos.x >= -180 and pos.x <= 180:
+				# Can enter bottom arm
+				result.x = clamp(pos.x, -180, 180)
+				result.y = clamp(pos.y, 180, 540)
+			else:
+				# Stay in center bar
+				result.x = clamp(pos.x, -680, 680)
+				result.y = clamp(pos.y, -180, 180)
 
 	return result
 
@@ -1293,20 +1311,25 @@ func _start_wakeup_sequence() -> void:
 	wakeup_phase = 1
 	wakeup_timer = 0.0
 
+	# Hide all interactive labels and UI during wake-up transition
+	_set_interactive_labels_visible(false)
+	control_hints.visible = false
+
 	# Position player in bed (lying down)
 	var bed_pos = object_positions.get("Bed", Vector2(-220, 200))
 	player.position = bed_pos + Vector2(0, -20)
-	player.modulate.a = 1.0  # Player visible immediately for movement
-	control_hints.visible = true  # Show controls immediately
+	player.modulate.a = 1.0
 
-	# Create fade-in overlay (black screen)
+	# Create fade-in overlay (black screen) - ensure it's on top
 	wakeup_overlay = ColorRect.new()
 	wakeup_overlay.name = "WakeupOverlay"
 	wakeup_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
 	wakeup_overlay.color = Color(0, 0, 0, 1)
+	wakeup_overlay.z_index = 100  # Ensure overlay is above everything
 	add_child(wakeup_overlay)
+	move_child(wakeup_overlay, -1)  # Move to end (render last/on top)
 
-	# Create wake-up text
+	# Create wake-up text (above overlay)
 	wakeup_text = Label.new()
 	wakeup_text.name = "WakeupText"
 	wakeup_text.text = "..."
@@ -1319,6 +1342,7 @@ func _start_wakeup_sequence() -> void:
 	wakeup_text.offset_right = 200
 	wakeup_text.offset_top = -50
 	wakeup_text.offset_bottom = 50
+	wakeup_text.z_index = 101  # Above overlay
 	add_child(wakeup_text)
 
 	_update_camera()
@@ -1381,6 +1405,9 @@ func _finish_wakeup() -> void:
 	wakeup_phase = 0
 	control_hints.visible = true
 
+	# Show all interactive labels again
+	_set_interactive_labels_visible(true)
+
 	# Clean up any remaining UI
 	if wakeup_overlay:
 		wakeup_overlay.queue_free()
@@ -1390,6 +1417,29 @@ func _finish_wakeup() -> void:
 		wakeup_text = null
 
 	print("[Bedroom] Wake-up sequence complete")
+
+
+## Hide/show all interactive object labels (used during wake-up transition)
+func _set_interactive_labels_visible(show: bool) -> void:
+	if not isometric_base:
+		return
+
+	# List of label node paths within IsometricBase
+	var label_paths = [
+		"Console/ConsoleLabel",
+		"Bed/BedLabel",
+		"Window/WindowLabel",
+		"Bookshelf/ShelfLabel",
+		"Plant/PlantLabel",
+		"Door/DoorLabel",
+		"Closet/Label",
+		"Mirror/Label"
+	]
+
+	for path in label_paths:
+		var label = isometric_base.get_node_or_null(path)
+		if label:
+			label.visible = show
 
 
 # =============================================================================

@@ -35,6 +35,8 @@ Thumbs.db
 # Build outputs
 builds/
 export/
+build/web/*
+!build/web/.gitkeep
 *.pck
 *.zip
 
