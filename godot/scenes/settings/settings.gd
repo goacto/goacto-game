@@ -118,6 +118,9 @@ func _ready() -> void:
 	# Build cutscene theater section
 	_build_cutscene_theater()
 
+	# Build feedback section
+	_build_feedback_section()
+
 	print("[Settings] Ready")
 
 
@@ -600,3 +603,146 @@ func _play_cutscene(cutscene_id: String) -> void:
 	GameManager.player_data["pending_cutscene"] = cutscene_id
 	GameManager.player_data["cutscene_replay_mode"] = true  # Return to previous scene after
 	GameManager.goto_scene("res://scenes/cutscene/cutscene.tscn")
+
+
+# =============================================================================
+# FEEDBACK SYSTEM
+# =============================================================================
+
+# Google Form URL for feedback
+const GOOGLE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdSNUA6MVx7aP-uOkIk-VHGYg6knh9GOow_lD5Pm9FzDryW7w/viewform"
+
+# Entry IDs for pre-filling
+const FORM_ENTRY_TYPE = "entry.571787797"      # Bug Report / Feature Request
+const FORM_ENTRY_DESC = "entry.1442389502"     # Description
+const FORM_ENTRY_DEVICE = "entry.2028626144"   # Platform/Browser
+
+var feedback_panel: PanelContainer = null
+
+
+func _build_feedback_section() -> void:
+	var vbox = $Panel/Margin/ScrollContainer/VBox
+	if not vbox:
+		return
+
+	# Create feedback section
+	var section = VBoxContainer.new()
+	section.name = "FeedbackSection"
+
+	# Section title
+	var title = Label.new()
+	title.text = "Feedback & Support"
+	title.add_theme_font_size_override("font_size", 18)
+	title.add_theme_color_override("font_color", Color(0.9, 0.85, 0.7))
+	section.add_child(title)
+
+	# Spacer
+	var spacer = Control.new()
+	spacer.custom_minimum_size.y = 10
+	section.add_child(spacer)
+
+	# Buttons row
+	var btn_row = HBoxContainer.new()
+	btn_row.add_theme_constant_override("separation", 15)
+
+	# Bug Report button
+	var bug_btn = Button.new()
+	bug_btn.text = "Report Bug"
+	bug_btn.custom_minimum_size = Vector2(120, 40)
+	bug_btn.pressed.connect(_show_feedback_form.bind("bug"))
+	btn_row.add_child(bug_btn)
+
+	# Feature Request button
+	var feature_btn = Button.new()
+	feature_btn.text = "Request Feature"
+	feature_btn.custom_minimum_size = Vector2(140, 40)
+	feature_btn.pressed.connect(_show_feedback_form.bind("feature"))
+	btn_row.add_child(feature_btn)
+
+	# Reset Game button (for stuck states)
+	var reset_btn = Button.new()
+	reset_btn.text = "Reset Game"
+	reset_btn.custom_minimum_size = Vector2(120, 40)
+	reset_btn.add_theme_color_override("font_color", Color(1.0, 0.6, 0.6))
+	reset_btn.pressed.connect(_show_reset_confirm)
+	btn_row.add_child(reset_btn)
+
+	section.add_child(btn_row)
+
+	# Info label
+	var info = Label.new()
+	info.text = "Stuck? Press Ctrl+Shift+R to force reload the game."
+	info.add_theme_font_size_override("font_size", 12)
+	info.add_theme_color_override("font_color", Color(0.6, 0.6, 0.7))
+	info.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	section.add_child(info)
+
+	# Add to settings panel (before ButtonRow)
+	var button_row = vbox.get_node_or_null("ButtonRow")
+	if button_row:
+		vbox.move_child(section, button_row.get_index())
+	else:
+		vbox.add_child(section)
+
+
+func _show_feedback_form(feedback_type: String) -> void:
+	# Collect device info
+	var device_info = _get_device_info()
+	var platform = OS.get_name()
+
+	# Build Google Form URL with pre-filled data
+	var url = GOOGLE_FORM_URL + "?usp=pp_url"
+	url += "&" + FORM_ENTRY_TYPE + "=" + ("Bug Report" if feedback_type == "bug" else "Feature Request").uri_encode()
+	url += "&" + FORM_ENTRY_DEVICE + "=" + (platform + " - " + device_info).uri_encode()
+
+	# Open in browser
+	OS.shell_open(url)
+
+	print("[Settings] Opened feedback form: ", feedback_type)
+
+
+func _get_device_info() -> String:
+	var info = []
+	info.append("Platform: " + OS.get_name())
+	info.append("Version: 0.1.0")
+
+	# Screen info
+	var screen_size = DisplayServer.window_get_size()
+	info.append("Screen: %dx%d" % [screen_size.x, screen_size.y])
+
+	# Mobile detection
+	if MobileUIManager and MobileUIManager.is_mobile:
+		info.append("Device: Mobile")
+	else:
+		info.append("Device: Desktop")
+
+	# Game progress
+	if GameManager:
+		var chapter = GameManager.player_data.get("current_chapter", 1)
+		var total_focus = GameManager.player_data.get("total_focus_minutes", 0)
+		info.append("Chapter: %d" % chapter)
+		info.append("Focus Minutes: %d" % total_focus)
+
+	return " | ".join(info)
+
+
+func _show_reset_confirm() -> void:
+	# Create confirmation dialog
+	var dialog = AcceptDialog.new()
+	dialog.title = "Reset Game?"
+	dialog.dialog_text = "This will reload the game. Unsaved progress will be lost.\n\nContinue?"
+	dialog.ok_button_text = "Reset"
+	dialog.add_cancel_button("Cancel")
+	dialog.confirmed.connect(_do_game_reset)
+	dialog.canceled.connect(func(): dialog.queue_free())
+	add_child(dialog)
+	dialog.popup_centered()
+
+
+func _do_game_reset() -> void:
+	# For web: use JavaScript to reload
+	if OS.get_name() == "Web":
+		JavaScriptBridge.eval("location.reload();")
+	else:
+		# For native: restart the scene tree
+		get_tree().reload_current_scene()
