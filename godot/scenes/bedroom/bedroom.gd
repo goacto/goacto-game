@@ -240,17 +240,21 @@ func _ready() -> void:
 	# Load any placed room decorations
 	_load_placed_decorations()
 
-	# Show tutorial tooltips for first-time visitors
-	_check_bedroom_tutorials()
-
-	# Check if player has console in inventory - show hint
-	if GameManager.has_item("mindscape_console") and not console_placed:
-		await get_tree().create_timer(0.8).timeout
-		_show_dialogue("Console Ready", "You have Great-Elder Zyx's Mindscape Console!\n\n*The console hums eagerly in your inventory*\n\nFind the pedestal in your room to place it.")
-		GameManager.player_data.erase("needs_console_placement")
-
 	# Setup virtual joystick for mobile
 	_setup_virtual_joystick()
+
+	# Show tutorial tooltips for first-time visitors (awaited to prevent overlap)
+	await _check_bedroom_tutorials()
+
+	# Check if player has console in inventory - show hint (only if no tutorial was shown)
+	if GameManager.has_item("mindscape_console") and not console_placed:
+		# Wait for any dialogue to close first
+		while in_dialogue:
+			await get_tree().create_timer(0.1).timeout
+		await get_tree().create_timer(0.5).timeout
+		if not in_dialogue:  # Double check
+			_show_dialogue("Console Ready", "You have Great-Elder Zyx's Mindscape Console!\n\n*The console hums eagerly in your inventory*\n\nFind the pedestal in your room to place it.")
+			GameManager.player_data.erase("needs_console_placement")
 
 	print("[Bedroom] Goacto's cabin ready - Welcome aboard the Stellar Wanderer")
 
@@ -8172,6 +8176,7 @@ func _create_bedroom_tooltip(tip_id: String, tip_data: Dictionary) -> void:
 	btn_row.add_child(got_it_btn)
 
 	add_child(tutorial_tooltip)
+	in_dialogue = true  # Block other dialogs while tooltip is shown
 	_play_sfx("res://audio/sfx/ui_open.wav")
 
 
@@ -8179,3 +8184,4 @@ func _close_bedroom_tutorial() -> void:
 	if tutorial_tooltip:
 		tutorial_tooltip.queue_free()
 		tutorial_tooltip = null
+	in_dialogue = false

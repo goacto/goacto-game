@@ -26,14 +26,14 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	var input_direction = Vector2.ZERO
 
-	# Keyboard input (for desktop/testing)
-	if Input.is_action_pressed("ui_right"):
+	# Keyboard input (WASD and arrow keys via move_* actions)
+	if Input.is_action_pressed("move_right") or Input.is_action_pressed("ui_right"):
 		input_direction.x += 1
-	if Input.is_action_pressed("ui_left"):
+	if Input.is_action_pressed("move_left") or Input.is_action_pressed("ui_left"):
 		input_direction.x -= 1
-	if Input.is_action_pressed("ui_down"):
+	if Input.is_action_pressed("move_down") or Input.is_action_pressed("ui_down"):
 		input_direction.y += 1
-	if Input.is_action_pressed("ui_up"):
+	if Input.is_action_pressed("move_up") or Input.is_action_pressed("ui_up"):
 		input_direction.y -= 1
 
 	# If we have keyboard input, use it
