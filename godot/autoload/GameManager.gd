@@ -2,6 +2,11 @@ extends Node
 ## GameManager - Global game state singleton
 ## Manages overall game state, scene transitions, and coordinates between systems
 
+# Version and Build Info
+const VERSION: String = "v0.1.0-prototype"
+const BUILD_TIMESTAMP: String = "LOCAL"  # Updated by CI: YYYYMMDD-HHMMSS
+const RESET_HOTKEY: String = "Ctrl+Shift+R"
+
 # Game States
 enum GameState {
 	MAIN_MENU,
@@ -147,7 +152,44 @@ func _ready() -> void:
 	# Create transition overlay
 	_create_transition_overlay()
 
+	# Create version overlay
+	_create_version_overlay()
+
 	print("[GameManager] Initialized - GOACTO Mindscape ready")
+
+
+# Version overlay for debugging
+var version_overlay: CanvasLayer = null
+
+func _create_version_overlay() -> void:
+	version_overlay = CanvasLayer.new()
+	version_overlay.name = "VersionOverlay"
+	version_overlay.layer = 100  # Always on top
+	add_child(version_overlay)
+
+	var label = Label.new()
+	label.name = "VersionLabel"
+
+	# Build info text
+	var build_info = BUILD_TIMESTAMP if BUILD_TIMESTAMP != "LOCAL" else "Local Dev"
+	label.text = "%s | Build: %s | Reset: %s" % [VERSION, build_info, RESET_HOTKEY]
+
+	# Position in bottom-right
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	label.anchor_left = 1.0
+	label.anchor_right = 1.0
+	label.anchor_top = 1.0
+	label.anchor_bottom = 1.0
+	label.offset_left = -300
+	label.offset_right = -10
+	label.offset_top = -30
+	label.offset_bottom = -10
+
+	# Styling - subtle
+	label.add_theme_font_size_override("font_size", 12)
+	label.add_theme_color_override("font_color", Color(1, 1, 1, 0.4))
+
+	version_overlay.add_child(label)
 
 
 # Transition overlay

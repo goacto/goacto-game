@@ -1183,56 +1183,115 @@ func _setup_placement_spot_indicator() -> void:
 
 
 func _place_console_from_inventory() -> void:
+	print("[Bedroom] === _place_console_from_inventory START ===")
+
 	# Check if player has console in inventory
 	if not GameManager.has_item("mindscape_console"):
+		print("[Bedroom] No console in inventory")
 		_show_dialogue("Empty Pedestal", "This pedestal is designed for the Mindscape Console.\n\n*You don't have the console yet*\n\nSearch the ship to find Great-Elder Zyx's console.")
 		return
 
+	print("[Bedroom] Console in inventory, showing placement dialogue...")
 	# Show placement dialogue then place
 	_show_dialogue("Placing Console...", "This console was used by your great-elder Zyx to connect with humans on Earth.\n\nNow it's your turn to carry on the family tradition.\n\n*The console hums eagerly in your hands*")
 
-	# Wait for dialogue to close, then place
-	await get_tree().create_timer(0.1).timeout
-	while in_dialogue:
-		await get_tree().create_timer(0.1).timeout
+	# Wait for dialogue to close, then place (with timeout)
+	print("[Bedroom] Waiting for dialogue to close...")
+	var wait_time := 0.0
+	const MAX_WAIT := 30.0  # 30 second timeout
 
+	await get_tree().create_timer(0.1).timeout
+	while in_dialogue and wait_time < MAX_WAIT:
+		await get_tree().create_timer(0.1).timeout
+		wait_time += 0.1
+		if int(wait_time * 10) % 50 == 0:  # Log every 5 seconds
+			print("[Bedroom] Still waiting for dialogue... ", wait_time, "s")
+
+	if wait_time >= MAX_WAIT:
+		print("[Bedroom] WARNING: Dialogue wait timed out after ", MAX_WAIT, "s")
+		in_dialogue = false  # Force close
+
+	print("[Bedroom] Dialogue closed, calling _place_console...")
 	_place_console()
 
 
 func _place_console() -> void:
+	print("[Bedroom] === _place_console START ===")
+
+	# Safety check
+	if not is_inside_tree():
+		push_warning("[Bedroom] Cannot place console - not in tree")
+		return
+
 	# Mark console as placed
+	print("[Bedroom] Marking console as placed...")
 	GameManager.player_data["console_placed_in_bedroom"] = true
 	GameManager.player_data.erase("needs_console_placement")
 	GameManager.remove_item("mindscape_console")
 	console_placed = true
 
 	# Remove placement indicator
-	if placement_indicator:
+	print("[Bedroom] Removing placement indicator...")
+	if placement_indicator and is_instance_valid(placement_indicator):
 		placement_indicator.queue_free()
 		placement_indicator = null
 
 	# Remove placement spot from interactions, add console
+	print("[Bedroom] Updating object positions...")
 	object_positions.erase("ConsolePlacementSpot")
 	object_positions["Console"] = Vector2(280, -80)
 
 	# Show console visual
-	if console_visual:
+	print("[Bedroom] Showing console visual...")
+	if console_visual and is_instance_valid(console_visual):
 		console_visual.visible = true
-	if headset_glow:
+	if headset_glow and is_instance_valid(headset_glow):
 		headset_glow.visible = true
 
 	# Setup console hologram effects
+	print("[Bedroom] Setting up hologram effects...")
 	_setup_console_hologram()
 
 	# Play placement sound
+	print("[Bedroom] Playing placement sound...")
 	_play_sfx("res://audio/sfx/console_place.wav")
 
 	# Save game
+	print("[Bedroom] Saving game...")
 	SaveManager.save_game()
 
-	# Show placement confirmation
-	await get_tree().create_timer(0.5).timeout
+	print("[Bedroom] Console placed! Scheduling confirmation dialogue...")
+
+	# Show placement confirmation using call_deferred to avoid blocking
+	call_deferred("_show_console_activation_dialogue")
+
+
+func _show_console_activation_dialogue() -> void:
+	print("[Bedroom] === _show_console_activation_dialogue START ===")
+
+	if not is_inside_tree():
+		print("[Bedroom] ERROR: Not in tree, cannot show dialogue")
+		return
+
+	# Small delay before showing dialogue
+	print("[Bedroom] Creating timer for dialogue delay...")
+	var timer = get_tree().create_timer(0.5)
+	print("[Bedroom] Timer created, awaiting...")
+	await timer.timeout
+	print("[Bedroom] Timer completed!")
+
+	if not is_inside_tree():
+		print("[Bedroom] ERROR: Left tree during timer wait")
+		return
+
+	# Safety check for dialogue panel
+	if not dialogue_panel or not is_instance_valid(dialogue_panel):
+		print("[Bedroom] ERROR: dialogue_panel is invalid!")
+		return
+
+	print("[Bedroom] Showing activation dialogue...")
 	_show_dialogue("Console Activated!", "The Mindscape Console is now set up!\n\n*Ancient Goactorian symbols flicker to life on the holographic display*\n\nApproach the console and put on the neural headset to connect with your human companion.", "res://audio/voice/bedroom/console_placed.ogg")
+	print("[Bedroom] === Console placement complete ===")
 
 
 func _animate_room(delta: float) -> void:
