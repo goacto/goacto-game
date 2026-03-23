@@ -4,7 +4,7 @@ extends Node
 
 # Version and Build Info
 const VERSION: String = "v0.1.0-prototype"
-const BUILD_TIMESTAMP: String = "20260323-022959"  # Updated on export: YYYYMMDD-HHMMSS
+const BUILD_TIMESTAMP: String = "20260323-063317"  # UTC timestamp: YYYYMMDD-HHMMSS
 const RESET_HOTKEY: String = "Ctrl+Shift+R"
 
 # Game States

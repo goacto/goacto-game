@@ -169,6 +169,10 @@
 - [x] Southern Peaks invisible terrain (fixed: container ordering, not negative z_index)
 - [x] Portal transition off-center (fixed: dynamic viewport centering)
 - [x] Bedroom movement delay on continue (fixed: non-blocking wake-up animation)
+- [x] WASD diagonal movement (fixed: removed isometric conversion, now cardinal)
+- [x] Dialog overlap on first bedroom visit (fixed: in_dialogue flag for tooltips)
+- [x] Console visual separation (fixed: consistent position at origin)
+- [x] mindscape_west.gd parse error (fixed: moved mid-file variables to top)
 
 ---
 
@@ -237,15 +241,22 @@
 - [x] Personal Milestones Celebrations (7/14/30/60/90/180/365 day achievements with XP rewards and titles)
 - [x] Companion Evolution System (8 evolution stages based on login days, visual changes, accessories)
 - [x] Expanded Bedroom Layout (plus-shaped room with proper bounds, reorganized furniture)
+- [x] JSON Save Import/Export (paste JSON to import, copy JSON to export, cross-platform save transfer)
+- [x] Build timestamp with relative time (version overlay shows "20260323-022959 (5m ago)")
+- [x] WASD cardinal movement (removed isometric conversion, direct cardinal directions)
+- [x] Web/PWA deployment (Vercel hosting, manifest.json, CORS headers)
 
 ---
 
 ## Immediate Next Steps (Suggested)
 
-1. **Multiple Endings** - Story branches based on habits
-2. **Voice acting for key dialogue** - Mom, Narrator voices
-3. **Screen reader support** - Accessibility enhancement
-4. **Code refactoring** - Reduce duplicate code across scenes
+1. **Playtesting & Bug Fixes** - Test all scenes via web deployment, fix any remaining issues
+2. **CI/CD Pipeline** - Automate build timestamp and web export on push
+3. **Voice acting for key dialogue** - Mom, Narrator voices (230+ lines needed)
+4. **Multiple Endings** - Story branches based on habits
+5. **Code refactoring** - Reduce duplicate code across scenes (ShipSceneBase pattern)
+6. **Screen reader support** - Accessibility enhancement
+7. **Performance optimization** - Profile particle systems, lazy loading
 
 ---
 
@@ -254,7 +265,7 @@
 ### Visual Style
 - Polygon-based 2D graphics (no external assets required)
 - Color palette: deep purples, teals, golds, soft greens
-- Isometric 2.5D perspective for room scenes
+- Top-down 2D perspective with cardinal movement (WASD/arrows)
 - Glowing/pulsing effects for interactive elements
 
 ### Audio Style
