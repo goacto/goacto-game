@@ -1,0 +1,17 @@
+{
+  "name": "Mindscape",
+  "short_name": "Mindscape",
+  "description": "Grow your inner world through real-world action",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0a0a12",
+  "theme_color": "#D4A84B",
+  "icons": [
+    {
+      "src": "index.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
