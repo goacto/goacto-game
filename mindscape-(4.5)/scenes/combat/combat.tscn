@@ -1,0 +1,232 @@
+[gd_scene load_steps=2 format=3 uid="uid://combat"]
+
+[ext_resource type="Script" path="res://scenes/combat/combat.gd" id="1_script"]
+
+[node name="Combat" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.04, 0.05, 0.08, 1)
+
+[node name="BattleArena" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="EnemyArea" type="VBoxContainer" parent="BattleArena"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -180.0
+offset_top = 150.0
+offset_right = 180.0
+offset_bottom = 480.0
+grow_horizontal = 2
+theme_override_constants/separation = 25
+
+[node name="EnemyName" type="Label" parent="BattleArena/EnemyArea"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 38
+theme_override_colors/font_color = Color(0.8, 0.3, 0.3, 1)
+text = "DOUBT"
+horizontal_alignment = 1
+
+[node name="EnemySprite" type="Polygon2D" parent="BattleArena/EnemyArea"]
+position = Vector2(180, 110)
+color = Color(0.5, 0.2, 0.3, 1)
+polygon = PackedVector2Array(-70, 90, -90, 25, -55, -45, 0, -90, 55, -45, 90, 25, 70, 90, 0, 70)
+
+[node name="EnemyShadow" type="Polygon2D" parent="BattleArena/EnemyArea"]
+modulate = Color(1, 1, 1, 0.3)
+position = Vector2(180, 200)
+color = Color(0, 0, 0, 1)
+polygon = PackedVector2Array(-80, 0, 0, -25, 80, 0, 0, 25)
+
+[node name="EnemyHealthBar" type="ProgressBar" parent="BattleArena/EnemyArea"]
+custom_minimum_size = Vector2(0, 35)
+layout_mode = 2
+max_value = 100.0
+value = 100.0
+show_percentage = false
+
+[node name="PlayerArea" type="HBoxContainer" parent="BattleArena"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -450.0
+offset_top = -520.0
+offset_right = 450.0
+offset_bottom = -300.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_constants/separation = 60
+alignment = 1
+
+[node name="PlayerPanel" type="VBoxContainer" parent="BattleArena/PlayerArea"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="PlayerSprite" type="Polygon2D" parent="BattleArena/PlayerArea/PlayerPanel"]
+position = Vector2(60, 55)
+color = Color(0.4, 0.6, 0.9, 1)
+polygon = PackedVector2Array(-25, 55, -25, -10, -12, -35, 12, -35, 25, -10, 25, 55)
+
+[node name="PlayerName" type="Label" parent="BattleArena/PlayerArea/PlayerPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "You"
+horizontal_alignment = 1
+
+[node name="PlayerHealth" type="ProgressBar" parent="BattleArena/PlayerArea/PlayerPanel"]
+custom_minimum_size = Vector2(120, 25)
+layout_mode = 2
+max_value = 100.0
+value = 100.0
+show_percentage = false
+
+[node name="AspectPanel" type="VBoxContainer" parent="BattleArena/PlayerArea"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="AspectSprite" type="Polygon2D" parent="BattleArena/PlayerArea/AspectPanel"]
+position = Vector2(60, 55)
+color = Color(0.2, 0.4, 0.8, 1)
+polygon = PackedVector2Array(-22, 50, -22, -8, -12, -30, 12, -30, 22, -8, 22, 50)
+
+[node name="AspectName" type="Label" parent="BattleArena/PlayerArea/AspectPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(0.4, 0.6, 0.9, 1)
+text = "Discipline"
+horizontal_alignment = 1
+
+[node name="AspectHealth" type="ProgressBar" parent="BattleArena/PlayerArea/AspectPanel"]
+custom_minimum_size = Vector2(120, 25)
+layout_mode = 2
+max_value = 100.0
+value = 100.0
+show_percentage = false
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="ActionPanel" type="PanelContainer" parent="UI"]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -300.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="Margin" type="MarginContainer" parent="UI/ActionPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_top = 25
+theme_override_constants/margin_right = 30
+theme_override_constants/margin_bottom = 25
+
+[node name="VBox" type="VBoxContainer" parent="UI/ActionPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="ActionLabel" type="Label" parent="UI/ActionPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "Choose your action:"
+horizontal_alignment = 1
+
+[node name="ActionButtons" type="HBoxContainer" parent="UI/ActionPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 25
+alignment = 1
+
+[node name="AttackButton" type="Button" parent="UI/ActionPanel/Margin/VBox/ActionButtons"]
+custom_minimum_size = Vector2(180, 90)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Focus
+(Attack)"
+
+[node name="DefendButton" type="Button" parent="UI/ActionPanel/Margin/VBox/ActionButtons"]
+custom_minimum_size = Vector2(180, 90)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Breathe
+(Defend)"
+
+[node name="SpecialButton" type="Button" parent="UI/ActionPanel/Margin/VBox/ActionButtons"]
+custom_minimum_size = Vector2(180, 90)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Discipline
+(Special)"
+
+[node name="BattleLog" type="Label" parent="UI/ActionPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+theme_override_colors/font_color = Color(0.6, 0.6, 0.7, 1)
+text = "A wild Doubt appears..."
+horizontal_alignment = 1
+
+[node name="ResultPanel" type="PanelContainer" parent="UI"]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -380.0
+offset_top = -250.0
+offset_right = 380.0
+offset_bottom = 250.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="UI/ResultPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 40
+
+[node name="VBox" type="VBoxContainer" parent="UI/ResultPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 35
+alignment = 1
+
+[node name="ResultTitle" type="Label" parent="UI/ResultPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 42
+text = "DOUBT OVERCOME"
+horizontal_alignment = 1
+
+[node name="ResultMessage" type="Label" parent="UI/ResultPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "You faced your doubt and emerged stronger.
++50 Experience
++1.0 World Evolution"
+horizontal_alignment = 1
+
+[node name="ContinueButton" type="Button" parent="UI/ResultPanel/Margin/VBox"]
+custom_minimum_size = Vector2(280, 80)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 26
+text = "Return"

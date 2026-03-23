@@ -1,0 +1,84 @@
+[gd_scene format=3 uid="uid://kx6kugnvwli8"]
+
+[ext_resource type="Script" path="res://scenes/daily_rituals/daily_rituals.gd" id="1_script"]
+
+[node name="DailyRituals" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.025, 0.04, 1)
+
+[node name="HBoxLayout" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+
+[node name="PanelSection" type="PanelContainer" parent="HBoxLayout"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 2.0
+
+[node name="GraphicSection" type="Control" parent="HBoxLayout"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.0
+
+[node name="ShrineVisuals" type="Node2D" parent="HBoxLayout/GraphicSection"]
+position = Vector2(250, 400)
+
+[node name="MainPanel" type="MarginContainer" parent="HBoxLayout/PanelSection"]
+layout_mode = 2
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 30
+theme_override_constants/margin_bottom = 40
+
+[node name="VBox" type="VBoxContainer" parent="HBoxLayout/PanelSection/MainPanel"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="TitleLabel" type="Label" parent="HBoxLayout/PanelSection/MainPanel/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "Daily Rituals"
+horizontal_alignment = 1
+
+[node name="SubtitleLabel" type="Label" parent="HBoxLayout/PanelSection/MainPanel/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.55, 0.55, 0.65, 1)
+text = "Complete your daily rituals to grow"
+horizontal_alignment = 1
+
+[node name="HabitsScroll" type="ScrollContainer" parent="HBoxLayout/PanelSection/MainPanel/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="HabitsContainer" type="VBoxContainer" parent="HBoxLayout/PanelSection/MainPanel/VBox/HabitsScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="BackButton" type="Button" parent="HBoxLayout/PanelSection/MainPanel/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 45)
+theme_override_font_sizes/font_size = 15
+theme_override_colors/font_color = Color(0.5, 0.5, 0.6, 1)
+text = "Return to Mindscape"

@@ -19,6 +19,14 @@ var flame_data: Array = []
 # Zone panel graphic
 var zone_graphic_container: Control = null
 
+# Variables moved from mid-file (GDScript requires class vars at top)
+var fish_data: Array = []
+var artifact_glow: Polygon2D = null
+var _current_aspect_for_graphic: String = ""
+var _current_shadow_type: String = ""
+var _selected_kindness_category: String = "helping"
+var _kindness_feeling: int = 3
+
 func _ready() -> void:
 	# Get node references
 	game_world = $GameWorld
@@ -478,9 +486,6 @@ func _add_shrine_flames() -> void:
 		})
 
 
-var fish_data: Array = []
-var artifact_glow: Polygon2D = null
-
 func _create_ancient_ruins() -> void:
 	# Ancient Goactorian pillars scattered around
 	var pillar_positions = [
@@ -899,8 +904,6 @@ func _create_shadow_work_graphic() -> void:
 		flame.color = Color(0.6, 0.3, 0.7, 0.9)
 		zone_graphic_container.add_child(flame)
 
-
-var _current_aspect_for_graphic: String = ""
 
 func _create_aspect_shrine_graphic() -> void:
 	# If we have a current aspect selected, show evolved graphic
@@ -2807,8 +2810,6 @@ func _add_spacer(height: int) -> void:
 
 # ============ SHADOW WORK SYSTEM ============
 
-var _current_shadow_type: String = ""
-
 const SHADOW_TYPES = {
 	"fear": {
 		"name": "Fear",
@@ -3271,8 +3272,6 @@ const KINDNESS_CATEGORIES = [
 	{"id": "self_care", "name": "Self-Compassion", "icon": "💚", "color": Color(0.5, 0.75, 0.6)}
 ]
 
-var _selected_kindness_category: String = "helping"
-
 
 func _open_kindness_log() -> void:
 	zone_title.text = "Kindness Log"
@@ -3484,8 +3483,6 @@ func _show_kindness_entry_form() -> void:
 
 	zone_body.add_child(button_row)
 
-
-var _kindness_feeling: int = 3
 
 func _select_kindness_category(cat_id: String) -> void:
 	_selected_kindness_category = cat_id

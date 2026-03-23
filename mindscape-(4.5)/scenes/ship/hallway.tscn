@@ -1,0 +1,610 @@
+[gd_scene load_steps=2 format=3 uid="uid://dl8m3n0p5q6r"]
+
+[ext_resource type="Script" path="res://scenes/ship/hallway.gd" id="1_hallway"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dialogue"]
+bg_color = Color(0.08, 0.06, 0.12, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.6, 0.5, 0.8, 0.8)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0, 0, 0, 0.5)
+shadow_size = 8
+
+[node name="Hallway" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_hallway")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.06, 0.05, 0.1, 1)
+
+[node name="GameWorld" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="IsometricBase" type="Node2D" parent="GameWorld"]
+position = Vector2(640, 360)
+
+[node name="Floor" type="Polygon2D" parent="GameWorld/IsometricBase"]
+color = Color(0.1, 0.08, 0.15, 1)
+polygon = PackedVector2Array(-600, -50, -500, -100, 1550, -100, 1650, -50, 1650, 100, 1550, 150, -500, 150, -600, 100)
+
+[node name="FloorStripe1" type="Polygon2D" parent="GameWorld/IsometricBase"]
+color = Color(0.5, 0.4, 0.7, 0.3)
+polygon = PackedVector2Array(-580, 0, 1630, 0, 1630, 10, -580, 10)
+
+[node name="FloorStripe2" type="Polygon2D" parent="GameWorld/IsometricBase"]
+color = Color(0.5, 0.4, 0.7, 0.2)
+polygon = PackedVector2Array(-580, 50, 1630, 50, 1630, 55, -580, 55)
+
+[node name="FloorStripe3" type="Polygon2D" parent="GameWorld/IsometricBase"]
+color = Color(0.4, 0.35, 0.6, 0.15)
+polygon = PackedVector2Array(-580, -30, 1630, -30, 1630, -25, -580, -25)
+
+[node name="BackWall" type="Polygon2D" parent="GameWorld/IsometricBase"]
+position = Vector2(0, -100)
+color = Color(0.08, 0.06, 0.12, 1)
+polygon = PackedVector2Array(-600, 0, -600, -200, 1650, -200, 1650, 0)
+
+[node name="WallTrim" type="Polygon2D" parent="GameWorld/IsometricBase"]
+position = Vector2(0, -100)
+color = Color(0.6, 0.5, 0.8, 0.5)
+polygon = PackedVector2Array(-600, -5, 1650, -5, 1650, 0, -600, 0)
+
+[node name="Lights" type="Node2D" parent="GameWorld/IsometricBase"]
+
+[node name="Light1" type="Polygon2D" parent="GameWorld/IsometricBase/Lights"]
+position = Vector2(-400, -180)
+color = Color(0.7, 0.8, 1, 0.8)
+polygon = PackedVector2Array(-15, -8, 15, -8, 15, 8, -15, 8)
+
+[node name="Light2" type="Polygon2D" parent="GameWorld/IsometricBase/Lights"]
+position = Vector2(-150, -180)
+color = Color(0.7, 0.8, 1, 0.8)
+polygon = PackedVector2Array(-15, -8, 15, -8, 15, 8, -15, 8)
+
+[node name="Light3" type="Polygon2D" parent="GameWorld/IsometricBase/Lights"]
+position = Vector2(100, -180)
+color = Color(0.7, 0.8, 1, 0.8)
+polygon = PackedVector2Array(-15, -8, 15, -8, 15, 8, -15, 8)
+
+[node name="Light4" type="Polygon2D" parent="GameWorld/IsometricBase/Lights"]
+position = Vector2(350, -180)
+color = Color(0.7, 0.8, 1, 0.8)
+polygon = PackedVector2Array(-15, -8, 15, -8, 15, 8, -15, 8)
+
+[node name="Light5" type="Polygon2D" parent="GameWorld/IsometricBase/Lights"]
+position = Vector2(600, -180)
+color = Color(0.7, 0.8, 1, 0.8)
+polygon = PackedVector2Array(-15, -8, 15, -8, 15, 8, -15, 8)
+
+[node name="Light6" type="Polygon2D" parent="GameWorld/IsometricBase/Lights"]
+position = Vector2(850, -180)
+color = Color(0.7, 0.8, 1, 0.8)
+polygon = PackedVector2Array(-15, -8, 15, -8, 15, 8, -15, 8)
+
+[node name="Light7" type="Polygon2D" parent="GameWorld/IsometricBase/Lights"]
+position = Vector2(1100, -180)
+color = Color(0.7, 0.8, 1, 0.8)
+polygon = PackedVector2Array(-15, -8, 15, -8, 15, 8, -15, 8)
+
+[node name="Light8" type="Polygon2D" parent="GameWorld/IsometricBase/Lights"]
+position = Vector2(1350, -180)
+color = Color(0.65, 0.75, 0.95, 0.7)
+polygon = PackedVector2Array(-15, -8, 15, -8, 15, 8, -15, 8)
+
+[node name="KitchenDoor" type="Node2D" parent="GameWorld/IsometricBase"]
+position = Vector2(-450, 0)
+
+[node name="Frame" type="Polygon2D" parent="GameWorld/IsometricBase/KitchenDoor"]
+color = Color(0.2, 0.18, 0.3, 1)
+polygon = PackedVector2Array(-45, -130, 45, -130, 45, 50, -45, 50)
+
+[node name="Panel" type="Polygon2D" parent="GameWorld/IsometricBase/KitchenDoor"]
+color = Color(0.3, 0.25, 0.45, 1)
+polygon = PackedVector2Array(-35, -120, 35, -120, 35, 40, -35, 40)
+
+[node name="Label" type="Label" parent="GameWorld/IsometricBase/KitchenDoor"]
+offset_left = -30.0
+offset_top = -160.0
+offset_right = 30.0
+offset_bottom = -140.0
+theme_override_font_sizes/font_size = 12
+text = "KITCHEN"
+horizontal_alignment = 1
+
+[node name="Painting1" type="Node2D" parent="GameWorld/IsometricBase"]
+position = Vector2(-200, -80)
+
+[node name="Frame" type="Polygon2D" parent="GameWorld/IsometricBase/Painting1"]
+position = Vector2(0, -100)
+color = Color(0.5, 0.4, 0.3, 1)
+polygon = PackedVector2Array(-50, -40, 50, -40, 50, 40, -50, 40)
+
+[node name="Canvas" type="Polygon2D" parent="GameWorld/IsometricBase/Painting1"]
+position = Vector2(0, -100)
+color = Color(0.3, 0.35, 0.5, 1)
+polygon = PackedVector2Array(-42, -32, 42, -32, 42, 32, -42, 32)
+
+[node name="Figure1" type="Polygon2D" parent="GameWorld/IsometricBase/Painting1"]
+position = Vector2(-20, -100)
+color = Color(0.6, 0.5, 0.8, 0.8)
+polygon = PackedVector2Array(-8, -15, 8, -15, 8, 20, -8, 20)
+
+[node name="Figure2" type="Polygon2D" parent="GameWorld/IsometricBase/Painting1"]
+position = Vector2(5, -100)
+color = Color(0.5, 0.7, 0.9, 0.8)
+polygon = PackedVector2Array(-10, -20, 10, -20, 10, 22, -10, 22)
+
+[node name="Figure3" type="Polygon2D" parent="GameWorld/IsometricBase/Painting1"]
+position = Vector2(25, -100)
+color = Color(0.4, 0.6, 0.5, 0.8)
+polygon = PackedVector2Array(-6, -12, 6, -12, 6, 15, -6, 15)
+
+[node name="PlantPot" type="Node2D" parent="GameWorld/IsometricBase"]
+position = Vector2(0, 50)
+
+[node name="Pot" type="Polygon2D" parent="GameWorld/IsometricBase/PlantPot"]
+color = Color(0.4, 0.3, 0.25, 1)
+polygon = PackedVector2Array(-25, -15, 25, -15, 20, 30, -20, 30)
+
+[node name="Plant" type="Polygon2D" parent="GameWorld/IsometricBase/PlantPot"]
+position = Vector2(0, -40)
+color = Color(0.3, 0.6, 0.4, 1)
+polygon = PackedVector2Array(-30, 25, -15, -20, 0, -30, 15, -20, 30, 25, 0, 30)
+
+[node name="Painting2" type="Node2D" parent="GameWorld/IsometricBase"]
+position = Vector2(100, -80)
+
+[node name="Frame" type="Polygon2D" parent="GameWorld/IsometricBase/Painting2"]
+position = Vector2(0, -100)
+color = Color(0.4, 0.35, 0.5, 1)
+polygon = PackedVector2Array(-60, -35, 60, -35, 60, 35, -60, 35)
+
+[node name="Canvas" type="Polygon2D" parent="GameWorld/IsometricBase/Painting2"]
+position = Vector2(0, -100)
+color = Color(0.15, 0.1, 0.25, 1)
+polygon = PackedVector2Array(-52, -27, 52, -27, 52, 27, -52, 27)
+
+[node name="Mountains" type="Polygon2D" parent="GameWorld/IsometricBase/Painting2"]
+position = Vector2(0, -100)
+color = Color(0.4, 0.3, 0.6, 0.7)
+polygon = PackedVector2Array(-50, 25, -30, -10, -10, 5, 10, -15, 35, 0, 50, 25)
+
+[node name="Trees" type="Polygon2D" parent="GameWorld/IsometricBase/Painting2"]
+position = Vector2(-25, -85)
+color = Color(0.3, 0.5, 0.7, 0.8)
+polygon = PackedVector2Array(-8, 12, 0, -8, 8, 12)
+
+[node name="Trees2" type="Polygon2D" parent="GameWorld/IsometricBase/Painting2"]
+position = Vector2(20, -82)
+color = Color(0.4, 0.5, 0.6, 0.7)
+polygon = PackedVector2Array(-6, 10, 0, -6, 6, 10)
+
+[node name="ObservatoryDoor" type="Node2D" parent="GameWorld/IsometricBase"]
+position = Vector2(250, 0)
+
+[node name="Frame" type="Polygon2D" parent="GameWorld/IsometricBase/ObservatoryDoor"]
+color = Color(0.18, 0.2, 0.28, 1)
+polygon = PackedVector2Array(-45, -130, 45, -130, 45, 50, -45, 50)
+
+[node name="Panel" type="Polygon2D" parent="GameWorld/IsometricBase/ObservatoryDoor"]
+color = Color(0.25, 0.3, 0.4, 1)
+polygon = PackedVector2Array(-35, -120, 35, -120, 35, 40, -35, 40)
+
+[node name="Window" type="Polygon2D" parent="GameWorld/IsometricBase/ObservatoryDoor"]
+position = Vector2(0, -55)
+color = Color(0.15, 0.25, 0.45, 0.6)
+polygon = PackedVector2Array(-28, -40, 28, -40, 28, 25, -28, 25)
+
+[node name="Star1" type="Polygon2D" parent="GameWorld/IsometricBase/ObservatoryDoor"]
+position = Vector2(-12, -70)
+color = Color(0.8, 0.85, 1.0, 0.8)
+polygon = PackedVector2Array(-2, 0, 0, -2, 2, 0, 0, 2)
+
+[node name="Star2" type="Polygon2D" parent="GameWorld/IsometricBase/ObservatoryDoor"]
+position = Vector2(10, -55)
+color = Color(0.9, 0.8, 0.5, 0.7)
+polygon = PackedVector2Array(-1.5, 0, 0, -1.5, 1.5, 0, 0, 1.5)
+
+[node name="Star3" type="Polygon2D" parent="GameWorld/IsometricBase/ObservatoryDoor"]
+position = Vector2(5, -80)
+color = Color(0.7, 0.8, 1.0, 0.6)
+polygon = PackedVector2Array(-1, 0, 0, -1, 1, 0, 0, 1)
+
+[node name="Handle" type="Polygon2D" parent="GameWorld/IsometricBase/ObservatoryDoor"]
+position = Vector2(25, 0)
+color = Color(0.5, 0.55, 0.65, 1)
+polygon = PackedVector2Array(-4, -8, 4, -8, 4, 8, -4, 8)
+
+[node name="Label" type="Label" parent="GameWorld/IsometricBase/ObservatoryDoor"]
+offset_left = -50.0
+offset_top = -160.0
+offset_right = 50.0
+offset_bottom = -140.0
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.4, 0.5, 0.7, 0.9)
+text = "OBSERVATORY"
+horizontal_alignment = 1
+
+[node name="Stairs" type="Node2D" parent="GameWorld/IsometricBase"]
+position = Vector2(450, 0)
+
+[node name="Frame" type="Polygon2D" parent="GameWorld/IsometricBase/Stairs"]
+color = Color(0.25, 0.22, 0.35, 1)
+polygon = PackedVector2Array(-50, -140, 50, -140, 50, 60, -50, 60)
+
+[node name="Opening" type="Polygon2D" parent="GameWorld/IsometricBase/Stairs"]
+color = Color(0.1, 0.08, 0.15, 1)
+polygon = PackedVector2Array(-40, -130, 40, -130, 40, 50, -40, 50)
+
+[node name="Step1" type="Polygon2D" parent="GameWorld/IsometricBase/Stairs"]
+color = Color(0.35, 0.3, 0.5, 1)
+polygon = PackedVector2Array(-35, 40, 35, 40, 35, 50, -35, 50)
+
+[node name="Step2" type="Polygon2D" parent="GameWorld/IsometricBase/Stairs"]
+color = Color(0.35, 0.3, 0.5, 1)
+polygon = PackedVector2Array(-35, 20, 35, 20, 35, 30, -35, 30)
+
+[node name="Step3" type="Polygon2D" parent="GameWorld/IsometricBase/Stairs"]
+color = Color(0.35, 0.3, 0.5, 1)
+polygon = PackedVector2Array(-35, 0, 35, 0, 35, 10, -35, 10)
+
+[node name="UpArrow" type="Polygon2D" parent="GameWorld/IsometricBase/Stairs"]
+position = Vector2(0, -80)
+color = Color(0.6, 0.8, 1, 0.7)
+polygon = PackedVector2Array(-15, 20, 0, -20, 15, 20, 5, 20, 5, 40, -5, 40, -5, 20)
+
+[node name="Label" type="Label" parent="GameWorld/IsometricBase/Stairs"]
+offset_left = -40.0
+offset_top = -170.0
+offset_right = 40.0
+offset_bottom = -150.0
+theme_override_font_sizes/font_size = 12
+text = "UPSTAIRS"
+horizontal_alignment = 1
+
+[node name="Painting3" type="Node2D" parent="GameWorld/IsometricBase"]
+position = Vector2(650, -80)
+
+[node name="Frame" type="Polygon2D" parent="GameWorld/IsometricBase/Painting3"]
+position = Vector2(0, -100)
+color = Color(0.35, 0.3, 0.45, 1)
+polygon = PackedVector2Array(-55, -45, 55, -45, 55, 45, -55, 45)
+
+[node name="Canvas" type="Polygon2D" parent="GameWorld/IsometricBase/Painting3"]
+position = Vector2(0, -100)
+color = Color(0.05, 0.03, 0.12, 1)
+polygon = PackedVector2Array(-47, -37, 47, -37, 47, 37, -47, 37)
+
+[node name="Star1" type="Polygon2D" parent="GameWorld/IsometricBase/Painting3"]
+position = Vector2(-25, -120)
+color = Color(0.9, 0.8, 0.5, 0.9)
+polygon = PackedVector2Array(-3, 0, 0, -4, 3, 0, 0, 4)
+
+[node name="Star2" type="Polygon2D" parent="GameWorld/IsometricBase/Painting3"]
+position = Vector2(15, -130)
+color = Color(0.8, 0.9, 1, 0.8)
+polygon = PackedVector2Array(-2, 0, 0, -3, 2, 0, 0, 3)
+
+[node name="Star3" type="Polygon2D" parent="GameWorld/IsometricBase/Painting3"]
+position = Vector2(30, -90)
+color = Color(0.9, 0.7, 0.5, 0.9)
+polygon = PackedVector2Array(-2, 0, 0, -3, 2, 0, 0, 3)
+
+[node name="Star4" type="Polygon2D" parent="GameWorld/IsometricBase/Painting3"]
+position = Vector2(-10, -80)
+color = Color(0.7, 0.8, 1, 0.7)
+polygon = PackedVector2Array(-2, 0, 0, -2, 2, 0, 0, 2)
+
+[node name="RouteLine" type="Polygon2D" parent="GameWorld/IsometricBase/Painting3"]
+position = Vector2(0, -100)
+color = Color(0.5, 0.4, 0.8, 0.4)
+polygon = PackedVector2Array(-25, -20, -10, 20, 15, -30, 30, 10)
+
+[node name="CurrentPos" type="Polygon2D" parent="GameWorld/IsometricBase/Painting3"]
+position = Vector2(-35, -95)
+color = Color(0.3, 0.9, 0.5, 0.9)
+polygon = PackedVector2Array(-4, 0, 0, -5, 4, 0, 0, 5)
+
+[node name="LivingRoomDoor" type="Node2D" parent="GameWorld/IsometricBase"]
+position = Vector2(850, 0)
+
+[node name="Frame" type="Polygon2D" parent="GameWorld/IsometricBase/LivingRoomDoor"]
+color = Color(0.22, 0.2, 0.32, 1)
+polygon = PackedVector2Array(-50, -130, 50, -130, 50, 50, -50, 50)
+
+[node name="Panel" type="Polygon2D" parent="GameWorld/IsometricBase/LivingRoomDoor"]
+color = Color(0.32, 0.28, 0.48, 1)
+polygon = PackedVector2Array(-40, -120, 40, -120, 40, 40, -40, 40)
+
+[node name="Window" type="Polygon2D" parent="GameWorld/IsometricBase/LivingRoomDoor"]
+position = Vector2(0, -60)
+color = Color(0.4, 0.5, 0.7, 0.5)
+polygon = PackedVector2Array(-25, -35, 25, -35, 25, 15, -25, 15)
+
+[node name="Handle" type="Polygon2D" parent="GameWorld/IsometricBase/LivingRoomDoor"]
+position = Vector2(25, 0)
+color = Color(0.7, 0.6, 0.5, 1)
+polygon = PackedVector2Array(-4, -8, 4, -8, 4, 8, -4, 8)
+
+[node name="Label" type="Label" parent="GameWorld/IsometricBase/LivingRoomDoor"]
+offset_left = -45.0
+offset_top = -160.0
+offset_right = 45.0
+offset_bottom = -140.0
+theme_override_font_sizes/font_size = 12
+text = "LIVING ROOM"
+horizontal_alignment = 1
+
+[node name="WallPanel1" type="Node2D" parent="GameWorld/IsometricBase"]
+position = Vector2(1000, -180)
+
+[node name="Frame" type="Polygon2D" parent="GameWorld/IsometricBase/WallPanel1"]
+color = Color(0.15, 0.12, 0.22, 0.9)
+polygon = PackedVector2Array(-35, -50, 35, -50, 35, 30, -35, 30)
+
+[node name="Screen" type="Polygon2D" parent="GameWorld/IsometricBase/WallPanel1"]
+color = Color(0.2, 0.25, 0.35, 0.7)
+polygon = PackedVector2Array(-28, -42, 28, -42, 28, 15, -28, 15)
+
+[node name="Light" type="Polygon2D" parent="GameWorld/IsometricBase/WallPanel1"]
+position = Vector2(0, 22)
+color = Color(0.4, 0.7, 0.5, 0.8)
+polygon = PackedVector2Array(-8, -4, 8, -4, 8, 4, -8, 4)
+
+[node name="Pipe1" type="Polygon2D" parent="GameWorld/IsometricBase"]
+position = Vector2(1200, -220)
+color = Color(0.25, 0.22, 0.3, 0.9)
+polygon = PackedVector2Array(-150, -8, 150, -8, 150, 0, -150, 0)
+
+[node name="Pipe2" type="Polygon2D" parent="GameWorld/IsometricBase"]
+position = Vector2(1200, -235)
+color = Color(0.2, 0.18, 0.25, 0.8)
+polygon = PackedVector2Array(-150, -5, 150, -5, 150, 0, -150, 0)
+
+[node name="Crate1" type="Node2D" parent="GameWorld/IsometricBase"]
+position = Vector2(1150, 60)
+
+[node name="Base" type="Polygon2D" parent="GameWorld/IsometricBase/Crate1"]
+color = Color(0.3, 0.25, 0.2, 1)
+polygon = PackedVector2Array(-30, -25, 30, -25, 30, 25, -30, 25)
+
+[node name="Top" type="Polygon2D" parent="GameWorld/IsometricBase/Crate1"]
+position = Vector2(0, -25)
+color = Color(0.35, 0.3, 0.25, 1)
+polygon = PackedVector2Array(-30, -8, 30, -8, 30, 0, -30, 0)
+
+[node name="Stripe" type="Polygon2D" parent="GameWorld/IsometricBase/Crate1"]
+color = Color(0.6, 0.5, 0.3, 0.6)
+polygon = PackedVector2Array(-30, -5, 30, -5, 30, 5, -30, 5)
+
+[node name="Crate2" type="Node2D" parent="GameWorld/IsometricBase"]
+position = Vector2(1220, 40)
+
+[node name="Base" type="Polygon2D" parent="GameWorld/IsometricBase/Crate2"]
+color = Color(0.25, 0.22, 0.18, 1)
+polygon = PackedVector2Array(-22, -20, 22, -20, 22, 20, -22, 20)
+
+[node name="Top" type="Polygon2D" parent="GameWorld/IsometricBase/Crate2"]
+position = Vector2(0, -20)
+color = Color(0.3, 0.27, 0.22, 1)
+polygon = PackedVector2Array(-22, -6, 22, -6, 22, 0, -22, 0)
+
+[node name="CargoHoldDoor" type="Node2D" parent="GameWorld/IsometricBase"]
+position = Vector2(1500, 0)
+
+[node name="Frame" type="Polygon2D" parent="GameWorld/IsometricBase/CargoHoldDoor"]
+color = Color(0.18, 0.15, 0.22, 1)
+polygon = PackedVector2Array(-55, -140, 55, -140, 55, 55, -55, 55)
+
+[node name="Panel" type="Polygon2D" parent="GameWorld/IsometricBase/CargoHoldDoor"]
+color = Color(0.25, 0.22, 0.32, 1)
+polygon = PackedVector2Array(-45, -130, 45, -130, 45, 45, -45, 45)
+
+[node name="Window" type="Polygon2D" parent="GameWorld/IsometricBase/CargoHoldDoor"]
+position = Vector2(0, -60)
+color = Color(0.3, 0.35, 0.45, 0.5)
+polygon = PackedVector2Array(-30, -40, 30, -40, 30, 15, -30, 15)
+
+[node name="WarningStripe" type="Polygon2D" parent="GameWorld/IsometricBase/CargoHoldDoor"]
+position = Vector2(0, 30)
+color = Color(0.7, 0.5, 0.2, 0.6)
+polygon = PackedVector2Array(-45, -8, 45, -8, 45, 8, -45, 8)
+
+[node name="Handle" type="Polygon2D" parent="GameWorld/IsometricBase/CargoHoldDoor"]
+position = Vector2(30, 0)
+color = Color(0.55, 0.5, 0.45, 1)
+polygon = PackedVector2Array(-5, -10, 5, -10, 5, 10, -5, 10)
+
+[node name="Label" type="Label" parent="GameWorld/IsometricBase/CargoHoldDoor"]
+offset_left = -55.0
+offset_top = -170.0
+offset_right = 55.0
+offset_bottom = -150.0
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.8, 0.6, 0.3, 1)
+text = "CARGO HOLD"
+horizontal_alignment = 1
+
+[node name="Player" type="Node2D" parent="GameWorld/IsometricBase"]
+position = Vector2(-350, 0)
+
+[node name="Shadow" type="Polygon2D" parent="GameWorld/IsometricBase/Player"]
+modulate = Color(0, 0, 0, 0.4)
+position = Vector2(0, 45)
+polygon = PackedVector2Array(-25, 0, 0, -12, 25, 0, 0, 12)
+
+[node name="Body" type="Polygon2D" parent="GameWorld/IsometricBase/Player"]
+position = Vector2(0, -25)
+color = Color(0.83, 0.66, 0.29, 1)
+polygon = PackedVector2Array(-18, 35, -18, 0, -12, -20, 12, -20, 18, 0, 18, 35)
+
+[node name="Head" type="Polygon2D" parent="GameWorld/IsometricBase/Player"]
+position = Vector2(0, -55)
+color = Color(0.9, 0.75, 0.4, 1)
+polygon = PackedVector2Array(-14, 10, -14, -10, 14, -10, 14, 10)
+
+[node name="Eyes" type="Polygon2D" parent="GameWorld/IsometricBase/Player"]
+position = Vector2(0, -58)
+color = Color(0.2, 0.15, 0.1, 1)
+polygon = PackedVector2Array(-8, -2, -8, -5, -4, -5, -4, -2, 4, -2, 4, -5, 8, -5, 8, -2)
+
+[node name="Antenna" type="Polygon2D" parent="GameWorld/IsometricBase/Player"]
+position = Vector2(0, -70)
+color = Color(0.83, 0.66, 0.29, 0.9)
+polygon = PackedVector2Array(-2, 0, -2, -15, 2, -15, 2, 0)
+
+[node name="AntennaTip" type="Polygon2D" parent="GameWorld/IsometricBase/Player"]
+position = Vector2(0, -88)
+color = Color(0.95, 0.85, 0.5, 1)
+polygon = PackedVector2Array(-4, 0, 0, -6, 4, 0, 0, 4)
+
+[node name="Header" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 20.0
+offset_bottom = 70.0
+
+[node name="Margin" type="MarginContainer" parent="Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 50
+theme_override_constants/margin_right = 50
+
+[node name="HBox" type="HBoxContainer" parent="Header/Margin"]
+layout_mode = 2
+
+[node name="LocationLabel" type="Label" parent="Header/Margin/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.5, 0.45, 0.6, 1)
+text = "Hallway - Stellar Wanderer"
+
+[node name="MenuButton" type="Button" parent="Header/Margin/HBox"]
+custom_minimum_size = Vector2(100, 40)
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Menu"
+
+[node name="InteractionPrompt" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -150.0
+offset_top = -120.0
+offset_right = 150.0
+offset_bottom = -60.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="Margin" type="MarginContainer" parent="InteractionPrompt"]
+layout_mode = 2
+theme_override_constants/margin_left = 15
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 15
+theme_override_constants/margin_bottom = 10
+
+[node name="VBox" type="VBoxContainer" parent="InteractionPrompt/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="ObjectName" type="Label" parent="InteractionPrompt/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Object Name"
+horizontal_alignment = 1
+
+[node name="PromptText" type="Label" parent="InteractionPrompt/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "Press SPACE to interact"
+horizontal_alignment = 1
+
+[node name="ControlHints" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -100.0
+offset_top = -40.0
+offset_right = 100.0
+offset_bottom = -15.0
+grow_horizontal = 2
+grow_vertical = 0
+alignment = 1
+
+[node name="MoveHint" type="Label" parent="ControlHints"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "WASD/Arrows: Move"
+
+[node name="DialoguePanel" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -250.0
+offset_top = 100.0
+offset_right = 250.0
+offset_bottom = 300.0
+grow_horizontal = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_dialogue")
+
+[node name="Margin" type="MarginContainer" parent="DialoguePanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 15
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 15
+
+[node name="VBox" type="VBoxContainer" parent="DialoguePanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="DialogueTitle" type="Label" parent="DialoguePanel/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Speaker"
+horizontal_alignment = 1
+
+[node name="DialogueText" type="Label" parent="DialoguePanel/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Dialogue text goes here..."
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="DialogueButton" type="Button" parent="DialoguePanel/Margin/VBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Continue"

@@ -1,0 +1,444 @@
+[gd_scene load_steps=3 format=3 uid="uid://csettingsmenu"]
+
+[ext_resource type="Script" path="res://scenes/settings/settings.gd" id="1_script"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.06, 0.05, 0.1, 0.98)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.5, 0.4, 0.7, 0.6)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[node name="Settings" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.03, 0.03, 0.06, 1)
+
+[node name="Panel" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -340.0
+offset_top = -400.0
+offset_right = 340.0
+offset_bottom = 400.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="Margin" type="MarginContainer" parent="Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 25
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 25
+theme_override_constants/margin_bottom = 20
+
+[node name="ScrollContainer" type="ScrollContainer" parent="Panel/Margin"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="VBox" type="VBoxContainer" parent="Panel/Margin/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="TitleLabel" type="Label" parent="Panel/Margin/ScrollContainer/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+theme_override_colors/font_color = Color(0.83, 0.66, 0.29, 1)
+text = "Settings"
+horizontal_alignment = 1
+
+[node name="Separator1" type="HSeparator" parent="Panel/Margin/ScrollContainer/VBox"]
+layout_mode = 2
+
+[node name="AudioLabel" type="Label" parent="Panel/Margin/ScrollContainer/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.6, 0.55, 0.7, 1)
+text = "Audio"
+
+[node name="AudioSection" type="VBoxContainer" parent="Panel/Margin/ScrollContainer/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="MasterRow" type="HBoxContainer" parent="Panel/Margin/ScrollContainer/VBox/AudioSection"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="MasterLabel" type="Label" parent="Panel/Margin/ScrollContainer/VBox/AudioSection/MasterRow"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "Master"
+
+[node name="MasterSlider" type="HSlider" parent="Panel/Margin/ScrollContainer/VBox/AudioSection/MasterRow"]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.0
+max_value = 100.0
+value = 100.0
+
+[node name="MasterValue" type="Label" parent="Panel/Margin/ScrollContainer/VBox/AudioSection/MasterRow"]
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.6, 0.6, 0.65, 1)
+text = "100%"
+horizontal_alignment = 2
+
+[node name="MusicRow" type="HBoxContainer" parent="Panel/Margin/ScrollContainer/VBox/AudioSection"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="MusicLabel" type="Label" parent="Panel/Margin/ScrollContainer/VBox/AudioSection/MusicRow"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "Music"
+
+[node name="MusicSlider" type="HSlider" parent="Panel/Margin/ScrollContainer/VBox/AudioSection/MusicRow"]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.0
+max_value = 100.0
+value = 70.0
+
+[node name="MusicValue" type="Label" parent="Panel/Margin/ScrollContainer/VBox/AudioSection/MusicRow"]
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.6, 0.6, 0.65, 1)
+text = "70%"
+horizontal_alignment = 2
+
+[node name="VoiceRow" type="HBoxContainer" parent="Panel/Margin/ScrollContainer/VBox/AudioSection"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="VoiceLabel" type="Label" parent="Panel/Margin/ScrollContainer/VBox/AudioSection/VoiceRow"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "Voice"
+
+[node name="VoiceSlider" type="HSlider" parent="Panel/Margin/ScrollContainer/VBox/AudioSection/VoiceRow"]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.0
+max_value = 100.0
+value = 100.0
+
+[node name="VoiceValue" type="Label" parent="Panel/Margin/ScrollContainer/VBox/AudioSection/VoiceRow"]
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.6, 0.6, 0.65, 1)
+text = "100%"
+horizontal_alignment = 2
+
+[node name="SFXRow" type="HBoxContainer" parent="Panel/Margin/ScrollContainer/VBox/AudioSection"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="SFXLabel" type="Label" parent="Panel/Margin/ScrollContainer/VBox/AudioSection/SFXRow"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "Sound FX"
+
+[node name="SFXSlider" type="HSlider" parent="Panel/Margin/ScrollContainer/VBox/AudioSection/SFXRow"]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.0
+max_value = 100.0
+value = 80.0
+
+[node name="SFXValue" type="Label" parent="Panel/Margin/ScrollContainer/VBox/AudioSection/SFXRow"]
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.6, 0.6, 0.65, 1)
+text = "80%"
+horizontal_alignment = 2
+
+[node name="AmbientRow" type="HBoxContainer" parent="Panel/Margin/ScrollContainer/VBox/AudioSection"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="AmbientLabel" type="Label" parent="Panel/Margin/ScrollContainer/VBox/AudioSection/AmbientRow"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "Ambient"
+
+[node name="AmbientSlider" type="HSlider" parent="Panel/Margin/ScrollContainer/VBox/AudioSection/AmbientRow"]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.0
+max_value = 100.0
+value = 50.0
+
+[node name="AmbientValue" type="Label" parent="Panel/Margin/ScrollContainer/VBox/AudioSection/AmbientRow"]
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.6, 0.6, 0.65, 1)
+text = "50%"
+horizontal_alignment = 2
+
+[node name="TestRow" type="HBoxContainer" parent="Panel/Margin/ScrollContainer/VBox/AudioSection"]
+layout_mode = 2
+alignment = 1
+
+[node name="TestVoiceButton" type="Button" parent="Panel/Margin/ScrollContainer/VBox/AudioSection/TestRow"]
+custom_minimum_size = Vector2(140, 32)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Test Voice"
+
+[node name="Separator2" type="HSeparator" parent="Panel/Margin/ScrollContainer/VBox"]
+layout_mode = 2
+
+[node name="SaveLoadLabel" type="Label" parent="Panel/Margin/ScrollContainer/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.6, 0.55, 0.7, 1)
+text = "Save / Load"
+
+[node name="SaveLoadSection" type="VBoxContainer" parent="Panel/Margin/ScrollContainer/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="SlotRow1" type="HBoxContainer" parent="Panel/Margin/ScrollContainer/VBox/SaveLoadSection"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Slot1Label" type="Label" parent="Panel/Margin/ScrollContainer/VBox/SaveLoadSection/SlotRow1"]
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+text = "Slot 1: Empty"
+
+[node name="Save1" type="Button" parent="Panel/Margin/ScrollContainer/VBox/SaveLoadSection/SlotRow1"]
+custom_minimum_size = Vector2(65, 28)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Save"
+
+[node name="Load1" type="Button" parent="Panel/Margin/ScrollContainer/VBox/SaveLoadSection/SlotRow1"]
+custom_minimum_size = Vector2(65, 28)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Load"
+
+[node name="Export1" type="Button" parent="Panel/Margin/ScrollContainer/VBox/SaveLoadSection/SlotRow1"]
+custom_minimum_size = Vector2(65, 28)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Export"
+
+[node name="SlotRow2" type="HBoxContainer" parent="Panel/Margin/ScrollContainer/VBox/SaveLoadSection"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Slot2Label" type="Label" parent="Panel/Margin/ScrollContainer/VBox/SaveLoadSection/SlotRow2"]
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+text = "Slot 2: Empty"
+
+[node name="Save2" type="Button" parent="Panel/Margin/ScrollContainer/VBox/SaveLoadSection/SlotRow2"]
+custom_minimum_size = Vector2(65, 28)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Save"
+
+[node name="Load2" type="Button" parent="Panel/Margin/ScrollContainer/VBox/SaveLoadSection/SlotRow2"]
+custom_minimum_size = Vector2(65, 28)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Load"
+
+[node name="Export2" type="Button" parent="Panel/Margin/ScrollContainer/VBox/SaveLoadSection/SlotRow2"]
+custom_minimum_size = Vector2(65, 28)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Export"
+
+[node name="SlotRow3" type="HBoxContainer" parent="Panel/Margin/ScrollContainer/VBox/SaveLoadSection"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Slot3Label" type="Label" parent="Panel/Margin/ScrollContainer/VBox/SaveLoadSection/SlotRow3"]
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+text = "Slot 3: Empty"
+
+[node name="Save3" type="Button" parent="Panel/Margin/ScrollContainer/VBox/SaveLoadSection/SlotRow3"]
+custom_minimum_size = Vector2(65, 28)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Save"
+
+[node name="Load3" type="Button" parent="Panel/Margin/ScrollContainer/VBox/SaveLoadSection/SlotRow3"]
+custom_minimum_size = Vector2(65, 28)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Load"
+
+[node name="Export3" type="Button" parent="Panel/Margin/ScrollContainer/VBox/SaveLoadSection/SlotRow3"]
+custom_minimum_size = Vector2(65, 28)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Export"
+
+[node name="ImportRow" type="HBoxContainer" parent="Panel/Margin/ScrollContainer/VBox/SaveLoadSection"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 8
+
+[node name="ImportButton" type="Button" parent="Panel/Margin/ScrollContainer/VBox/SaveLoadSection/ImportRow"]
+custom_minimum_size = Vector2(140, 32)
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "Import Save File"
+
+[node name="AccessibilityLabel" type="Label" parent="Panel/Margin/ScrollContainer/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.6, 0.55, 0.7, 1)
+text = "Accessibility"
+
+[node name="AccessibilitySection" type="VBoxContainer" parent="Panel/Margin/ScrollContainer/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="FontSizeRow" type="HBoxContainer" parent="Panel/Margin/ScrollContainer/VBox/AccessibilitySection"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="FontSizeLabel" type="Label" parent="Panel/Margin/ScrollContainer/VBox/AccessibilitySection/FontSizeRow"]
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "Font Size"
+
+[node name="FontSizeOption" type="OptionButton" parent="Panel/Margin/ScrollContainer/VBox/AccessibilitySection/FontSizeRow"]
+custom_minimum_size = Vector2(180, 32)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 14
+item_count = 3
+popup/item_0/text = "Small"
+popup/item_1/text = "Medium"
+popup/item_1/id = 1
+popup/item_2/text = "Large"
+popup/item_2/id = 2
+
+[node name="HighContrastRow" type="HBoxContainer" parent="Panel/Margin/ScrollContainer/VBox/AccessibilitySection"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="HighContrastLabel" type="Label" parent="Panel/Margin/ScrollContainer/VBox/AccessibilitySection/HighContrastRow"]
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "High Contrast"
+
+[node name="HighContrastToggle" type="CheckButton" parent="Panel/Margin/ScrollContainer/VBox/AccessibilitySection/HighContrastRow"]
+custom_minimum_size = Vector2(80, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ReducedMotionRow" type="HBoxContainer" parent="Panel/Margin/ScrollContainer/VBox/AccessibilitySection"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ReducedMotionLabel" type="Label" parent="Panel/Margin/ScrollContainer/VBox/AccessibilitySection/ReducedMotionRow"]
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "Reduced Motion"
+
+[node name="ReducedMotionToggle" type="CheckButton" parent="Panel/Margin/ScrollContainer/VBox/AccessibilitySection/ReducedMotionRow"]
+custom_minimum_size = Vector2(80, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ColorblindRow" type="HBoxContainer" parent="Panel/Margin/ScrollContainer/VBox/AccessibilitySection"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ColorblindLabel" type="Label" parent="Panel/Margin/ScrollContainer/VBox/AccessibilitySection/ColorblindRow"]
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "Colorblind Mode"
+
+[node name="ColorblindOption" type="OptionButton" parent="Panel/Margin/ScrollContainer/VBox/AccessibilitySection/ColorblindRow"]
+custom_minimum_size = Vector2(180, 32)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 14
+item_count = 4
+popup/item_0/text = "None"
+popup/item_1/text = "Deuteranopia (Green)"
+popup/item_1/id = 1
+popup/item_2/text = "Protanopia (Red)"
+popup/item_2/id = 2
+popup/item_3/text = "Tritanopia (Blue)"
+popup/item_3/id = 3
+
+[node name="Separator3" type="HSeparator" parent="Panel/Margin/ScrollContainer/VBox"]
+layout_mode = 2
+
+[node name="ButtonRow" type="HBoxContainer" parent="Panel/Margin/ScrollContainer/VBox"]
+layout_mode = 2
+alignment = 1
+
+[node name="BackButton" type="Button" parent="Panel/Margin/ScrollContainer/VBox/ButtonRow"]
+custom_minimum_size = Vector2(160, 45)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "Back"
+
+[node name="FileDialog" type="FileDialog" parent="."]
+title = "Import Save File"
+initial_position = 1
+size = Vector2i(600, 400)
+ok_button_text = "Import"
+file_mode = 0
+access = 2
+filters = PackedStringArray("*.json ; JSON Save Files")

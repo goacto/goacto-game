@@ -1,0 +1,317 @@
+[gd_scene format=3 uid="uid://dep4u53f5pl84"]
+
+[ext_resource type="Script" uid="uid://df7wssx3q5nqt" path="res://scenes/main_menu/main_menu.gd" id="1_script"]
+
+[node name="MainMenu" type="Control" unique_id=2095725942]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Background" type="ColorRect" parent="." unique_id=193131214]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.025, 0.045, 1)
+
+[node name="StarsContainer" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="GlowOrb" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -150.0
+offset_top = -350.0
+offset_right = 150.0
+offset_bottom = -50.0
+mouse_filter = 2
+
+[node name="OrbGlow3" type="ColorRect" parent="GlowOrb"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -120.0
+offset_top = -120.0
+offset_right = 120.0
+offset_bottom = 120.0
+color = Color(0.4, 0.25, 0.6, 0.08)
+
+[node name="OrbGlow2" type="ColorRect" parent="GlowOrb"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -80.0
+offset_top = -80.0
+offset_right = 80.0
+offset_bottom = 80.0
+color = Color(0.5, 0.35, 0.7, 0.12)
+
+[node name="OrbGlow1" type="ColorRect" parent="GlowOrb"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -45.0
+offset_top = -45.0
+offset_right = 45.0
+offset_bottom = 45.0
+color = Color(0.6, 0.45, 0.8, 0.2)
+
+[node name="OrbCore" type="ColorRect" parent="GlowOrb"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
+color = Color(0.83, 0.66, 0.29, 0.9)
+
+[node name="CenterContainer" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="CenterContainer" unique_id=926142208]
+custom_minimum_size = Vector2(320, 0)
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="TitleContainer" type="VBoxContainer" parent="CenterContainer/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="CenterContainer/VBox/TitleContainer" unique_id=56506031]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.95, 0.97, 1)
+theme_override_font_sizes/font_size = 56
+text = "MINDSCAPE"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="TitleGlow" type="Label" parent="CenterContainer/VBox/TitleContainer"]
+modulate = Color(0.83, 0.66, 0.29, 0.3)
+layout_mode = 2
+theme_override_font_sizes/font_size = 56
+text = "MINDSCAPE"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Subtitle" type="Label" parent="CenterContainer/VBox/TitleContainer" unique_id=91289600]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.83, 0.66, 0.29, 1)
+theme_override_font_sizes/font_size = 20
+text = "by GOACTO"
+horizontal_alignment = 1
+
+[node name="Spacer" type="Control" parent="CenterContainer/VBox" unique_id=1156733958]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+
+[node name="ButtonContainer" type="VBoxContainer" parent="CenterContainer/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="StartButton" type="Button" parent="CenterContainer/VBox/ButtonContainer" unique_id=409465164]
+custom_minimum_size = Vector2(280, 60)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 22
+text = "Begin Journey"
+
+[node name="ContinueButton" type="Button" parent="CenterContainer/VBox/ButtonContainer" unique_id=1760852113]
+custom_minimum_size = Vector2(280, 60)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 22
+text = "Continue Journey"
+
+[node name="LoadButton" type="Button" parent="CenterContainer/VBox/ButtonContainer"]
+custom_minimum_size = Vector2(280, 50)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.65, 0.68, 0.75, 1)
+text = "Load Game"
+
+[node name="SettingsButton" type="Button" parent="CenterContainer/VBox/ButtonContainer"]
+custom_minimum_size = Vector2(280, 50)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.65, 0.68, 0.75, 1)
+text = "Settings"
+
+[node name="Spacer2" type="Control" parent="CenterContainer/VBox" unique_id=1304679228]
+custom_minimum_size = Vector2(0, 15)
+layout_mode = 2
+
+[node name="GOACTOLabel" type="Label" parent="CenterContainer/VBox" unique_id=1394490570]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.42, 0.25, 0.8)
+theme_override_font_sizes/font_size = 14
+text = "Growing Ourselves And Contributing To Others"
+horizontal_alignment = 1
+
+[node name="AudioControls" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -150.0
+offset_top = 15.0
+offset_right = -15.0
+offset_bottom = 55.0
+grow_horizontal = 0
+theme_override_constants/separation = 10
+
+[node name="MuteButton" type="Button" parent="AudioControls"]
+layout_mode = 2
+custom_minimum_size = Vector2(45, 40)
+theme_override_font_sizes/font_size = 18
+text = "Vol"
+flat = true
+
+[node name="VolumeSlider" type="HSlider" parent="AudioControls"]
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.0
+max_value = 100.0
+value = 80.0
+
+[node name="OnboardingPanel" type="PanelContainer" parent="." unique_id=1055229225]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 40.0
+offset_top = 80.0
+offset_right = -40.0
+offset_bottom = -80.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="OnboardingPanel" unique_id=758817527]
+layout_mode = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 40
+
+[node name="VBox" type="VBoxContainer" parent="OnboardingPanel/Margin" unique_id=988536406]
+layout_mode = 2
+theme_override_constants/separation = 30
+
+[node name="WelcomeTitle" type="Label" parent="OnboardingPanel/Margin/VBox" unique_id=1452144180]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.92, 0.92, 0.94, 1)
+theme_override_font_sizes/font_size = 40
+text = "Welcome to Mindscape"
+horizontal_alignment = 1
+
+[node name="SlideContent" type="VBoxContainer" parent="OnboardingPanel/Margin/VBox" unique_id=48543276]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 25
+
+[node name="SlideTitle" type="Label" parent="OnboardingPanel/Margin/VBox/SlideContent" unique_id=1627507802]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.83, 0.66, 0.29, 1)
+theme_override_font_sizes/font_size = 32
+text = "Your Personal Sanctuary"
+horizontal_alignment = 1
+
+[node name="SlideText" type="Label" parent="OnboardingPanel/Margin/VBox/SlideContent" unique_id=743557724]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "This is your inner world - a place that grows and evolves as you do.
+
+Every real-world action you take - focusing, building habits, setting goals - transforms this space into something beautiful."
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="SlideIcon" type="ColorRect" parent="OnboardingPanel/Margin/VBox/SlideContent" unique_id=511171818]
+custom_minimum_size = Vector2(120, 120)
+layout_mode = 2
+size_flags_horizontal = 4
+color = Color(0.83, 0.66, 0.29, 1)
+
+[node name="PageIndicator" type="HBoxContainer" parent="OnboardingPanel/Margin/VBox" unique_id=1883395006]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 15
+
+[node name="Dot1" type="ColorRect" parent="OnboardingPanel/Margin/VBox/PageIndicator" unique_id=1446534281]
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+color = Color(0.83, 0.66, 0.29, 1)
+
+[node name="Dot2" type="ColorRect" parent="OnboardingPanel/Margin/VBox/PageIndicator" unique_id=67050469]
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+color = Color(0.25, 0.25, 0.28, 1)
+
+[node name="Dot3" type="ColorRect" parent="OnboardingPanel/Margin/VBox/PageIndicator" unique_id=498079587]
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+color = Color(0.25, 0.25, 0.28, 1)
+
+[node name="Dot4" type="ColorRect" parent="OnboardingPanel/Margin/VBox/PageIndicator" unique_id=908420012]
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+color = Color(0.25, 0.25, 0.28, 1)
+
+[node name="ButtonRow" type="HBoxContainer" parent="OnboardingPanel/Margin/VBox" unique_id=1789032267]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 20
+
+[node name="BackButton" type="Button" parent="OnboardingPanel/Margin/VBox/ButtonRow"]
+visible = false
+custom_minimum_size = Vector2(150, 70)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(0.6, 0.6, 0.65, 1)
+text = "Back"
+
+[node name="SkipButton" type="Button" parent="OnboardingPanel/Margin/VBox/ButtonRow" unique_id=1208228596]
+custom_minimum_size = Vector2(150, 70)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(0.6, 0.6, 0.65, 1)
+text = "Skip"
+
+[node name="NextButton" type="Button" parent="OnboardingPanel/Margin/VBox/ButtonRow" unique_id=558763629]
+custom_minimum_size = Vector2(200, 70)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Next"

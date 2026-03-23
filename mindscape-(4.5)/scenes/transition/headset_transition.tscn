@@ -1,0 +1,74 @@
+[gd_scene load_steps=2 format=3 uid="uid://dj8k2m9n4p5q"]
+
+[ext_resource type="Script" path="res://scenes/transition/headset_transition.gd" id="1_transition"]
+
+[node name="HeadsetTransition" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_transition")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.04, 0.08, 1)
+
+[node name="Vignette" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0)
+
+[node name="CenterEffects" type="Node2D" parent="."]
+position = Vector2(640, 360)
+
+[node name="Glow" type="Polygon2D" parent="CenterEffects"]
+color = Color(0.3, 0.6, 0.9, 0.6)
+polygon = PackedVector2Array(-120, 0, -85, -85, 0, -120, 85, -85, 120, 0, 85, 85, 0, 120, -85, 85)
+
+[node name="Ring" type="Polygon2D" parent="CenterEffects"]
+color = Color(0.4, 0.7, 1, 0.8)
+polygon = PackedVector2Array(-80, 0, -57, -57, 0, -80, 57, -57, 80, 0, 57, 57, 0, 80, -57, 57, -80, 0, -60, 0, -42, 42, 0, 60, 42, 42, 60, 0, 42, -42, 0, -60, -42, -42, -60, 0)
+
+[node name="Particles" type="Node2D" parent="."]
+position = Vector2(640, 360)
+
+[node name="StatusLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -200.0
+offset_top = 480.0
+offset_right = 200.0
+offset_bottom = 520.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 28
+text = "NEURAL LINK ACTIVATING"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="SubtitleLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -250.0
+offset_top = 530.0
+offset_right = 250.0
+offset_bottom = 570.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 18
+text = "Connecting to mindscape..."
+horizontal_alignment = 1
+vertical_alignment = 1
