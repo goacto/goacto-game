@@ -1243,7 +1243,7 @@ func _place_console() -> void:
 	# Remove placement spot from interactions, add console
 	print("[Bedroom] Updating object positions...")
 	object_positions.erase("ConsolePlacementSpot")
-	object_positions["Console"] = Vector2(280, -80)
+	object_positions["Console"] = Vector2(0, 0)  # Console visual is at origin
 
 	# Show console visual
 	print("[Bedroom] Showing console visual...")
@@ -1888,8 +1888,8 @@ func _setup_console_hologram() -> void:
 	if console_hologram:
 		return
 
-	# Find console position in isometric base
-	var console_pos = object_positions.get("Console", Vector2(280, -80))
+	# Find console position in isometric base (Console visual is at origin)
+	var console_pos = object_positions.get("Console", Vector2(0, 0))
 
 	console_hologram = Node2D.new()
 	console_hologram.name = "ConsoleHologram"

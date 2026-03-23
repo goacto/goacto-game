@@ -80,13 +80,8 @@ func _ready() -> void:
 	var has_save = SaveManager.has_save()
 	continue_button.visible = has_save
 
-	# Check if any save slots exist
-	var has_any_slot = false
-	for i in range(1, 4):
-		if SaveManager.has_slot_save(i):
-			has_any_slot = true
-			break
-	load_button.visible = has_any_slot or has_save
+	# Load button is always visible (for importing saves)
+	load_button.visible = true
 
 	# For new players, show "Begin Journey" text
 	if has_save:
@@ -845,6 +840,37 @@ func _show_load_panel() -> void:
 	var sep2 = HSeparator.new()
 	vbox.add_child(sep2)
 
+	# JSON Import/Export section
+	var json_label = Label.new()
+	json_label.text = "Import / Export (JSON)"
+	json_label.add_theme_font_size_override("font_size", 14)
+	json_label.add_theme_color_override("font_color", Color(0.5, 0.55, 0.6))
+	json_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(json_label)
+
+	var json_row = HBoxContainer.new()
+	json_row.add_theme_constant_override("separation", 15)
+	json_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_child(json_row)
+
+	var import_btn = Button.new()
+	import_btn.text = "Import JSON"
+	import_btn.custom_minimum_size = Vector2(140, 40)
+	import_btn.add_theme_font_size_override("font_size", 14)
+	import_btn.pressed.connect(_show_import_dialog)
+	json_row.add_child(import_btn)
+
+	var export_btn = Button.new()
+	export_btn.text = "Export JSON"
+	export_btn.custom_minimum_size = Vector2(140, 40)
+	export_btn.add_theme_font_size_override("font_size", 14)
+	export_btn.disabled = not SaveManager.has_save()
+	export_btn.pressed.connect(_show_export_dialog)
+	json_row.add_child(export_btn)
+
+	var sep3 = HSeparator.new()
+	vbox.add_child(sep3)
+
 	# Back button
 	var back_btn = Button.new()
 	back_btn.text = "Back"
@@ -1085,6 +1111,10 @@ func _close_load_panel() -> void:
 
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
+		if json_dialog:
+			_close_json_dialog()
+			get_viewport().set_input_as_handled()
+			return
 		if delete_confirm_dialog:
 			_cancel_delete_slot()
 			get_viewport().set_input_as_handled()
@@ -1092,3 +1122,173 @@ func _input(event: InputEvent) -> void:
 		if load_panel and load_panel.visible:
 			_close_load_panel()
 			get_viewport().set_input_as_handled()
+
+
+# ============ JSON Import/Export ============
+var json_dialog: PanelContainer = null
+var json_text_edit: TextEdit = null
+
+func _show_import_dialog() -> void:
+	_create_json_dialog("Import Save Data", true)
+
+
+func _show_export_dialog() -> void:
+	_create_json_dialog("Export Save Data", false)
+
+
+func _create_json_dialog(title_text: String, is_import: bool) -> void:
+	if json_dialog:
+		json_dialog.queue_free()
+
+	json_dialog = PanelContainer.new()
+	json_dialog.name = "JSONDialog"
+
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.04, 0.04, 0.08, 0.98)
+	style.border_color = Color(0.4, 0.6, 0.8, 0.6)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(12)
+	json_dialog.add_theme_stylebox_override("panel", style)
+
+	json_dialog.set_anchors_preset(Control.PRESET_CENTER)
+	json_dialog.offset_left = -320
+	json_dialog.offset_right = 320
+	json_dialog.offset_top = -250
+	json_dialog.offset_bottom = 250
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 20)
+	margin.add_theme_constant_override("margin_right", 20)
+	margin.add_theme_constant_override("margin_top", 15)
+	margin.add_theme_constant_override("margin_bottom", 15)
+	json_dialog.add_child(margin)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 12)
+	margin.add_child(vbox)
+
+	# Title
+	var title = Label.new()
+	title.text = title_text
+	title.add_theme_font_size_override("font_size", 22)
+	title.add_theme_color_override("font_color", Color(0.5, 0.7, 0.9))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(title)
+
+	# Instructions
+	var instructions = Label.new()
+	if is_import:
+		instructions.text = "Paste your JSON save data below:"
+	else:
+		instructions.text = "Copy your save data (select all, then copy):"
+	instructions.add_theme_font_size_override("font_size", 14)
+	instructions.add_theme_color_override("font_color", Color(0.6, 0.65, 0.7))
+	instructions.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(instructions)
+
+	# TextEdit for JSON
+	json_text_edit = TextEdit.new()
+	json_text_edit.custom_minimum_size = Vector2(580, 300)
+	json_text_edit.add_theme_font_size_override("font_size", 12)
+	json_text_edit.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+
+	if not is_import:
+		# Export: populate with current save data
+		var save_data = SaveManager.export_save_data()
+		json_text_edit.text = save_data
+		json_text_edit.editable = false
+	else:
+		json_text_edit.placeholder_text = '{"version": "0.3.2", "player": {...}, ...}'
+
+	vbox.add_child(json_text_edit)
+
+	# Buttons
+	var btn_row = HBoxContainer.new()
+	btn_row.add_theme_constant_override("separation", 15)
+	btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_child(btn_row)
+
+	var cancel_btn = Button.new()
+	cancel_btn.text = "Cancel"
+	cancel_btn.custom_minimum_size = Vector2(120, 42)
+	cancel_btn.add_theme_font_size_override("font_size", 16)
+	cancel_btn.pressed.connect(_close_json_dialog)
+	btn_row.add_child(cancel_btn)
+
+	if is_import:
+		var import_btn = Button.new()
+		import_btn.text = "Import"
+		import_btn.custom_minimum_size = Vector2(120, 42)
+		import_btn.add_theme_font_size_override("font_size", 16)
+		import_btn.add_theme_color_override("font_color", Color(0.4, 0.8, 0.5))
+		import_btn.pressed.connect(_do_import)
+		btn_row.add_child(import_btn)
+	else:
+		var copy_btn = Button.new()
+		copy_btn.text = "Copy All"
+		copy_btn.custom_minimum_size = Vector2(120, 42)
+		copy_btn.add_theme_font_size_override("font_size", 16)
+		copy_btn.pressed.connect(_copy_export_text)
+		btn_row.add_child(copy_btn)
+
+	add_child(json_dialog)
+
+	# Animate
+	json_dialog.modulate.a = 0.0
+	json_dialog.scale = Vector2(0.95, 0.95)
+	var tween = create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(json_dialog, "modulate:a", 1.0, 0.2)
+	tween.tween_property(json_dialog, "scale", Vector2(1.0, 1.0), 0.2).set_ease(Tween.EASE_OUT)
+
+
+func _close_json_dialog() -> void:
+	if json_dialog:
+		json_dialog.queue_free()
+		json_dialog = null
+	json_text_edit = null
+
+
+func _do_import() -> void:
+	if not json_text_edit or json_text_edit.text.strip_edges() == "":
+		_show_import_result("Please paste your save data first.", false)
+		return
+
+	var success = SaveManager.import_save_data(json_text_edit.text)
+	if success:
+		_show_import_result("Save data imported successfully!\nThe game will now load.", true)
+		await get_tree().create_timer(1.5).timeout
+		_close_json_dialog()
+		_close_load_panel()
+		# Load the imported data
+		SaveManager.load_game()
+		GameManager.player_data["wakeup_from_continue"] = true
+		_enter_mindscape()
+	else:
+		_show_import_result("Import failed. Check that the data is valid JSON.", false)
+
+
+func _copy_export_text() -> void:
+	if json_text_edit:
+		DisplayServer.clipboard_set(json_text_edit.text)
+		_show_import_result("Copied to clipboard!", true)
+
+
+func _show_import_result(message: String, success: bool) -> void:
+	# Show a brief result message
+	var result_label = Label.new()
+	result_label.text = message
+	result_label.add_theme_font_size_override("font_size", 16)
+	result_label.add_theme_color_override("font_color", Color(0.4, 0.9, 0.5) if success else Color(0.9, 0.4, 0.4))
+	result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	result_label.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	result_label.offset_top = -60
+	result_label.offset_bottom = -30
+
+	if json_dialog:
+		json_dialog.add_child(result_label)
+
+		# Fade out after 2 seconds
+		var tween = create_tween()
+		tween.tween_property(result_label, "modulate:a", 0.0, 0.5).set_delay(2.0)
+		tween.tween_callback(result_label.queue_free)
