@@ -4,7 +4,7 @@ extends Node
 
 # Version and Build Info
 const VERSION: String = "v0.1.0-prototype"
-const BUILD_TIMESTAMP: String = "LOCAL"  # Updated by CI: YYYYMMDD-HHMMSS
+const BUILD_TIMESTAMP: String = "20260323-022959"  # Updated on export: YYYYMMDD-HHMMSS
 const RESET_HOTKEY: String = "Ctrl+Shift+R"
 
 # Game States
@@ -161,6 +161,42 @@ func _ready() -> void:
 # Version overlay for debugging
 var version_overlay: CanvasLayer = null
 
+func _get_relative_time(timestamp_str: String) -> String:
+	# Parse YYYYMMDD-HHMMSS format
+	if timestamp_str.length() != 15 or timestamp_str[8] != "-":
+		return ""
+
+	var year = int(timestamp_str.substr(0, 4))
+	var month = int(timestamp_str.substr(4, 2))
+	var day = int(timestamp_str.substr(6, 2))
+	var hour = int(timestamp_str.substr(9, 2))
+	var minute = int(timestamp_str.substr(11, 2))
+	var second = int(timestamp_str.substr(13, 2))
+
+	# Create build datetime dict
+	var build_time = Time.get_unix_time_from_datetime_dict({
+		"year": year, "month": month, "day": day,
+		"hour": hour, "minute": minute, "second": second
+	})
+
+	var now = Time.get_unix_time_from_system()
+	var diff = int(now - build_time)
+
+	if diff < 0:
+		return "just now"
+	elif diff < 60:
+		return "%ds ago" % diff
+	elif diff < 3600:
+		var mins = diff / 60
+		return "%dm ago" % mins
+	elif diff < 86400:
+		var hours = diff / 3600
+		return "%dh ago" % hours
+	else:
+		var days = diff / 86400
+		return "%dd ago" % days
+
+
 func _create_version_overlay() -> void:
 	version_overlay = CanvasLayer.new()
 	version_overlay.name = "VersionOverlay"
@@ -170,9 +206,14 @@ func _create_version_overlay() -> void:
 	var label = Label.new()
 	label.name = "VersionLabel"
 
-	# Build info text
-	var build_info = BUILD_TIMESTAMP if BUILD_TIMESTAMP != "LOCAL" else "Local Dev"
-	label.text = "%s | Build: %s | Reset: %s" % [VERSION, build_info, RESET_HOTKEY]
+	# Build info text with relative time
+	var build_info: String
+	if BUILD_TIMESTAMP == "LOCAL":
+		build_info = "Local Dev"
+	else:
+		var relative = _get_relative_time(BUILD_TIMESTAMP)
+		build_info = "%s (%s)" % [BUILD_TIMESTAMP, relative] if relative else BUILD_TIMESTAMP
+	label.text = "%s | %s | Reset: %s" % [VERSION, build_info, RESET_HOTKEY]
 
 	# Position in bottom-right
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
