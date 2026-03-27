@@ -96,9 +96,6 @@ func _setup_scene_specific() -> void:
 func _process_scene_specific(_delta: float) -> void:
 	pass
 
-## Get isometric movement factor (some scenes use different values)
-func _get_iso_movement_factor() -> float:
-	return 0.5
 
 # =============================================================================
 # COMMON SETUP
@@ -153,14 +150,8 @@ func _handle_movement(delta: float) -> void:
 	if input_dir != Vector2.ZERO:
 		input_dir = input_dir.normalized()
 
-		# Isometric movement (W=up-left, S=down-right, A=down-left, D=up-right)
-		var iso_factor = _get_iso_movement_factor()
-		var iso_movement = Vector2(
-			input_dir.x + input_dir.y * iso_factor,
-			(input_dir.y - input_dir.x) * iso_factor
-		)
-
-		var new_pos = player.position + iso_movement * player_speed * delta
+		# Cardinal movement (W=up, S=down, A=left, D=right)
+		var new_pos = player.position + input_dir * player_speed * delta
 
 		# Clamp to bounds
 		new_pos.x = clamp(new_pos.x, player_bounds.position.x, player_bounds.position.x + player_bounds.size.x)

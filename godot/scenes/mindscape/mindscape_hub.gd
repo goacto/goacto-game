@@ -117,7 +117,7 @@ var garden_patches: Array = []
 # Companion spirit
 var companion_spirit: Node2D = null
 var companion_tip_timer: float = 0.0
-var companion_tip_cooldown: float = 30.0  # Show tip every 30 seconds
+var companion_tip_cooldown: float = 120.0  # Show tip every 2 minutes
 var companion_enabled: bool = true
 var current_tip_bubble: Control = null
 var is_onboarding_active: bool = false  # Prevent tips during onboarding
@@ -288,8 +288,8 @@ func _setup_zone_interactions() -> void:
 	zone_positions["FocusChamber"] = focus_chamber.position
 	zone_positions["DailyRituals"] = daily_rituals.position
 	zone_positions["ReflectionPool"] = reflection_pool.position
-	# Experience Shop position (near South portal area) - expanded platform
-	zone_positions["ExperienceShop"] = Vector2(380, 420)
+	# Experience Shop position - tucked near the eastern edge
+	zone_positions["ExperienceShop"] = Vector2(620, 280)
 
 	# Create Experience Shop visual
 	_create_experience_shop_visual()
@@ -458,13 +458,8 @@ func _process(delta: float) -> void:
 	if input_dir != Vector2.ZERO:
 		input_dir = input_dir.normalized()
 
-		# Isometric movement (W=up-left, S=down-right, A=down-left, D=up-right)
-		var iso_movement = Vector2(
-			input_dir.x + input_dir.y,
-			(input_dir.y - input_dir.x) * 0.5
-		)
-
-		var new_pos = player.position + iso_movement * player_speed * delta
+		# Cardinal movement (W=up, S=down, A=left, D=right)
+		var new_pos = player.position + input_dir * player_speed * delta
 		new_pos = _constrain_to_diamond(new_pos)
 		player.position = new_pos
 
@@ -834,21 +829,7 @@ func _setup_progress_indicators() -> void:
 	flames_label.size = Vector2(60, 15)
 	flames_container.add_child(flames_label)
 
-	# Create evolution ring container
-	evolution_ring = Node2D.new()
-	evolution_ring.name = "EvolutionRing"
-	evolution_ring.position = Vector2(0, -60)
-
-	var ring_poly = Polygon2D.new()
-	ring_poly.name = "RingPoly"
-	ring_poly.color = Color(0.6, 0.4, 0.8, 0.15)
-	ring_poly.polygon = PackedVector2Array([
-		Vector2(-60, 0), Vector2(0, -30), Vector2(60, 0), Vector2(0, 30)
-	])
-	evolution_ring.add_child(ring_poly)
-
-	isometric_base.add_child(evolution_ring)
-	isometric_base.move_child(evolution_ring, 3)  # After InnerRing
+	# Evolution ring removed - progress shown via evolution label in header
 
 	# Create streak flames based on active habits
 	_update_streak_flames()
@@ -970,14 +951,14 @@ func _create_garden_patches() -> void:
 			if HabitManager.is_completed_today(habit.id):
 				domain_stats[domain_name].completed_today += 1
 
-	# Garden patch positions around the hub (isometric positions)
+	# Garden patch positions - spread out to avoid overlapping portals/zones
 	var patch_configs = [
-		{"name": "Mind", "pos": Vector2(-350, -100), "base_color": Color(0.3, 0.5, 0.8)},
-		{"name": "Body", "pos": Vector2(350, -100), "base_color": Color(0.8, 0.4, 0.3)},
-		{"name": "Soul", "pos": Vector2(-350, 150), "base_color": Color(0.6, 0.4, 0.8)},
-		{"name": "Social", "pos": Vector2(350, 150), "base_color": Color(0.4, 0.7, 0.5)},
-		{"name": "Career", "pos": Vector2(-180, 280), "base_color": Color(0.7, 0.6, 0.3)},
-		{"name": "Wealth", "pos": Vector2(180, 280), "base_color": Color(0.8, 0.7, 0.2)}
+		{"name": "Mind", "pos": Vector2(-500, -200), "base_color": Color(0.3, 0.5, 0.8)},
+		{"name": "Body", "pos": Vector2(500, -200), "base_color": Color(0.8, 0.4, 0.3)},
+		{"name": "Soul", "pos": Vector2(-550, 80), "base_color": Color(0.6, 0.4, 0.8)},
+		{"name": "Social", "pos": Vector2(550, 80), "base_color": Color(0.4, 0.7, 0.5)},
+		{"name": "Career", "pos": Vector2(-350, 320), "base_color": Color(0.7, 0.6, 0.3)},
+		{"name": "Wealth", "pos": Vector2(350, 320), "base_color": Color(0.8, 0.7, 0.2)}
 	]
 
 	for config in patch_configs:
@@ -1205,10 +1186,6 @@ func _animate_progress_indicators() -> void:
 				flame.set_meta("base_x", flame.position.x)
 			flame.position.x = flame.get_meta("base_x") + sway
 
-	# Animate evolution ring
-	if evolution_ring:
-		var pulse = sin(crystal_pulse_time * 1.5) * 0.03 + 1.0
-		evolution_ring.scale = evolution_ring.scale * pulse
 
 	# Animate garden patches
 	for patch_data in garden_patches:
@@ -1406,22 +1383,23 @@ func _setup_achievement_pedestals() -> void:
 	pedestals_container.name = "AchievementPedestals"
 	isometric_base.add_child(pedestals_container)
 
-	# Three pedestal positions - grouped on the right side
+	# Three pedestal positions - horizontal row in the northern gardens area
+	# Between the exit crystal (0, -60) and the north portal (0, -580)
 	var positions = [
-		Vector2(220, 60),
-		Vector2(260, 90),
-		Vector2(300, 120)
+		Vector2(-120, -340),
+		Vector2(0, -340),
+		Vector2(120, -340)
 	]
 
-	# Section label - positioned above the pedestals
+	# Section label - centered above the pedestals
 	var label = Label.new()
 	label.name = "SectionLabel"
 	label.text = "Achievements"
 	label.add_theme_font_size_override("font_size", 11)
 	label.add_theme_color_override("font_color", Color(0.7, 0.65, 0.5, 0.9))
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.position = Vector2(200, 15)  # Above the first pedestal
-	label.size = Vector2(120, 15)
+	label.position = Vector2(-70, -385)
+	label.size = Vector2(140, 15)
 	pedestals_container.add_child(label)
 
 	for i in range(3):
@@ -10878,7 +10856,7 @@ func _create_hub_floor_patterns() -> void:
 		ring.color = ring_colors[i]
 		hub_env_container.add_child(ring)
 
-	# Add subtle star patterns on floor - expanded coverage
+	# Add subtle star patterns across the full visible area
 	var star_positions = [
 		# Inner stars
 		Vector2(-400, -150), Vector2(400, -150),
@@ -10894,17 +10872,42 @@ func _create_hub_floor_patterns() -> void:
 		Vector2(-1000, -150), Vector2(1000, -150),
 		Vector2(-900, 350), Vector2(900, 350),
 		Vector2(-600, -550), Vector2(600, -550),
-		Vector2(-200, 600), Vector2(200, 600)
+		Vector2(-200, 600), Vector2(200, 600),
+		# Far outer stars - fill the full zoomed-out view
+		Vector2(-1500, -600), Vector2(1500, -600),
+		Vector2(-1500, 0), Vector2(1500, 0),
+		Vector2(-1500, 600), Vector2(1500, 600),
+		Vector2(-1200, -800), Vector2(1200, -800),
+		Vector2(-1200, 800), Vector2(1200, 800),
+		Vector2(0, -900), Vector2(0, 900),
+		Vector2(-1800, -300), Vector2(1800, -300),
+		Vector2(-1800, 300), Vector2(1800, 300),
+		Vector2(-2000, 0), Vector2(2000, 0),
+		Vector2(-2000, -500), Vector2(2000, -500),
+		Vector2(-2000, 500), Vector2(2000, 500),
+		Vector2(-1600, -900), Vector2(1600, -900),
+		Vector2(-1600, 900), Vector2(1600, 900),
+		Vector2(-2400, -200), Vector2(2400, -200),
+		Vector2(-2400, 200), Vector2(2400, 200),
+		Vector2(-2200, -700), Vector2(2200, -700),
+		Vector2(-2200, 700), Vector2(2200, 700),
+		Vector2(-800, -1000), Vector2(800, -1000),
+		Vector2(-800, 1000), Vector2(800, 1000),
+		Vector2(-2600, 0), Vector2(2600, 0),
+		Vector2(0, -1100), Vector2(0, 1100),
 	]
 	for pos in star_positions:
 		var star = Polygon2D.new()
+		var star_size = randf_range(8, 14)
+		var s = star_size
+		var s2 = s * 0.33
 		star.polygon = PackedVector2Array([
-			Vector2(-12, 0), Vector2(-4, -4), Vector2(0, -12),
-			Vector2(4, -4), Vector2(12, 0), Vector2(4, 4),
-			Vector2(0, 12), Vector2(-4, 4)
+			Vector2(-s, 0), Vector2(-s2, -s2), Vector2(0, -s),
+			Vector2(s2, -s2), Vector2(s, 0), Vector2(s2, s2),
+			Vector2(0, s), Vector2(-s2, s2)
 		])
 		star.position = pos
-		star.color = Color(0.5, 0.4, 0.7, 0.2)
+		star.color = Color(0.5, 0.4, 0.7, randf_range(0.1, 0.25))
 		hub_env_container.add_child(star)
 
 	# Add mystical pathway markings connecting zones
@@ -11164,20 +11167,6 @@ func _create_hub_center_enhancement() -> void:
 
 	hub_env_container.add_child(rune_ring)
 
-	# Add pulsing energy lines from center
-	for i in range(4):
-		var angle = (float(i) / 4) * TAU + PI/4
-		var line = Polygon2D.new()
-		var length = 180
-		var end_x = cos(angle) * length
-		var end_y = sin(angle) * length * 0.5
-		line.polygon = PackedVector2Array([
-			Vector2(0, 0), Vector2(end_x - 5, end_y - 2),
-			Vector2(end_x, end_y), Vector2(end_x - 5, end_y + 2)
-		])
-		line.position = Vector2(0, -60)
-		line.color = Color(0.5, 0.4, 0.8, 0.2)
-		hub_env_container.add_child(line)
 
 
 func _create_progress_indicators() -> void:
@@ -11275,79 +11264,14 @@ func _create_progress_indicators() -> void:
 		hub_env_container.add_child(streak_bg)
 		hub_env_container.add_child(streak_label)
 
-	# === EVOLUTION RING ===
-	# A ring around the platform that fills based on evolution progress
-	evolution_ring = Node2D.new()
-	evolution_ring.name = "EvolutionRing"
-	evolution_ring.position = Vector2(0, 0)
-
-	var ring_radius = 200
-	var ring_thickness = 6
-	var segment_count = 20
-
-	# Background ring (dark)
-	for i in range(segment_count):
-		var start_angle = (float(i) / segment_count) * TAU - PI/2
-		var end_angle = (float(i + 1) / segment_count) * TAU - PI/2
-
-		var segment = Polygon2D.new()
-		var outer_r = ring_radius + ring_thickness
-		var inner_r = ring_radius - ring_thickness
-
-		segment.polygon = PackedVector2Array([
-			Vector2(cos(start_angle) * inner_r, sin(start_angle) * inner_r * 0.5),
-			Vector2(cos(start_angle) * outer_r, sin(start_angle) * outer_r * 0.5),
-			Vector2(cos(end_angle) * outer_r, sin(end_angle) * outer_r * 0.5),
-			Vector2(cos(end_angle) * inner_r, sin(end_angle) * inner_r * 0.5)
-		])
-		segment.color = Color(0.15, 0.12, 0.2, 0.5)
-		evolution_ring.add_child(segment)
-
-	# Progress ring (glowing based on evolution)
-	var filled_segments = int(evolution_progress * segment_count)
-	var level_colors = [
-		Color(0.5, 0.5, 0.6),    # Level 1 - Gray
-		Color(0.4, 0.7, 0.5),    # Level 2 - Green
-		Color(0.3, 0.6, 0.9),    # Level 3 - Blue
-		Color(0.7, 0.5, 0.9),    # Level 4 - Purple
-		Color(0.9, 0.7, 0.3),    # Level 5 - Gold
-		Color(0.95, 0.4, 0.4),   # Level 6+ - Red/Fire
-	]
-	var ring_color = level_colors[min(evolution_level - 1, level_colors.size() - 1)]
-
-	for i in range(filled_segments):
-		var start_angle = (float(i) / segment_count) * TAU - PI/2
-		var end_angle = (float(i + 1) / segment_count) * TAU - PI/2
-
-		var segment = Polygon2D.new()
-		segment.name = "EvoSegment_" + str(i)
-		var outer_r = ring_radius + ring_thickness
-		var inner_r = ring_radius - ring_thickness
-
-		segment.polygon = PackedVector2Array([
-			Vector2(cos(start_angle) * inner_r, sin(start_angle) * inner_r * 0.5),
-			Vector2(cos(start_angle) * outer_r, sin(start_angle) * outer_r * 0.5),
-			Vector2(cos(end_angle) * outer_r, sin(end_angle) * outer_r * 0.5),
-			Vector2(cos(end_angle) * inner_r, sin(end_angle) * inner_r * 0.5)
-		])
-		segment.color = ring_color
-		evolution_ring.add_child(segment)
-
-		evolution_segments.append({
-			"polygon": segment,
-			"base_color": ring_color,
-			"index": i
-		})
-
-	evolution_ring.z_index = 2
-	hub_env_container.add_child(evolution_ring)
 
 	# Evolution level indicator
 	var evo_label = Label.new()
 	evo_label.name = "EvoLabel"
 	evo_label.text = "Evo " + str(evolution_level)
 	evo_label.add_theme_font_size_override("font_size", 12)
-	evo_label.add_theme_color_override("font_color", ring_color)
+	var evo_color = Color(0.7, 0.6, 0.9)
+	evo_label.add_theme_color_override("font_color", evo_color)
 	evo_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	evo_label.position = Vector2(-25, -220)
 	evo_label.z_index = 10
@@ -11389,12 +11313,6 @@ func _animate_hub_environment(delta: float) -> void:
 			var scale_pulse = 1.0 + sin(hub_env_time * flame.flicker_speed * 0.8) * 0.1
 			flame.node.scale = Vector2(scale_pulse, scale_pulse)
 
-	# Animate evolution ring segments (subtle glow pulse)
-	for seg in evolution_segments:
-		if is_instance_valid(seg.polygon):
-			var pulse = 0.8 + sin(hub_env_time * 2.0 + seg.index * 0.3) * 0.2
-			var color = seg.base_color
-			seg.polygon.color = Color(color.r, color.g, color.b, color.a * pulse)
 
 	# Animate weather/atmosphere effects
 	_animate_weather_effects(delta)
@@ -11936,6 +11854,16 @@ func _open_experience_shop() -> void:
 		btn.name = "CategoryBtn_" + str(cat.id)
 		sidebar.add_child(btn)
 
+	# IRL Gifts tab (special - uses focus coins, not aspect XP)
+	var irl_btn = Button.new()
+	irl_btn.text = "🎁 IRL Gifts"
+	irl_btn.custom_minimum_size = Vector2(0, 45)
+	irl_btn.add_theme_font_size_override("font_size", 16)
+	irl_btn.add_theme_color_override("font_color", Color(0.95, 0.8, 0.4))
+	irl_btn.pressed.connect(_on_shop_irl_gifts_selected)
+	irl_btn.name = "CategoryBtn_IRL"
+	sidebar.add_child(irl_btn)
+
 	# Items scroll area
 	var scroll = ScrollContainer.new()
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -12009,6 +11937,189 @@ func _on_shop_category_selected(category: int) -> void:
 	for item in items:
 		var item_id = item.get("id", "")
 		_create_shop_item_card(item_id, item)
+
+
+func _on_shop_irl_gifts_selected() -> void:
+	# Highlight the IRL button, unhighlight others
+	if shop_panel:
+		var sidebar = shop_panel.get_node_or_null("VBoxContainer/HBoxContainer/VBoxContainer")
+		if sidebar:
+			for child in sidebar.get_children():
+				if child is Button:
+					if child.name == "CategoryBtn_IRL":
+						child.add_theme_color_override("font_color", Color(0.95, 0.8, 0.4))
+					else:
+						child.remove_theme_color_override("font_color")
+
+	if not shop_item_grid:
+		return
+
+	for child in shop_item_grid.get_children():
+		child.queue_free()
+
+	# Focus coins balance
+	var focus_coins = GameManager.player_data.get("total_focus_sessions", 0)
+
+	# Header with coin balance
+	var header = VBoxContainer.new()
+	header.custom_minimum_size = Vector2(700, 0)
+	shop_item_grid.columns = 1
+	shop_item_grid.add_child(header)
+
+	var coin_label = Label.new()
+	coin_label.text = "Focus Coins: %d (1 earned per completed session)" % focus_coins
+	coin_label.add_theme_font_size_override("font_size", 16)
+	coin_label.add_theme_color_override("font_color", Color(0.95, 0.85, 0.4))
+	header.add_child(coin_label)
+
+	var desc = Label.new()
+	desc.text = "Redeem focus coins for real-world rewards! Complete focus sessions to earn coins, then unlock discount codes for the GOACTO shop."
+	desc.add_theme_font_size_override("font_size", 13)
+	desc.add_theme_color_override("font_color", Color(0.6, 0.65, 0.7))
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	header.add_child(desc)
+
+	var spacer = Control.new()
+	spacer.custom_minimum_size = Vector2(0, 12)
+	header.add_child(spacer)
+
+	# IRL Gift items
+	var irl_items = [
+		{
+			"name": "GOACTO Sticker Pack",
+			"desc": "A set of motivational GOACTO stickers delivered to your door.",
+			"coins": 10,
+			"url": "https://goacto.shop/stickers",
+			"discount": "FOCUS10",
+			"color": Color(0.4, 0.8, 0.6)
+		},
+		{
+			"name": "Growth Journal",
+			"desc": "Physical GOACTO growth journal with guided prompts and reflection pages.",
+			"coins": 25,
+			"url": "https://goacto.shop/journal",
+			"discount": "FOCUS25",
+			"color": Color(0.5, 0.7, 0.9)
+		},
+		{
+			"name": "Mindscape Poster",
+			"desc": "Premium art print of your mindscape evolution. A reminder of your journey.",
+			"coins": 50,
+			"url": "https://goacto.shop/poster",
+			"discount": "FOCUS50",
+			"color": Color(0.8, 0.6, 0.9)
+		},
+		{
+			"name": "Agent Goacto Figure",
+			"desc": "Collectible desk figure of Agent Goacto. Your companion in the real world.",
+			"coins": 100,
+			"url": "https://goacto.shop/figure",
+			"discount": "FOCUS100",
+			"color": Color(0.95, 0.75, 0.3)
+		},
+	]
+
+	# Gift cards grid
+	var gifts_grid = GridContainer.new()
+	gifts_grid.columns = 2
+	gifts_grid.add_theme_constant_override("h_separation", 15)
+	gifts_grid.add_theme_constant_override("v_separation", 15)
+	header.add_child(gifts_grid)
+
+	for gift in irl_items:
+		var card = PanelContainer.new()
+		card.custom_minimum_size = Vector2(330, 140)
+
+		var style = StyleBoxFlat.new()
+		var can_afford = focus_coins >= gift.coins
+		style.bg_color = Color(0.1, 0.12, 0.16, 1) if can_afford else Color(0.08, 0.08, 0.1, 1)
+		style.corner_radius_top_left = 8
+		style.corner_radius_top_right = 8
+		style.corner_radius_bottom_left = 8
+		style.corner_radius_bottom_right = 8
+		style.border_color = gift.color if can_afford else Color(0.25, 0.25, 0.3, 0.5)
+		style.border_width_left = 2
+		style.border_width_right = 2
+		style.border_width_top = 2
+		style.border_width_bottom = 2
+		card.add_theme_stylebox_override("panel", style)
+		gifts_grid.add_child(card)
+
+		var vbox = VBoxContainer.new()
+		vbox.add_theme_constant_override("separation", 4)
+
+		var margin = MarginContainer.new()
+		margin.add_theme_constant_override("margin_left", 12)
+		margin.add_theme_constant_override("margin_right", 12)
+		margin.add_theme_constant_override("margin_top", 10)
+		margin.add_theme_constant_override("margin_bottom", 10)
+		margin.add_child(vbox)
+		card.add_child(margin)
+
+		var title = Label.new()
+		title.text = gift.name
+		title.add_theme_font_size_override("font_size", 16)
+		title.add_theme_color_override("font_color", gift.color)
+		vbox.add_child(title)
+
+		var desc_label = Label.new()
+		desc_label.text = gift.desc
+		desc_label.add_theme_font_size_override("font_size", 11)
+		desc_label.add_theme_color_override("font_color", Color(0.55, 0.58, 0.65))
+		desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		vbox.add_child(desc_label)
+
+		var cost_label = Label.new()
+		cost_label.text = "%d Focus Coins" % gift.coins
+		cost_label.add_theme_font_size_override("font_size", 13)
+		cost_label.add_theme_color_override("font_color", Color(0.95, 0.85, 0.4) if can_afford else Color(0.5, 0.5, 0.5))
+		vbox.add_child(cost_label)
+
+		var btn_row = HBoxContainer.new()
+		btn_row.add_theme_constant_override("separation", 10)
+		vbox.add_child(btn_row)
+
+		var redeem_btn = Button.new()
+		redeem_btn.text = "Unlock Code" if can_afford else "Need %d more" % (gift.coins - focus_coins)
+		redeem_btn.custom_minimum_size = Vector2(120, 30)
+		redeem_btn.add_theme_font_size_override("font_size", 12)
+		redeem_btn.disabled = not can_afford
+		if can_afford:
+			redeem_btn.pressed.connect(_on_irl_gift_redeem.bind(gift))
+		btn_row.add_child(redeem_btn)
+
+		var browse_btn = Button.new()
+		browse_btn.text = "View in Shop"
+		browse_btn.flat = true
+		browse_btn.custom_minimum_size = Vector2(100, 30)
+		browse_btn.add_theme_font_size_override("font_size", 12)
+		browse_btn.add_theme_color_override("font_color", Color(0.5, 0.7, 0.9))
+		browse_btn.pressed.connect(func(): OS.shell_open(gift.url))
+		btn_row.add_child(browse_btn)
+
+	# Coming soon note
+	var note = Label.new()
+	note.text = "More rewards coming soon! Every focus session earns you 1 coin."
+	note.add_theme_font_size_override("font_size", 12)
+	note.add_theme_color_override("font_color", Color(0.45, 0.48, 0.55))
+	header.add_child(note)
+
+
+func _on_irl_gift_redeem(gift: Dictionary) -> void:
+	var focus_coins = GameManager.player_data.get("total_focus_sessions", 0)
+	if focus_coins < gift.coins:
+		_show_dialogue("Not Enough Coins", "You need %d focus coins but have %d.\n\nComplete more focus sessions to earn coins!" % [gift.coins, focus_coins])
+		return
+
+	# Show the discount code
+	var code = gift.get("discount", "GOACTO")
+	_close_experience_shop()
+	_show_dialogue(
+		"Code Unlocked!",
+		"Your discount code for %s:\n\n%s\n\nUse this code at goacto.shop for a special discount.\n\nThe code has been copied - visit the shop to redeem!" % [gift.name, code],
+		func(): OS.shell_open(gift.get("url", "https://goacto.shop"))
+	)
+	DisplayServer.clipboard_set(code)
 
 
 func _create_shop_item_card(item_id: String, item: Dictionary) -> void:

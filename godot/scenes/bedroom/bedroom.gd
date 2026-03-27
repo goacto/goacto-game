@@ -156,7 +156,7 @@ const INTERACTIVE_OBJECTS = {
 # Object positions for proximity detection (expanded plus-shaped layout)
 var object_positions: Dictionary = {
 	# Left wing
-	"Window": Vector2(-450, -120),
+	"Window": Vector2(-450, -320),
 	"Door": Vector2(-550, 100),
 	# Top wing
 	"Plant": Vector2(-80, -420),
@@ -196,15 +196,14 @@ func _ready() -> void:
 	# Hide UI initially
 	interaction_prompt.visible = false
 	dialogue_panel.visible = false
-	control_hints.visible = false
+	control_hints.visible = true
 
 	# Check if this is a "continue journey" wake-up
-	if GameManager.player_data.get("wakeup_from_continue", false):
+	var is_wakeup = GameManager.player_data.get("wakeup_from_continue", false)
+	if is_wakeup:
 		GameManager.player_data.erase("wakeup_from_continue")
 		_start_wakeup_sequence()
 	else:
-		# Normal entry - center the view
-		control_hints.visible = true
 		_update_camera()
 
 	# Start animations
@@ -459,13 +458,8 @@ func _handle_movement(delta: float) -> void:
 	if input_dir != Vector2.ZERO:
 		input_dir = input_dir.normalized()
 
-		# Convert to isometric movement (W=up-left, S=down-right, A=down-left, D=up-right)
-		var iso_movement = Vector2(
-			input_dir.x + input_dir.y,
-			(input_dir.y - input_dir.x) * 0.5
-		)
-
-		var new_pos = player.position + iso_movement * player_speed * delta
+		# Cardinal movement (W=up, S=down, A=left, D=right)
+		var new_pos = player.position + input_dir * player_speed * delta
 
 		# Clamp to plus-shaped room bounds (pass current position to track region)
 		new_pos = _clamp_to_plus_bounds(new_pos, player.position)
@@ -1503,6 +1497,13 @@ func _set_interactive_labels_visible(show: bool) -> void:
 		var label = isometric_base.get_node_or_null(path)
 		if label:
 			label.visible = show
+
+
+func _fade_in_bedroom_ui() -> void:
+	# Fade in the entire scene by tweening self.modulate.a from 0 to 1
+	var tween = create_tween()
+	tween.tween_property(self, "modulate:a", 1.0, 1.0).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	await tween.finished
 
 
 # =============================================================================
@@ -7015,8 +7016,8 @@ func _get_placed_decoration_ids() -> Array:
 
 
 func _create_decoration_item_button(parent: Node, item_id: String) -> void:
-	var item = ShopManager.get_item(item_id) if ShopManager else {}
-	if item.is_empty():
+	var item = ShopManager.get_item(item_id) if ShopManager else null
+	if not item or (item is Dictionary and item.is_empty()):
 		return
 
 	var btn = Button.new()

@@ -5,7 +5,6 @@ extends Node
 # Version and Build Info
 const VERSION: String = "v0.1.0-prototype"
 const BUILD_TIMESTAMP: String = "20260323-063317"  # UTC timestamp: YYYYMMDD-HHMMSS
-const RESET_HOTKEY: String = "Ctrl+Shift+R"
 
 # Game States
 enum GameState {
@@ -203,34 +202,53 @@ func _create_version_overlay() -> void:
 	version_overlay.layer = 100  # Always on top
 	add_child(version_overlay)
 
+	var hbox = HBoxContainer.new()
+	hbox.name = "VersionBar"
+	hbox.anchor_left = 1.0
+	hbox.anchor_right = 1.0
+	hbox.anchor_top = 1.0
+	hbox.anchor_bottom = 1.0
+	hbox.offset_left = -360
+	hbox.offset_right = -10
+	hbox.offset_top = -30
+	hbox.offset_bottom = -10
+	hbox.alignment = BoxContainer.ALIGNMENT_END
+	hbox.add_theme_constant_override("separation", 6)
+
+	# Version label
 	var label = Label.new()
 	label.name = "VersionLabel"
 
-	# Build info text with relative time
 	var build_info: String
 	if BUILD_TIMESTAMP == "LOCAL":
 		build_info = "Local Dev"
 	else:
 		var relative = _get_relative_time(BUILD_TIMESTAMP)
 		build_info = "%s (%s)" % [BUILD_TIMESTAMP, relative] if relative else BUILD_TIMESTAMP
-	label.text = "%s | %s | Reset: %s" % [VERSION, build_info, RESET_HOTKEY]
+	label.text = "%s | %s" % [VERSION, build_info]
 
-	# Position in bottom-right
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	label.anchor_left = 1.0
-	label.anchor_right = 1.0
-	label.anchor_top = 1.0
-	label.anchor_bottom = 1.0
-	label.offset_left = -300
-	label.offset_right = -10
-	label.offset_top = -30
-	label.offset_bottom = -10
-
-	# Styling - subtle
 	label.add_theme_font_size_override("font_size", 12)
 	label.add_theme_color_override("font_color", Color(1, 1, 1, 0.4))
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hbox.add_child(label)
 
-	version_overlay.add_child(label)
+	# Reset button - reloads current scene when things freeze
+	var reset_btn = Button.new()
+	reset_btn.name = "ResetButton"
+	reset_btn.text = "Reset Scene"
+	reset_btn.flat = true
+	reset_btn.add_theme_font_size_override("font_size", 12)
+	reset_btn.add_theme_color_override("font_color", Color(1, 0.6, 0.6, 0.5))
+	reset_btn.add_theme_color_override("font_hover_color", Color(1, 0.6, 0.6, 0.9))
+	reset_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	reset_btn.pressed.connect(_reset_current_scene)
+	hbox.add_child(reset_btn)
+
+	version_overlay.add_child(hbox)
+
+
+func _reset_current_scene() -> void:
+	get_tree().reload_current_scene()
 
 
 # Transition overlay
@@ -295,10 +313,10 @@ func _fade_to_scene(scene_path: String) -> void:
 	tween.tween_callback(func():
 		# Change scene
 		get_tree().change_scene_to_file(scene_path)
-		# Fade in after a brief delay
+		# Fade in after a brief pause to let the scene initialize
 		var fade_in_tween = create_tween()
-		fade_in_tween.tween_interval(0.1)  # Brief pause
-		fade_in_tween.tween_property(transition_rect, "color:a", 0.0, FADE_DURATION)
+		fade_in_tween.tween_interval(0.15)
+		fade_in_tween.tween_property(transition_rect, "color:a", 0.0, 0.8).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 		fade_in_tween.tween_callback(func(): is_transitioning = false)
 	)
 
