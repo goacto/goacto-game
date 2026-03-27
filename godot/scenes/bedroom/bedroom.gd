@@ -1018,7 +1018,7 @@ func _create_lock_icon(item_id: String, position: Vector2) -> void:
 	var lock_icon = Node2D.new()
 	lock_icon.name = "LockIcon_" + item_id
 	lock_icon.position = position + Vector2(0, -60)  # Float above item
-	lock_icon.z_index = 10
+	lock_icon.z_index = 5
 
 	# Lock body (rounded rectangle)
 	var lock_body = Polygon2D.new()

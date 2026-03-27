@@ -13333,9 +13333,11 @@ func _check_daily_login() -> void:
 	var result = GameManager.check_daily_login()
 
 	if result.is_new_day:
-		# Show daily reward popup
+		# Show daily reward popup (wait for onboarding to finish first)
 		if result.reward and not result.reward.is_empty():
-			await get_tree().create_timer(1.0).timeout  # Brief delay after entering
+			while is_onboarding_active:
+				await get_tree().create_timer(0.5).timeout
+			await get_tree().create_timer(1.0).timeout
 			_show_daily_reward_popup(result)
 
 
