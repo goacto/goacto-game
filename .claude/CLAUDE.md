@@ -1789,6 +1789,13 @@ const SCRIPTS_BRONZE = Color("#cd7f32")
 
 ## Development Guidelines
 
+### Pre-Commit: Update Build Timestamp
+Before every commit that will be deployed, update the build timestamp in `godot/autoload/GameManager.gd`:
+```gdscript
+const BUILD_TIMESTAMP: String = "YYYYMMDD-HHMMSS"  # UTC timestamp
+```
+Set it to the current UTC time. This is displayed in the bottom-right of the game UI and shows "Xd ago" relative time. **Always update this when committing changes that will be deployed to Vercel.**
+
 ### Code Conventions
 
 #### Naming
