@@ -404,37 +404,36 @@ func _hide_interaction_prompt() -> void:
 	interaction_prompt.visible = false
 
 
+var _frame_count: int = 0
+
 func _process(delta: float) -> void:
+	_frame_count += 1
+
 	# Skip if in UI
 	if zone_panel.visible or dialogue_panel.visible or pause_menu.visible:
 		return
 
-	# Crystal animation
+	# Crystal animation (every frame - small)
 	crystal_pulse_time += delta
 	_animate_crystal()
 
-	# Animate enhanced hub environment
-	_animate_hub_environment(delta)
+	# Stagger heavy animations across frames for performance
+	if _frame_count % 2 == 0:
+		# Even frames: environment + portals
+		_animate_hub_environment(delta * 2)
+		_animate_enhanced_portals(delta * 2)
+	else:
+		# Odd frames: companion + shop + progress + evolution
+		_animate_companion(delta * 2)
+		_animate_shop_visual()
+		_animate_progress_indicators()
+		_animate_evolution_stages(delta * 2)
 
-	# Animate enhanced portals
-	_animate_enhanced_portals(delta)
+	# Minimap update every 3rd frame
+	if _frame_count % 3 == 0:
+		_update_minimap()
 
-	# Animate companion spirit
-	_animate_companion(delta)
-
-	# Animate shop visual
-	_animate_shop_visual()
-
-	# Animate progress indicators
-	_animate_progress_indicators()
-
-	# Animate evolution stage elements
-	_animate_evolution_stages(delta)
-
-	# Update minimap
-	_update_minimap()
-
-	# Check proximity to zones, portals, and exit crystal
+	# Proximity checks every frame (needed for responsiveness)
 	_check_zone_portal_proximity()
 	_check_exit_crystal_proximity()
 

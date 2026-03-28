@@ -614,8 +614,149 @@ func complete_chapter(chapter_id: String) -> void:
 	if CHAPTERS.has(next_chapter) and is_chapter_unlocked(next_chapter):
 		campaign_state.current_chapter = next_chapter
 
+	# Evaluate ending when final chapter completes
+	if chapter_id == "chapter_10":
+		_evaluate_ending()
+
 	_save_campaign()
 	print("[CampaignManager] Chapter completed: ", chapter_id)
+
+
+# =============================================================================
+# MULTIPLE ENDINGS SYSTEM
+# =============================================================================
+
+signal ending_determined(ending: Dictionary)
+
+const ENDINGS = {
+	"transcendence": {
+		"id": "transcendence",
+		"name": "Transcendence",
+		"title": "The Transcendent Agent",
+		"description": "You achieved mastery across all aspects of growth. Your human didn't just improve - they transformed. The mindscape became a paradise, and your contribution echoes across galaxies.",
+		"requirements": "All aspects level 5+, 90+ evolution, 100+ sessions",
+		"color": Color(0.95, 0.85, 0.4),
+		"tier": "legendary"
+	},
+	"balanced_growth": {
+		"id": "balanced_growth",
+		"name": "Balanced Growth",
+		"title": "The Harmonious Guide",
+		"description": "You helped your human find balance across all domains of life. No single aspect dominated - instead, a harmony emerged that made the whole greater than its parts.",
+		"requirements": "All aspects level 3+, 50+ evolution, balanced XP",
+		"color": Color(0.5, 0.85, 0.65),
+		"tier": "gold"
+	},
+	"discipline_path": {
+		"id": "discipline_path",
+		"name": "The Disciplined Path",
+		"title": "The Iron Will",
+		"description": "Your human became a force of pure discipline. Habits were forged into unbreakable chains of consistency. What they lacked in breadth, they made up for in depth.",
+		"requirements": "Discipline highest aspect, 60+ day streak",
+		"color": Color(0.4, 0.6, 0.9),
+		"tier": "gold"
+	},
+	"creative_spirit": {
+		"id": "creative_spirit",
+		"name": "The Creative Spirit",
+		"title": "The Innovator",
+		"description": "Your human's creativity blossomed beyond imagination. They didn't just follow scripts - they wrote entirely new ones. The Script Lab became their masterpiece.",
+		"requirements": "Creativity highest aspect, 10+ scripts created",
+		"color": Color(0.7, 0.4, 0.9),
+		"tier": "gold"
+	},
+	"compassionate_heart": {
+		"id": "compassionate_heart",
+		"name": "The Compassionate Heart",
+		"title": "The Empath",
+		"description": "Your human's greatest growth was in their connections. Relationships flourished, kindness multiplied, and the ripple effects of their compassion touched everyone around them.",
+		"requirements": "Compassion highest aspect, 10+ relationships nurtured",
+		"color": Color(0.4, 0.8, 0.7),
+		"tier": "gold"
+	},
+	"resilient_return": {
+		"id": "resilient_return",
+		"name": "The Resilient Return",
+		"title": "The Phoenix",
+		"description": "Your human fell. More than once. But every time, they got back up. Their story isn't one of perfection - it's one of perseverance. And that's the most human story of all.",
+		"requirements": "Multiple streak recoveries, used grace days, came back from long breaks",
+		"color": Color(0.9, 0.5, 0.3),
+		"tier": "gold"
+	},
+	"steady_journey": {
+		"id": "steady_journey",
+		"name": "The Steady Journey",
+		"title": "The Persistent One",
+		"description": "Step by step, day by day, your human kept going. Not the fastest, not the most dramatic, but absolutely consistent. They proved that showing up is its own kind of magic.",
+		"requirements": "Default ending - completed the certification",
+		"color": Color(0.6, 0.65, 0.8),
+		"tier": "silver"
+	}
+}
+
+
+func _evaluate_ending() -> void:
+	var ending_id = "steady_journey"  # Default
+
+	var aspects = GameManager.player_data.get("aspects", {})
+	var evolution = GameManager.player_data.get("world_evolution_level", 0.0)
+	var sessions = int(GameManager.player_data.get("total_focus_sessions", 0))
+	var streak = int(GameManager.player_data.get("current_streak_days", 0))
+	var grace_used = int(HabitManager.grace_days_available) if HabitManager else 0
+
+	# Calculate aspect levels
+	var aspect_levels = {}
+	var min_level = 999
+	var max_level = 0
+	var highest_aspect = ""
+	for aspect_id in aspects:
+		var level = int(aspects[aspect_id].get("level", 1))
+		aspect_levels[aspect_id] = level
+		if level < min_level:
+			min_level = level
+		if level > max_level:
+			max_level = level
+			highest_aspect = aspect_id
+
+	var all_above_5 = min_level >= 5 and aspect_levels.size() >= 6
+	var all_above_3 = min_level >= 3 and aspect_levels.size() >= 6
+
+	# Check for Transcendence (legendary)
+	if all_above_5 and evolution >= 90 and sessions >= 100:
+		ending_id = "transcendence"
+	# Check for Balanced Growth
+	elif all_above_3 and evolution >= 50 and max_level - min_level <= 2:
+		ending_id = "balanced_growth"
+	# Check aspect-specific endings
+	elif highest_aspect == "discipline" and streak >= 60:
+		ending_id = "discipline_path"
+	elif highest_aspect == "creativity":
+		var scripts = ScriptManager.get_all_scripts() if ScriptManager else []
+		if scripts.size() >= 10:
+			ending_id = "creative_spirit"
+	elif highest_aspect == "compassion":
+		var relationships = RelationshipManager.get_all_relationships() if RelationshipManager else []
+		if relationships.size() >= 10:
+			ending_id = "compassionate_heart"
+	# Resilient Return (came back from breaks, used grace days)
+	elif HabitManager and HabitManager.get_total_grace_days_used() >= 3:
+		ending_id = "resilient_return"
+
+	# Store the ending
+	campaign_state["ending"] = ending_id
+	campaign_state["ending_evaluated"] = true
+	_save_campaign()
+
+	var ending = ENDINGS.get(ending_id, ENDINGS["steady_journey"])
+	ending_determined.emit(ending)
+	print("[CampaignManager] Ending determined: ", ending.name)
+
+
+func get_ending() -> Dictionary:
+	var ending_id = campaign_state.get("ending", "")
+	if ending_id == "":
+		return {}
+	return ENDINGS.get(ending_id, {})
 
 
 ## Check all chapters for unlock conditions

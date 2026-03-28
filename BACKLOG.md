@@ -96,7 +96,7 @@
 - [x] Chapter UI panel with journey overview and objectives
 - [x] Cutscene Theater for replaying past scenes
 - [x] Character relationship tracking (Mom, Aspects, bond levels, progress tracking, UI display)
-- [ ] Multiple ending possibilities based on habits
+- [x] Multiple ending possibilities based on habits (7 endings: Transcendence, Balanced Growth, Discipline Path, Creative Spirit, Compassionate Heart, Resilient Return, Steady Journey)
 
 ### Aspects (Discipline, Focus, etc.)
 - [x] Aspect awakening ceremonies (visual ceremony at levels 2/3/5/7/10 with speeches)
@@ -147,7 +147,7 @@
 - [ ] Add unit tests for HabitManager
 
 ### Performance
-- [ ] Profile and optimize particle systems
+- [x] Profile and optimize particle systems (staggered frame animations in hub _process)
 - [ ] Lazy loading for heavy scenes
 - [ ] Memory usage optimization
 - [x] Save data compression (compact JSON for auto-save, pretty-print only for exports)
@@ -156,7 +156,8 @@
 - [x] Mobile touch controls optimization (interact button, auto-hide on panels)
 - [x] iOS/Android export setup (export presets configured)
 - [x] Desktop window management (resizable window enabled)
-- [ ] Steam/itch.io integration
+- [x] itch.io page setup (ITCH_IO_PAGE.md with full description, tags, screenshots guide)
+- [ ] Steam integration
 
 ---
 

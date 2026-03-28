@@ -775,6 +775,14 @@ func unarchive_topic(topic_id: String) -> void:
 		SaveManager.save_game()
 
 
+## Get total grace days used (for resilience tracking)
+func get_total_grace_days_used() -> int:
+	var total = 0
+	for habit in habits.values():
+		total += int(habit.get("grace_days_used", 0))
+	return total
+
+
 ## Get total focus sessions across all topics
 func get_total_focus_sessions() -> int:
 	var total = 0
