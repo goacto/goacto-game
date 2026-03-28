@@ -310,7 +310,7 @@ func _build_topics_content(container: VBoxContainer) -> void:
 	)
 	container.add_child(general_btn)
 
-	# Topics from HabitManager
+	# Active topics from HabitManager
 	if HabitManager:
 		var topics = HabitManager.get_all_topics()
 		if topics.size() > 0:
@@ -324,10 +324,10 @@ func _build_topics_content(container: VBoxContainer) -> void:
 
 			for topic in topics:
 				var topic_row = HBoxContainer.new()
-				topic_row.add_theme_constant_override("separation", 8)
+				topic_row.add_theme_constant_override("separation", 6)
 				container.add_child(topic_row)
 
-				# Topic button with session count in the label
+				# Topic button with session count
 				var sessions = topic.get("total_sessions", 0)
 				var topic_btn = Button.new()
 				topic_btn.text = "%s (%d)" % [topic.name, sessions]
@@ -337,18 +337,21 @@ func _build_topics_content(container: VBoxContainer) -> void:
 				topic_btn.pressed.connect(_start_with_topic.bind(topic.id, topic.name))
 				topic_row.add_child(topic_btn)
 
-				# Delete button
-				var delete_btn = Button.new()
-				delete_btn.text = "x"
-				delete_btn.custom_minimum_size = Vector2(35, 35)
-				delete_btn.add_theme_font_size_override("font_size", 14)
-				delete_btn.add_theme_color_override("font_color", Color(0.6, 0.4, 0.4))
-				delete_btn.add_theme_color_override("font_hover_color", Color(0.9, 0.4, 0.4))
-				delete_btn.tooltip_text = "Delete topic"
-				delete_btn.pressed.connect(_confirm_delete_topic_from_chamber.bind(topic.id, topic.name))
-				topic_row.add_child(delete_btn)
+				# Archive button
+				var archive_btn = Button.new()
+				archive_btn.text = "-"
+				archive_btn.custom_minimum_size = Vector2(32, 32)
+				archive_btn.add_theme_font_size_override("font_size", 16)
+				archive_btn.add_theme_color_override("font_color", Color(0.55, 0.55, 0.4))
+				archive_btn.add_theme_color_override("font_hover_color", Color(0.85, 0.75, 0.4))
+				archive_btn.tooltip_text = "Archive topic"
+				archive_btn.pressed.connect(func():
+					HabitManager.archive_topic(topic.id)
+					_show_step(Step.FOCUS_SELECTION)
+				)
+				topic_row.add_child(archive_btn)
 
-	_add_spacer_to(container, 15)
+	_add_spacer_to(container, 12)
 
 	# Create new topic button
 	var new_topic_btn = Button.new()
@@ -358,6 +361,72 @@ func _build_topics_content(container: VBoxContainer) -> void:
 	new_topic_btn.add_theme_color_override("font_color", Color(0.5, 0.6, 0.75))
 	new_topic_btn.pressed.connect(_show_create_topic)
 	container.add_child(new_topic_btn)
+
+	# Archived topics section
+	if HabitManager:
+		var archived = HabitManager.get_archived_topics()
+		if archived.size() > 0:
+			_add_spacer_to(container, 15)
+
+			var archive_toggle = Button.new()
+			archive_toggle.text = "Archived (%d)" % archived.size()
+			archive_toggle.flat = true
+			archive_toggle.custom_minimum_size = Vector2(0, 30)
+			archive_toggle.add_theme_font_size_override("font_size", 13)
+			archive_toggle.add_theme_color_override("font_color", Color(0.45, 0.45, 0.5))
+			archive_toggle.add_theme_color_override("font_hover_color", Color(0.6, 0.6, 0.65))
+			container.add_child(archive_toggle)
+
+			var archive_list = VBoxContainer.new()
+			archive_list.name = "ArchivedList"
+			archive_list.add_theme_constant_override("separation", 6)
+			archive_list.visible = false
+			container.add_child(archive_list)
+
+			archive_toggle.pressed.connect(func():
+				archive_list.visible = not archive_list.visible
+				archive_toggle.text = ("Hide Archived" if archive_list.visible else "Archived (%d)") % archived.size()
+			)
+
+			for topic in archived:
+				var row = HBoxContainer.new()
+				row.add_theme_constant_override("separation", 6)
+				archive_list.add_child(row)
+
+				var sessions = topic.get("total_sessions", 0)
+				var label = Button.new()
+				label.text = "%s (%d)" % [topic.name, sessions]
+				label.custom_minimum_size = Vector2(0, 38)
+				label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				label.add_theme_font_size_override("font_size", 14)
+				label.add_theme_color_override("font_color", Color(0.45, 0.45, 0.5))
+				label.pressed.connect(_start_with_topic.bind(topic.id, topic.name))
+				row.add_child(label)
+
+				# Restore button
+				var restore_btn = Button.new()
+				restore_btn.text = "+"
+				restore_btn.custom_minimum_size = Vector2(32, 32)
+				restore_btn.add_theme_font_size_override("font_size", 16)
+				restore_btn.add_theme_color_override("font_color", Color(0.4, 0.6, 0.5))
+				restore_btn.add_theme_color_override("font_hover_color", Color(0.5, 0.85, 0.6))
+				restore_btn.tooltip_text = "Restore to active"
+				restore_btn.pressed.connect(func():
+					HabitManager.unarchive_topic(topic.id)
+					_show_step(Step.FOCUS_SELECTION)
+				)
+				row.add_child(restore_btn)
+
+				# Permanent delete button
+				var del_btn = Button.new()
+				del_btn.text = "x"
+				del_btn.custom_minimum_size = Vector2(32, 32)
+				del_btn.add_theme_font_size_override("font_size", 14)
+				del_btn.add_theme_color_override("font_color", Color(0.5, 0.35, 0.35))
+				del_btn.add_theme_color_override("font_hover_color", Color(0.9, 0.4, 0.4))
+				del_btn.tooltip_text = "Delete permanently"
+				del_btn.pressed.connect(_confirm_delete_topic_from_chamber.bind(topic.id, topic.name))
+				row.add_child(del_btn)
 
 
 func _build_scripts_content(container: VBoxContainer) -> void:

@@ -749,9 +749,30 @@ func create_topic(name: String) -> String:
 	return id
 
 
-## Get all topics
+## Get all active (non-archived) topics
 func get_all_topics() -> Array:
-	return topics.values()
+	return topics.values().filter(func(t): return not t.get("archived", false))
+
+
+## Get archived topics
+func get_archived_topics() -> Array:
+	return topics.values().filter(func(t): return t.get("archived", false))
+
+
+## Archive a topic (hide from active list, keep data)
+func archive_topic(topic_id: String) -> void:
+	if topics.has(topic_id):
+		topics[topic_id]["archived"] = true
+		print("[HabitManager] Archived topic: ", topics[topic_id].name)
+		SaveManager.save_game()
+
+
+## Restore an archived topic to active
+func unarchive_topic(topic_id: String) -> void:
+	if topics.has(topic_id):
+		topics[topic_id]["archived"] = false
+		print("[HabitManager] Unarchived topic: ", topics[topic_id].name)
+		SaveManager.save_game()
 
 
 ## Get total focus sessions across all topics
