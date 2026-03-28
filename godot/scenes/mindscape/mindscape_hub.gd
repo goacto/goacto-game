@@ -13476,7 +13476,7 @@ func _show_daily_reward_popup(login_result: Dictionary) -> void:
 	vbox.add_child(btn_container)
 
 	# Milestone celebration if applicable
-	if login_result.has("milestone") and not login_result.milestone.is_empty():
+	if login_result.has("milestone") and login_result.milestone and login_result.milestone is Dictionary and not login_result.milestone.is_empty():
 		await get_tree().create_timer(0.5).timeout
 		_show_milestone_celebration(login_result.milestone)
 
