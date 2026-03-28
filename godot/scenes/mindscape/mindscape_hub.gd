@@ -818,16 +818,7 @@ func _setup_progress_indicators() -> void:
 	flames_container.position = Vector2(0, 30)
 	isometric_base.add_child(flames_container)
 
-	# Streak flames label - positioned below the flames
-	var flames_label = Label.new()
-	flames_label.name = "FlamesLabel"
-	flames_label.text = "Streaks"
-	flames_label.add_theme_font_size_override("font_size", 11)
-	flames_label.add_theme_color_override("font_color", Color(0.9, 0.7, 0.35, 0.9))
-	flames_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	flames_label.position = Vector2(-30, 20)  # Below the flames
-	flames_label.size = Vector2(60, 15)
-	flames_container.add_child(flames_label)
+	# Streak info shown in header - no floor label needed
 
 	# Evolution ring removed - progress shown via evolution label in header
 
@@ -1384,22 +1375,21 @@ func _setup_achievement_pedestals() -> void:
 	isometric_base.add_child(pedestals_container)
 
 	# Three pedestal positions - horizontal row in the northern gardens area
-	# Between the exit crystal (0, -60) and the north portal (0, -580)
 	var positions = [
-		Vector2(-120, -340),
+		Vector2(-160, -340),
 		Vector2(0, -340),
-		Vector2(120, -340)
+		Vector2(160, -340)
 	]
 
 	# Section label - centered above the pedestals
 	var label = Label.new()
 	label.name = "SectionLabel"
 	label.text = "Achievements"
-	label.add_theme_font_size_override("font_size", 11)
+	label.add_theme_font_size_override("font_size", 14)
 	label.add_theme_color_override("font_color", Color(0.7, 0.65, 0.5, 0.9))
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.position = Vector2(-70, -385)
-	label.size = Vector2(140, 15)
+	label.position = Vector2(-80, -440)
+	label.size = Vector2(160, 20)
 	pedestals_container.add_child(label)
 
 	for i in range(3):
@@ -1414,32 +1404,59 @@ func _create_pedestal(index: int) -> Node2D:
 	var pedestal = Node2D.new()
 	pedestal.name = "Pedestal" + str(index)
 
-	# Pedestal base
+	# Pedestal base (large hexagonal platform)
 	var base = Polygon2D.new()
 	base.name = "Base"
 	base.color = Color(0.25, 0.22, 0.35, 0.9)
 	base.polygon = PackedVector2Array([
-		Vector2(-20, 10), Vector2(-25, 0), Vector2(-20, -10),
-		Vector2(20, -10), Vector2(25, 0), Vector2(20, 10)
+		Vector2(-45, 20), Vector2(-55, 0), Vector2(-45, -20),
+		Vector2(45, -20), Vector2(55, 0), Vector2(45, 20)
 	])
 	pedestal.add_child(base)
+
+	# Base highlight
+	var base_top = Polygon2D.new()
+	base_top.color = Color(0.32, 0.28, 0.45, 0.7)
+	base_top.polygon = PackedVector2Array([
+		Vector2(-42, -5), Vector2(-48, -18),
+		Vector2(48, -18), Vector2(42, -5)
+	])
+	pedestal.add_child(base_top)
 
 	# Pedestal pillar
 	var pillar = Polygon2D.new()
 	pillar.color = Color(0.3, 0.27, 0.4, 0.9)
 	pillar.polygon = PackedVector2Array([
-		Vector2(-15, -10), Vector2(-15, -35),
-		Vector2(15, -35), Vector2(15, -10)
+		Vector2(-30, -18), Vector2(-30, -70),
+		Vector2(30, -70), Vector2(30, -18)
 	])
 	pedestal.add_child(pillar)
 
-	# Achievement display area (glow)
+	# Pillar front face (lighter)
+	var pillar_face = Polygon2D.new()
+	pillar_face.color = Color(0.35, 0.32, 0.48, 0.8)
+	pillar_face.polygon = PackedVector2Array([
+		Vector2(-28, -20), Vector2(-28, -68),
+		Vector2(0, -68), Vector2(0, -20)
+	])
+	pedestal.add_child(pillar_face)
+
+	# Trophy platform on top
+	var trophy_base = Polygon2D.new()
+	trophy_base.color = Color(0.4, 0.35, 0.55, 0.9)
+	trophy_base.polygon = PackedVector2Array([
+		Vector2(-35, -68), Vector2(-35, -78),
+		Vector2(35, -78), Vector2(35, -68)
+	])
+	pedestal.add_child(trophy_base)
+
+	# Achievement display area (glow - shows when unlocked)
 	var glow = Polygon2D.new()
 	glow.name = "Glow"
 	glow.color = Color(0.9, 0.75, 0.3, 0.0)  # Gold, initially hidden
 	glow.polygon = PackedVector2Array([
-		Vector2(-18, -32), Vector2(0, -55),
-		Vector2(18, -32), Vector2(0, -20)
+		Vector2(-30, -75), Vector2(0, -115),
+		Vector2(30, -75), Vector2(0, -60)
 	])
 	pedestal.add_child(glow)
 
@@ -1447,11 +1464,21 @@ func _create_pedestal(index: int) -> Node2D:
 	var icon = Label.new()
 	icon.name = "Icon"
 	icon.text = ""
-	icon.add_theme_font_size_override("font_size", 20)
+	icon.add_theme_font_size_override("font_size", 28)
 	icon.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	icon.position = Vector2(-15, -50)
-	icon.size = Vector2(30, 30)
+	icon.position = Vector2(-25, -110)
+	icon.size = Vector2(50, 40)
 	pedestal.add_child(icon)
+
+	# Pedestal number label
+	var num_label = Label.new()
+	num_label.text = str(index + 1)
+	num_label.add_theme_font_size_override("font_size", 16)
+	num_label.add_theme_color_override("font_color", Color(0.5, 0.45, 0.65, 0.6))
+	num_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	num_label.position = Vector2(-10, -55)
+	num_label.size = Vector2(20, 20)
+	pedestal.add_child(num_label)
 
 	return pedestal
 
@@ -11265,17 +11292,7 @@ func _create_progress_indicators() -> void:
 		hub_env_container.add_child(streak_label)
 
 
-	# Evolution level indicator
-	var evo_label = Label.new()
-	evo_label.name = "EvoLabel"
-	evo_label.text = "Evo " + str(evolution_level)
-	evo_label.add_theme_font_size_override("font_size", 12)
-	var evo_color = Color(0.7, 0.6, 0.9)
-	evo_label.add_theme_color_override("font_color", evo_color)
-	evo_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	evo_label.position = Vector2(-25, -220)
-	evo_label.z_index = 10
-	hub_env_container.add_child(evo_label)
+	# Evolution level indicator - removed (shown in header instead)
 
 
 func _animate_hub_environment(delta: float) -> void:

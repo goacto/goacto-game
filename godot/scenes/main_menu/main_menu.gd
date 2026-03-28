@@ -840,33 +840,57 @@ func _show_load_panel() -> void:
 	var sep2 = HSeparator.new()
 	vbox.add_child(sep2)
 
-	# JSON Import/Export section
-	var json_label = Label.new()
-	json_label.text = "Import / Export (JSON)"
-	json_label.add_theme_font_size_override("font_size", 14)
-	json_label.add_theme_color_override("font_color", Color(0.5, 0.55, 0.6))
-	json_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(json_label)
+	# Save File Management section
+	var save_mgmt_label = Label.new()
+	save_mgmt_label.text = "Save File Management"
+	save_mgmt_label.add_theme_font_size_override("font_size", 14)
+	save_mgmt_label.add_theme_color_override("font_color", Color(0.5, 0.55, 0.6))
+	save_mgmt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(save_mgmt_label)
 
-	var json_row = HBoxContainer.new()
-	json_row.add_theme_constant_override("separation", 15)
-	json_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	vbox.add_child(json_row)
+	# Row 1: Download / Upload file
+	var file_row = HBoxContainer.new()
+	file_row.add_theme_constant_override("separation", 10)
+	file_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_child(file_row)
+
+	var download_btn = Button.new()
+	download_btn.text = "Download Save"
+	download_btn.custom_minimum_size = Vector2(150, 40)
+	download_btn.add_theme_font_size_override("font_size", 14)
+	download_btn.add_theme_color_override("font_color", Color(0.5, 0.8, 0.6))
+	download_btn.disabled = not SaveManager.has_save()
+	download_btn.pressed.connect(_download_save_file)
+	file_row.add_child(download_btn)
+
+	var upload_btn = Button.new()
+	upload_btn.text = "Upload Save"
+	upload_btn.custom_minimum_size = Vector2(150, 40)
+	upload_btn.add_theme_font_size_override("font_size", 14)
+	upload_btn.add_theme_color_override("font_color", Color(0.8, 0.7, 0.4))
+	upload_btn.pressed.connect(_upload_save_file)
+	file_row.add_child(upload_btn)
+
+	# Row 2: Clipboard copy/paste (fallback)
+	var clip_row = HBoxContainer.new()
+	clip_row.add_theme_constant_override("separation", 10)
+	clip_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_child(clip_row)
 
 	var import_btn = Button.new()
-	import_btn.text = "Import JSON"
-	import_btn.custom_minimum_size = Vector2(140, 40)
-	import_btn.add_theme_font_size_override("font_size", 14)
+	import_btn.text = "Paste JSON"
+	import_btn.custom_minimum_size = Vector2(150, 35)
+	import_btn.add_theme_font_size_override("font_size", 12)
 	import_btn.pressed.connect(_show_import_dialog)
-	json_row.add_child(import_btn)
+	clip_row.add_child(import_btn)
 
 	var export_btn = Button.new()
-	export_btn.text = "Export JSON"
-	export_btn.custom_minimum_size = Vector2(140, 40)
-	export_btn.add_theme_font_size_override("font_size", 14)
+	export_btn.text = "Copy JSON"
+	export_btn.custom_minimum_size = Vector2(150, 35)
+	export_btn.add_theme_font_size_override("font_size", 12)
 	export_btn.disabled = not SaveManager.has_save()
 	export_btn.pressed.connect(_show_export_dialog)
-	json_row.add_child(export_btn)
+	clip_row.add_child(export_btn)
 
 	var sep3 = HSeparator.new()
 	vbox.add_child(sep3)
@@ -1292,3 +1316,330 @@ func _show_import_result(message: String, success: bool) -> void:
 		var tween = create_tween()
 		tween.tween_property(result_label, "modulate:a", 0.0, 0.5).set_delay(2.0)
 		tween.tween_callback(result_label.queue_free)
+
+
+# =============================================================================
+# SAVE FILE DOWNLOAD / UPLOAD
+# =============================================================================
+
+var upload_confirm_dialog: PanelContainer = null
+
+func _download_save_file() -> void:
+	var save_json = SaveManager.export_save_data()
+	if save_json.is_empty():
+		_show_toast("No save data to download.", false)
+		return
+
+	var player_name = GameManager.player_data.get("name", "Traveler").to_lower().replace(" ", "_")
+	var timestamp = Time.get_datetime_string_from_system().replace(":", "").replace("-", "").substr(0, 15)
+	var filename = "mindscape_save_%s_%s.json" % [player_name, timestamp]
+
+	if OS.get_name() == "Web":
+		_web_download_file(filename, save_json)
+	else:
+		_native_download_file(filename, save_json)
+
+
+func _web_download_file(filename: String, content: String) -> void:
+	# Use JavaScript to trigger a file download in the browser
+	var js_code = """
+	(function() {
+		var data = %s;
+		var blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+		var url = URL.createObjectURL(blob);
+		var a = document.createElement('a');
+		a.href = url;
+		a.download = '%s';
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+		URL.revokeObjectURL(url);
+	})();
+	""" % [content, filename]
+	JavaScriptBridge.eval(js_code)
+	_show_toast("Save file downloading...", true)
+
+
+func _native_download_file(filename: String, content: String) -> void:
+	# Save to user's documents or downloads folder
+	var path = ""
+	if OS.get_name() == "macOS" or OS.get_name() == "Linux":
+		path = OS.get_environment("HOME") + "/Downloads/" + filename
+	elif OS.get_name() == "Windows":
+		path = OS.get_environment("USERPROFILE") + "\\Downloads\\" + filename
+	else:
+		path = "user://" + filename
+
+	var file = FileAccess.open(path, FileAccess.WRITE)
+	if file:
+		file.store_string(content)
+		file.close()
+		_show_toast("Saved to: " + path, true)
+	else:
+		# Fallback to user:// directory
+		var fallback_path = "user://" + filename
+		file = FileAccess.open(fallback_path, FileAccess.WRITE)
+		if file:
+			file.store_string(content)
+			file.close()
+			_show_toast("Saved to game data folder.", true)
+		else:
+			_show_toast("Failed to save file.", false)
+
+
+func _upload_save_file() -> void:
+	if OS.get_name() == "Web":
+		_web_upload_file()
+	else:
+		_native_upload_file()
+
+
+func _web_upload_file() -> void:
+	# Create a hidden file input and trigger it via JavaScript
+	# The callback stores the result in a global variable we can poll
+	var js_code = """
+	(function() {
+		window._godotUploadedSave = null;
+		window._godotUploadReady = false;
+		var input = document.createElement('input');
+		input.type = 'file';
+		input.accept = '.json,.sav,.save,.txt';
+		input.onchange = function(e) {
+			var file = e.target.files[0];
+			if (!file) return;
+			var reader = new FileReader();
+			reader.onload = function(ev) {
+				window._godotUploadedSave = ev.target.result;
+				window._godotUploadReady = true;
+			};
+			reader.readAsText(file);
+		};
+		input.click();
+	})();
+	"""
+	JavaScriptBridge.eval(js_code)
+
+	# Poll for the file content
+	_poll_web_upload()
+
+
+func _poll_web_upload() -> void:
+	for i in range(300):  # Poll for up to 30 seconds
+		await get_tree().create_timer(0.1).timeout
+		var ready = JavaScriptBridge.eval("window._godotUploadReady === true")
+		if ready:
+			var content = JavaScriptBridge.eval("window._godotUploadedSave")
+			JavaScriptBridge.eval("window._godotUploadedSave = null; window._godotUploadReady = false;")
+			if content and content is String and content.length() > 0:
+				_confirm_import_save(content)
+			else:
+				_show_toast("Failed to read file.", false)
+			return
+	# Timeout - user probably cancelled the file picker
+	JavaScriptBridge.eval("window._godotUploadedSave = null; window._godotUploadReady = false;")
+
+
+func _native_upload_file() -> void:
+	# Use the paste JSON dialog as fallback for native
+	# (FileDialog doesn't work well in all contexts)
+	_show_import_dialog()
+
+
+func _confirm_import_save(json_content: String) -> void:
+	# Validate the JSON first
+	var json = JSON.new()
+	var parse_result = json.parse(json_content)
+	if parse_result != OK:
+		_show_toast("Invalid file: not valid JSON.", false)
+		return
+
+	var data = json.data
+	if not data is Dictionary or not data.has("player"):
+		_show_toast("Invalid save file: missing player data.", false)
+		return
+
+	# Build info about the uploaded save
+	var upload_name = ""
+	if data.has("player") and data.player is Dictionary:
+		upload_name = data.player.get("name", "Unknown")
+	var upload_version = data.get("version", "unknown")
+	var upload_evo = 0
+	if data.has("player") and data.player is Dictionary:
+		upload_evo = int(data.player.get("world_evolution_level", 0))
+	var upload_sessions = 0
+	if data.has("player") and data.player is Dictionary:
+		upload_sessions = int(data.player.get("total_focus_sessions", 0))
+
+	# Check if there's an existing save that would be overwritten
+	var has_existing = SaveManager.has_save()
+
+	# Show confirmation dialog
+	if upload_confirm_dialog:
+		upload_confirm_dialog.queue_free()
+
+	upload_confirm_dialog = PanelContainer.new()
+	upload_confirm_dialog.name = "UploadConfirmDialog"
+
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.06, 0.06, 0.1, 0.98)
+	style.border_color = Color(0.8, 0.7, 0.4, 0.7)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(14)
+	upload_confirm_dialog.add_theme_stylebox_override("panel", style)
+
+	upload_confirm_dialog.set_anchors_preset(Control.PRESET_CENTER)
+	upload_confirm_dialog.offset_left = -260
+	upload_confirm_dialog.offset_right = 260
+	upload_confirm_dialog.offset_top = -200
+	upload_confirm_dialog.offset_bottom = 200
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 25)
+	margin.add_theme_constant_override("margin_right", 25)
+	margin.add_theme_constant_override("margin_top", 20)
+	margin.add_theme_constant_override("margin_bottom", 20)
+	upload_confirm_dialog.add_child(margin)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 12)
+	margin.add_child(vbox)
+
+	# Title
+	var title = Label.new()
+	title.text = "Import Save File"
+	title.add_theme_font_size_override("font_size", 24)
+	title.add_theme_color_override("font_color", Color(0.95, 0.85, 0.4))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(title)
+
+	# Uploaded save info
+	var info_text = "Uploaded Save:\n"
+	info_text += "  Player: %s\n" % upload_name
+	info_text += "  Version: %s\n" % upload_version
+	info_text += "  Evolution: %d\n" % upload_evo
+	info_text += "  Focus Sessions: %d" % upload_sessions
+
+	var info_label = Label.new()
+	info_label.text = info_text
+	info_label.add_theme_font_size_override("font_size", 15)
+	info_label.add_theme_color_override("font_color", Color(0.6, 0.75, 0.9))
+	vbox.add_child(info_label)
+
+	# Warning if existing save
+	if has_existing:
+		var existing_name = GameManager.player_data.get("name", "Unknown")
+		var existing_evo = int(GameManager.player_data.get("world_evolution_level", 0))
+		var existing_sessions = int(GameManager.player_data.get("total_focus_sessions", 0))
+
+		var warn = Label.new()
+		warn.text = "WARNING: This will replace your current save!\n  Current: %s (Evo %d, %d sessions)" % [existing_name, existing_evo, existing_sessions]
+		warn.add_theme_font_size_override("font_size", 14)
+		warn.add_theme_color_override("font_color", Color(0.9, 0.5, 0.4))
+		warn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		vbox.add_child(warn)
+
+	# Slot selection
+	var slot_label = Label.new()
+	slot_label.text = "Import to:"
+	slot_label.add_theme_font_size_override("font_size", 14)
+	slot_label.add_theme_color_override("font_color", Color(0.6, 0.65, 0.7))
+	vbox.add_child(slot_label)
+
+	var slot_row = HBoxContainer.new()
+	slot_row.add_theme_constant_override("separation", 10)
+	slot_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_child(slot_row)
+
+	# Auto-save slot button
+	var auto_btn = Button.new()
+	auto_btn.text = "Auto-Save (Play Now)"
+	auto_btn.custom_minimum_size = Vector2(200, 40)
+	auto_btn.add_theme_font_size_override("font_size", 14)
+	auto_btn.add_theme_color_override("font_color", Color(0.5, 0.85, 0.6))
+	auto_btn.pressed.connect(_do_file_import.bind(json_content, 0))
+	slot_row.add_child(auto_btn)
+
+	# Manual slot buttons
+	for slot in range(1, 4):
+		var slot_btn = Button.new()
+		var slot_info = SaveManager.get_slot_info(slot)
+		if slot_info.get("exists", false):
+			slot_btn.text = "Slot %d (in use)" % slot
+			slot_btn.add_theme_color_override("font_color", Color(0.9, 0.7, 0.4))
+		else:
+			slot_btn.text = "Slot %d (empty)" % slot
+		slot_btn.custom_minimum_size = Vector2(130, 40)
+		slot_btn.add_theme_font_size_override("font_size", 13)
+		slot_btn.pressed.connect(_do_file_import.bind(json_content, slot))
+		slot_row.add_child(slot_btn)
+
+	# Cancel button
+	var cancel_row = HBoxContainer.new()
+	cancel_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_child(cancel_row)
+
+	var cancel_btn = Button.new()
+	cancel_btn.text = "Cancel"
+	cancel_btn.custom_minimum_size = Vector2(120, 40)
+	cancel_btn.add_theme_font_size_override("font_size", 16)
+	cancel_btn.pressed.connect(func():
+		if upload_confirm_dialog:
+			upload_confirm_dialog.queue_free()
+			upload_confirm_dialog = null
+	)
+	cancel_row.add_child(cancel_btn)
+
+	add_child(upload_confirm_dialog)
+
+	# Animate in
+	upload_confirm_dialog.modulate.a = 0.0
+	var tween = create_tween()
+	tween.tween_property(upload_confirm_dialog, "modulate:a", 1.0, 0.25)
+
+
+func _do_file_import(json_content: String, slot: int) -> void:
+	var success = false
+	if slot == 0:
+		success = SaveManager.import_save_data(json_content)
+	else:
+		success = SaveManager.import_to_slot(slot, json_content)
+
+	# Close dialog
+	if upload_confirm_dialog:
+		upload_confirm_dialog.queue_free()
+		upload_confirm_dialog = null
+
+	if success:
+		if slot == 0:
+			_show_toast("Save imported! Loading game...", true)
+			await get_tree().create_timer(1.0).timeout
+			_close_load_panel()
+			SaveManager.load_game()
+			GameManager.player_data["wakeup_from_continue"] = true
+			_enter_mindscape()
+		else:
+			_show_toast("Save imported to Slot %d!" % slot, true)
+			# Refresh the load panel to show the new slot
+			await get_tree().create_timer(1.0).timeout
+			_close_load_panel()
+			_show_load_panel()
+	else:
+		_show_toast("Import failed. Save file may be corrupted.", false)
+
+
+func _show_toast(message: String, success: bool) -> void:
+	var toast = Label.new()
+	toast.text = message
+	toast.add_theme_font_size_override("font_size", 18)
+	toast.add_theme_color_override("font_color", Color(0.4, 0.9, 0.5) if success else Color(0.9, 0.4, 0.4))
+	toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	toast.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	toast.offset_top = -80
+	toast.offset_bottom = -50
+	toast.offset_left = -200
+	toast.offset_right = 200
+	add_child(toast)
+
+	var tween = create_tween()
+	tween.tween_property(toast, "modulate:a", 0.0, 0.5).set_delay(2.5)
+	tween.tween_callback(toast.queue_free)
