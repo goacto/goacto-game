@@ -251,12 +251,10 @@ func _ready() -> void:
 	_setup_companion_spirit()
 	_setup_minimap()
 
-	# Create enhanced visuals
-	_create_enhanced_hub_environment()
-	_create_enhanced_portals()
-
-	# Setup evolution stages (visual changes based on evolution level)
-	_setup_evolution_stages()
+	# Defer heavy visual creation to after first frame (lazy loading)
+	call_deferred("_create_enhanced_hub_environment")
+	call_deferred("_create_enhanced_portals")
+	call_deferred("_setup_evolution_stages")
 
 	# Check daily login and show rewards
 	_check_daily_login()

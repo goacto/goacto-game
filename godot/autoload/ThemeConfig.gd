@@ -123,3 +123,70 @@ static func darken(color: Color, amount: float = 0.1) -> Color:
 ## Add transparency to a color
 static func with_alpha(color: Color, alpha: float) -> Color:
 	return Color(color.r, color.g, color.b, alpha)
+
+
+# =============================================================================
+# ACCESSIBILITY HELPERS
+# =============================================================================
+
+## Apply accessibility attributes to a button
+static func make_accessible(control: Control, description: String) -> void:
+	control.tooltip_text = description
+	if control is Button:
+		control.focus_mode = Control.FOCUS_ALL
+		control.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+
+
+## Apply accessibility to a group of buttons in a container
+static func make_container_accessible(container: Control) -> void:
+	for child in container.get_children():
+		if child is Button and child.tooltip_text == "":
+			child.tooltip_text = child.text
+			child.focus_mode = Control.FOCUS_ALL
+			child.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		if child is Container:
+			make_container_accessible(child)
+
+
+# =============================================================================
+# GAMEPLAY CONSTANTS
+# =============================================================================
+# Centralized values used across multiple scenes
+
+# Player movement
+const PLAYER_SPEED_DEFAULT: float = 250.0
+const PLAYER_SPEED_BEDROOM: float = 280.0
+const MOVE_SOUND_INTERVAL: float = 0.35
+const MOVE_SOUND_PATH: String = "res://audio/sfx/hover_move.wav"
+const MOVE_SOUND_VOLUME: float = -12.0
+
+# Camera
+const CAMERA_ZOOM_DEFAULT: float = 1.0
+const CAMERA_ZOOM_BEDROOM: float = 0.85
+const CAMERA_ZOOM_MIN: float = 0.5
+const CAMERA_ZOOM_MAX: float = 1.5
+const CAMERA_ZOOM_SPEED: float = 0.08
+
+# Interaction
+const INTERACTION_RADIUS: float = 100.0
+const INTERACTION_RADIUS_MINDSCAPE: float = 120.0
+
+# Focus sessions
+const FOCUS_DURATIONS: Array = [15, 25, 45, 60]
+const DEFAULT_FOCUS_MINUTES: int = 25
+const XP_PER_MINUTE: int = 2
+const DIFFICULTY_MULTIPLIER_STANDARD: float = 0.7
+const DIFFICULTY_MULTIPLIER_HARD: float = 1.5
+
+# Streaks
+const MAX_GRACE_DAYS: int = 3
+const GRACE_DAY_EARN_INTERVAL: int = 7  # Days of streak to earn 1 grace day
+
+# UI Animation
+const FADE_DURATION_FAST: float = 0.2
+const FADE_DURATION_NORMAL: float = 0.3
+const FADE_DURATION_SLOW: float = 0.8
+const TYPING_SPEED: float = 0.025  # Seconds per character for typewriter effect
+
+# Companion
+const COMPANION_TIP_COOLDOWN: float = 120.0  # Seconds between tips

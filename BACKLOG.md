@@ -132,7 +132,7 @@
 ### Accessibility
 - [x] Font size options (small/medium/large in Settings)
 - [x] High contrast mode (toggle in Settings)
-- [ ] Screen reader support
+- [x] Screen reader support basics (accessibility helpers in ThemeConfig, tooltip_text, focus_mode, cursor shape)
 - [x] Reduced motion option (toggle in Settings)
 - [x] Colorblind-friendly indicators (deuteranopia/protanopia/tritanopia modes in Settings)
 
@@ -142,13 +142,13 @@
 
 ### Code Quality
 - [ ] Refactor duplicate code across room scenes
-- [ ] Create reusable space view component
-- [ ] Centralize animation constants
+- [ ] Create reusable space view component (3 implementations in bedroom, kitchen, stairs - similar but different celestial objects)
+- [x] Centralize animation/gameplay constants (ThemeConfig: speeds, zoom, interaction radius, focus durations, UI timing)
 - [ ] Add unit tests for HabitManager
 
 ### Performance
 - [x] Profile and optimize particle systems (staggered frame animations in hub _process)
-- [ ] Lazy loading for heavy scenes
+- [x] Lazy loading for heavy scenes (hub defers heavy visual creation with call_deferred)
 - [ ] Memory usage optimization
 - [x] Save data compression (compact JSON for auto-save, pretty-print only for exports)
 
