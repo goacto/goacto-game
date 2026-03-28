@@ -144,7 +144,7 @@ func collect_mail(order_id: String) -> Array:
 		if GameManager:
 			if not GameManager.player_data.has("collected_decor"):
 				GameManager.player_data["collected_decor"] = []
-			GameManager.player_data.collected_decor.append(item_id)
+			GameManager.player_data["collected_decor"].append(item_id)
 
 	mail_collected.emit(order_id, items)
 	mail_count_changed.emit(available_mail.size())

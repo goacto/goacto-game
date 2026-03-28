@@ -1208,10 +1208,10 @@ func _select_timeframe(timeframe: int) -> void:
 			if child is Button:
 				child.button_pressed = false
 
-		match timeframe:
-			0: container.get_node("DailyBtn").button_pressed = true
-			1: container.get_node("WeeklyBtn").button_pressed = true
-			2: container.get_node("MilestoneBtn").button_pressed = true
+		var btn_name = ["DailyBtn", "WeeklyBtn", "MilestoneBtn"][timeframe] if timeframe < 3 else "DailyBtn"
+		var btn = container.get_node_or_null(btn_name)
+		if btn:
+			btn.button_pressed = true
 
 
 func _select_aspect(aspect_id: String) -> void:

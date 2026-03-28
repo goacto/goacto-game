@@ -948,10 +948,12 @@ func _update_meditation(delta: float) -> void:
 	var timer_label = meditation_panel.get_node_or_null("MarginContainer/MeditationVBox/Label2")
 	if not timer_label:
 		# Try alternate path
-		for child in meditation_panel.get_node("MarginContainer/MeditationVBox").get_children():
-			if child is Label and child.name == "TimerLabel":
-				timer_label = child
-				break
+		var vbox = meditation_panel.get_node_or_null("MarginContainer/MeditationVBox")
+		if vbox:
+			for child in vbox.get_children():
+				if child is Label and child.name == "TimerLabel":
+					timer_label = child
+					break
 
 	if timer_label:
 		var mins = int(meditation_timer) / 60

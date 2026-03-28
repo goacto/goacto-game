@@ -176,19 +176,19 @@ func _create_random_challenge(rarity: ChallengeRarity, exclude_types: Array, is_
 func update_progress(challenge_type: ChallengeType, amount: int = 1) -> void:
 	# Update daily challenges
 	for challenge in daily_challenges:
-		if challenge.type == challenge_type and not challenge.completed:
-			challenge.progress = min(challenge.progress + amount, challenge.target)
-			challenge_progress_updated.emit(challenge.id, challenge.progress)
+		if challenge.get("type") == challenge_type and not challenge.get("completed", false):
+			challenge["progress"] = min(challenge.get("progress", 0) + amount, challenge.get("target", 1))
+			challenge_progress_updated.emit(challenge.get("id", ""), challenge.get("progress", 0))
 
-			if challenge.progress >= challenge.target:
+			if challenge.get("progress", 0) >= challenge.get("target", 1):
 				_complete_challenge(challenge)
 
 	# Update weekly challenge
-	if weekly_challenge and weekly_challenge.type == challenge_type and not weekly_challenge.get("completed", false):
-		weekly_challenge.progress = min(weekly_challenge.progress + amount, weekly_challenge.target)
-		challenge_progress_updated.emit(weekly_challenge.id, weekly_challenge.progress)
+	if weekly_challenge and not weekly_challenge.is_empty() and weekly_challenge.get("type") == challenge_type and not weekly_challenge.get("completed", false):
+		weekly_challenge["progress"] = min(weekly_challenge.get("progress", 0) + amount, weekly_challenge.get("target", 1))
+		challenge_progress_updated.emit(weekly_challenge.get("id", ""), weekly_challenge.get("progress", 0))
 
-		if weekly_challenge.progress >= weekly_challenge.target:
+		if weekly_challenge.get("progress", 0) >= weekly_challenge.get("target", 1):
 			_complete_challenge(weekly_challenge)
 
 	_save_challenges()
