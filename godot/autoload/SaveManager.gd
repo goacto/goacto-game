@@ -38,7 +38,8 @@ func save_game() -> void:
 		"relationships": RelationshipManager.get_save_data() if RelationshipManager else {}
 	}
 
-	var json_string = JSON.stringify(save_data, "\t")
+	# Compact JSON for auto-save (smaller, faster writes on web)
+	var json_string = JSON.stringify(save_data)
 
 	var file = FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file:

@@ -83,7 +83,7 @@
 - [x] Generate core SFX (UI, focus, habits, portals)
 - [x] Wire up ambient sounds to all scenes
 - [x] Add music tracks for different areas (hub, ship, focus, regions)
-- [ ] Voice acting for key dialogue (Mom, Narrator)
+- [ ] Voice acting for key dialogue (Mom, Narrator) — VOICE_LINES.md guides created for all 9 empty scenes
 - [x] Dynamic audio mixing based on game state (8 audio states, mood modifiers, smooth transitions)
 
 ---
@@ -150,12 +150,12 @@
 - [ ] Profile and optimize particle systems
 - [ ] Lazy loading for heavy scenes
 - [ ] Memory usage optimization
-- [ ] Save data compression
+- [x] Save data compression (compact JSON for auto-save, pretty-print only for exports)
 
 ### Platform Support
 - [x] Mobile touch controls optimization (interact button, auto-hide on panels)
 - [x] iOS/Android export setup (export presets configured)
-- [ ] Desktop window management
+- [x] Desktop window management (resizable window enabled)
 - [ ] Steam/itch.io integration
 
 ---
