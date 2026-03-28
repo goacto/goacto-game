@@ -1492,8 +1492,12 @@ func _ensure_login_data() -> void:
 		player_data["last_login_date"] = ""
 	if not player_data.has("login_streak"):
 		player_data["login_streak"] = 0
+	else:
+		player_data["login_streak"] = int(player_data["login_streak"])
 	if not player_data.has("total_login_days"):
 		player_data["total_login_days"] = 0
+	else:
+		player_data["total_login_days"] = int(player_data["total_login_days"])
 	if not player_data.has("claimed_daily_rewards"):
 		player_data["claimed_daily_rewards"] = []
 	if not player_data.has("unlocked_milestones"):
@@ -1543,7 +1547,7 @@ func check_daily_login() -> Dictionary:
 	player_data.last_login_date = today
 
 	# Get today's reward (cycle through rewards after 30 days)
-	var reward_day = ((player_data.total_login_days - 1) % 30) + 1
+	var reward_day = ((int(player_data.total_login_days) - 1) % 30) + 1
 	var reward = _get_daily_reward(reward_day)
 	if reward:
 		result.reward = reward
