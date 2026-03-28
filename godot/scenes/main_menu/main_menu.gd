@@ -1440,9 +1440,25 @@ func _poll_web_upload() -> void:
 
 
 func _native_upload_file() -> void:
-	# Use the paste JSON dialog as fallback for native
-	# (FileDialog doesn't work well in all contexts)
-	_show_import_dialog()
+	var file_dialog = FileDialog.new()
+	file_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	file_dialog.access = FileDialog.ACCESS_FILESYSTEM
+	file_dialog.filters = PackedStringArray(["*.json ; JSON Save Files", "*.sav ; Save Files", "*.txt ; Text Files"])
+	file_dialog.title = "Select Save File"
+	file_dialog.size = Vector2(700, 500)
+	file_dialog.file_selected.connect(func(path: String):
+		var file = FileAccess.open(path, FileAccess.READ)
+		if file:
+			var content = file.get_as_text()
+			file.close()
+			_confirm_import_save(content)
+		else:
+			_show_toast("Failed to open file.", false)
+		file_dialog.queue_free()
+	)
+	file_dialog.canceled.connect(func(): file_dialog.queue_free())
+	add_child(file_dialog)
+	file_dialog.popup_centered()
 
 
 func _confirm_import_save(json_content: String) -> void:
