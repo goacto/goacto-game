@@ -173,6 +173,20 @@
 - [x] Dialog overlap on first bedroom visit (fixed: in_dialogue flag for tooltips)
 - [x] Console visual separation (fixed: consistent position at origin)
 - [x] mindscape_west.gd parse error (fixed: moved mid-file variables to top)
+- [x] Console placement crash: is_empty() on nil (fixed: null check before is_empty)
+- [x] Float % int crash on entering mindscape (fixed: int() cast on JSON-loaded numbers)
+- [x] Milestone is_empty on nil in daily reward (fixed: null check before is_empty)
+- [x] Settings crash: get_font_size_scale not found (fixed: renamed to get_font_size_multiplier)
+- [x] Dr. Lumina voice replays every kitchen entry (fixed: one-shot with player_data flag)
+- [x] Tutorial tooltips reappear after focus session (fixed: onboarding marks all tutorials seen)
+- [x] Tutorial tooltip text overlap with zone labels (fixed: z_index=30 on tooltips)
+- [x] Console alert shows after already entering mindscape (fixed: check onboarding status + one-shot flag)
+- [x] Red lock icons render over dialogue panels (fixed: z_index layering - locks=5, panels=20)
+- [x] Experience shop elements separated from kiosk (fixed: synced .tscn position with code)
+- [x] Web saves lost on tab close (fixed: FS.syncfs() after every save/delete)
+- [x] Combat crash on invalid enemy type (fixed: has() check before dictionary access)
+- [x] Dashboard float % int crash (fixed: int() cast on player data values)
+- [x] AudioManager sfx_pool empty access (fixed: size check before [0] access)
 
 ---
 
@@ -248,15 +262,35 @@
 
 ---
 
+## March 28, 2026 Session - Completed
+
+- [x] VR headset transition animation (first-person goggles with hands, lenses, foam padding)
+- [x] Pulsing evolution ring removed from mindscape hub
+- [x] Background stars expanded to full zoomed-out view
+- [x] Hub layout cleanup (garden patches, pedestals, shop repositioned)
+- [x] IRL Gifts tab in experience shop (focus coin rewards, discount codes)
+- [x] Reset Scene button (functional, replaces static text)
+- [x] Greeting label centered in mindscape hub header
+- [x] Achievement pedestals enlarged 2.5x with visual detail
+- [x] Save file download/upload system (web + desktop file pickers)
+- [x] Topic archive/restore system
+- [x] Topic session counts in button text + delete option
+- [x] SystemFont with emoji fallback for web
+- [x] Dynamic virtual joystick (touch anywhere on left half)
+- [x] Feedback form integration (Google Form with auto-filled game context)
+- [x] Old storage room voice lines wired (5 slots)
+- [x] Comprehensive CHANGELOG.md
+- [x] Comprehensive TEXTBOOK.md (beginner to expert)
+- [x] 14+ bug fixes (null safety, float/int, z-index, one-shot dialogues)
+
 ## Immediate Next Steps (Suggested)
 
-1. **Playtesting & Bug Fixes** - Test all scenes via web deployment, fix any remaining issues
-2. **CI/CD Pipeline** - Automate build timestamp and web export on push
-3. **Voice acting for key dialogue** - Mom, Narrator voices (230+ lines needed)
-4. **Multiple Endings** - Story branches based on habits
-5. **Code refactoring** - Reduce duplicate code across scenes (ShipSceneBase pattern)
+1. **Voice acting generation** - 230+ lines needed, infrastructure ready (old_storage wired as template)
+2. **Ship room refactor** - All 9 rooms extend Control instead of ShipSceneBase (massive duplication)
+3. **Multiple Endings** - Story branches based on habits
+4. **Steam/itch.io page** - High visibility for real users
+5. **Performance optimization** - Profile particle systems, lazy loading
 6. **Screen reader support** - Accessibility enhancement
-7. **Performance optimization** - Profile particle systems, lazy loading
 
 ---
 

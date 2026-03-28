@@ -229,7 +229,7 @@ func _load_accessibility_settings() -> void:
 		return
 
 	# Font size
-	var font_size = GameManager.get_font_size_scale()
+	var font_size = GameManager.get_font_size_multiplier()
 	var font_idx = 1  # Default to medium
 	if font_size < 0.9:
 		font_idx = 0  # Small

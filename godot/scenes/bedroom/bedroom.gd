@@ -245,15 +245,17 @@ func _ready() -> void:
 	# Show tutorial tooltips for first-time visitors (awaited to prevent overlap)
 	await _check_bedroom_tutorials()
 
-	# Check if player has console in inventory - show hint (only if no tutorial was shown)
-	if GameManager.has_item("mindscape_console") and not console_placed:
+	# Check if player has console in inventory but hasn't placed it yet
+	# Don't show if they've already completed onboarding (means they already used mindscape)
+	if GameManager.has_item("mindscape_console") and not console_placed and not GameManager.player_data.get("has_completed_onboarding", false) and not GameManager.player_data.get("console_hint_shown", false):
 		# Wait for any dialogue to close first
 		while in_dialogue:
 			await get_tree().create_timer(0.1).timeout
 		await get_tree().create_timer(0.5).timeout
-		if not in_dialogue:  # Double check
+		if not in_dialogue:
+			GameManager.player_data["console_hint_shown"] = true
 			_show_dialogue("Console Ready", "You have Great-Elder Zyx's Mindscape Console!\n\n*The console hums eagerly in your inventory*\n\nFind the pedestal in your room to place it.")
-			GameManager.player_data.erase("needs_console_placement")
+			SaveManager.save_game()
 
 	print("[Bedroom] Goacto's cabin ready - Welcome aboard the Stellar Wanderer")
 
@@ -4875,6 +4877,7 @@ func _show_save_panel() -> void:
 	save_panel.add_theme_stylebox_override("panel", style)
 
 	save_panel.set_anchors_preset(Control.PRESET_CENTER)
+	save_panel.z_index = 20
 	save_panel.offset_left = -380
 	save_panel.offset_right = 380
 	save_panel.offset_top = -380
@@ -4934,7 +4937,7 @@ func _show_save_panel() -> void:
 	var sep2 = HSeparator.new()
 	vbox.add_child(sep2)
 
-	# Export/Import section
+	# Backup & Transfer section
 	var export_label = Label.new()
 	export_label.text = "Backup & Transfer"
 	export_label.add_theme_font_size_override("font_size", 14)
@@ -4942,26 +4945,54 @@ func _show_save_panel() -> void:
 	export_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(export_label)
 
-	var export_row = HBoxContainer.new()
-	export_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	export_row.add_theme_constant_override("separation", 15)
-	vbox.add_child(export_row)
+	# Download / Upload row
+	var file_row = HBoxContainer.new()
+	file_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	file_row.add_theme_constant_override("separation", 10)
+	vbox.add_child(file_row)
 
-	var export_btn = Button.new()
-	export_btn.text = "Export Save"
-	export_btn.custom_minimum_size = Vector2(130, 40)
-	export_btn.add_theme_font_size_override("font_size", 14)
-	export_btn.add_theme_color_override("font_color", Color(0.6, 0.8, 0.9))
-	export_btn.pressed.connect(_show_export_dialog)
-	export_row.add_child(export_btn)
+	var download_btn = Button.new()
+	download_btn.text = "Download Save"
+	download_btn.custom_minimum_size = Vector2(150, 40)
+	download_btn.add_theme_font_size_override("font_size", 14)
+	download_btn.add_theme_color_override("font_color", Color(0.5, 0.8, 0.6))
+	download_btn.pressed.connect(_bedroom_download_save)
+	file_row.add_child(download_btn)
 
-	var import_btn = Button.new()
-	import_btn.text = "Import Save"
-	import_btn.custom_minimum_size = Vector2(130, 40)
-	import_btn.add_theme_font_size_override("font_size", 14)
-	import_btn.add_theme_color_override("font_color", Color(0.9, 0.8, 0.6))
-	import_btn.pressed.connect(_show_import_dialog)
-	export_row.add_child(import_btn)
+	var upload_btn = Button.new()
+	upload_btn.text = "Upload Save"
+	upload_btn.custom_minimum_size = Vector2(150, 40)
+	upload_btn.add_theme_font_size_override("font_size", 14)
+	upload_btn.add_theme_color_override("font_color", Color(0.8, 0.7, 0.4))
+	upload_btn.pressed.connect(_bedroom_upload_save)
+	file_row.add_child(upload_btn)
+
+	# Copy JSON row (clipboard fallback)
+	var clip_row = HBoxContainer.new()
+	clip_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	clip_row.add_theme_constant_override("separation", 10)
+	vbox.add_child(clip_row)
+
+	var copy_btn = Button.new()
+	copy_btn.text = "Copy JSON"
+	copy_btn.custom_minimum_size = Vector2(150, 35)
+	copy_btn.add_theme_font_size_override("font_size", 12)
+	copy_btn.pressed.connect(func():
+		var json = SaveManager.export_save_data()
+		if json and not json.is_empty():
+			DisplayServer.clipboard_set(json)
+			_show_dialogue("Copied!", "Save data copied to clipboard.")
+		else:
+			_show_dialogue("No Data", "No save data to export.")
+	)
+	clip_row.add_child(copy_btn)
+
+	var paste_btn = Button.new()
+	paste_btn.text = "Paste JSON"
+	paste_btn.custom_minimum_size = Vector2(150, 35)
+	paste_btn.add_theme_font_size_override("font_size", 12)
+	paste_btn.pressed.connect(_show_import_dialog)
+	clip_row.add_child(paste_btn)
 
 	var sep3 = HSeparator.new()
 	vbox.add_child(sep3)
@@ -5576,6 +5607,121 @@ func _close_save_panel() -> void:
 var export_dialog: PanelContainer = null
 var import_dialog: PanelContainer = null
 var import_text_input: TextEdit = null
+
+
+func _bedroom_download_save() -> void:
+	var save_json = SaveManager.export_save_data()
+	if save_json.is_empty():
+		_show_dialogue("No Data", "No save data to download.")
+		return
+
+	var player_name = GameManager.player_data.get("name", "Traveler").to_lower().replace(" ", "_")
+	var timestamp = Time.get_datetime_string_from_system().replace(":", "").replace("-", "").substr(0, 15)
+	var filename = "mindscape_save_%s_%s.json" % [player_name, timestamp]
+
+	if OS.get_name() == "Web":
+		var js_code = """
+		(function() {
+			var data = %s;
+			var blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+			var url = URL.createObjectURL(blob);
+			var a = document.createElement('a');
+			a.href = url;
+			a.download = '%s';
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			URL.revokeObjectURL(url);
+		})();
+		""" % [save_json, filename]
+		JavaScriptBridge.eval(js_code)
+		_show_dialogue("Downloading", "Save file is downloading...")
+	else:
+		var path = ""
+		if OS.get_name() == "macOS" or OS.get_name() == "Linux":
+			path = OS.get_environment("HOME") + "/Downloads/" + filename
+		elif OS.get_name() == "Windows":
+			path = OS.get_environment("USERPROFILE") + "\\Downloads\\" + filename
+		else:
+			path = "user://" + filename
+		var file = FileAccess.open(path, FileAccess.WRITE)
+		if file:
+			file.store_string(save_json)
+			file.close()
+			_show_dialogue("Saved", "File saved to Downloads folder.")
+		else:
+			_show_dialogue("Error", "Could not save file.")
+
+
+func _bedroom_upload_save() -> void:
+	if OS.get_name() == "Web":
+		var js_code = """
+		(function() {
+			window._godotUploadedSave = null;
+			window._godotUploadReady = false;
+			var input = document.createElement('input');
+			input.type = 'file';
+			input.accept = '.json,.sav,.save,.txt';
+			input.onchange = function(e) {
+				var file = e.target.files[0];
+				if (!file) return;
+				var reader = new FileReader();
+				reader.onload = function(ev) {
+					window._godotUploadedSave = ev.target.result;
+					window._godotUploadReady = true;
+				};
+				reader.readAsText(file);
+			};
+			input.click();
+		})();
+		"""
+		JavaScriptBridge.eval(js_code)
+		_poll_bedroom_upload()
+	else:
+		var file_dialog = FileDialog.new()
+		file_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+		file_dialog.access = FileDialog.ACCESS_FILESYSTEM
+		file_dialog.filters = PackedStringArray(["*.json ; JSON Save Files"])
+		file_dialog.title = "Select Save File"
+		file_dialog.size = Vector2(700, 500)
+		file_dialog.file_selected.connect(func(path: String):
+			var file = FileAccess.open(path, FileAccess.READ)
+			if file:
+				var content = file.get_as_text()
+				file.close()
+				_do_bedroom_import(content)
+			file_dialog.queue_free()
+		)
+		file_dialog.canceled.connect(func(): file_dialog.queue_free())
+		add_child(file_dialog)
+		file_dialog.popup_centered()
+
+
+func _poll_bedroom_upload() -> void:
+	for i in range(300):
+		await get_tree().create_timer(0.1).timeout
+		var ready = JavaScriptBridge.eval("window._godotUploadReady === true")
+		if ready:
+			var content = JavaScriptBridge.eval("window._godotUploadedSave")
+			JavaScriptBridge.eval("window._godotUploadedSave = null; window._godotUploadReady = false;")
+			if content and content is String and content.length() > 0:
+				_do_bedroom_import(content)
+			else:
+				_show_dialogue("Error", "Failed to read file.")
+			return
+	JavaScriptBridge.eval("window._godotUploadedSave = null; window._godotUploadReady = false;")
+
+
+func _do_bedroom_import(json_content: String) -> void:
+	var success = SaveManager.import_save_data(json_content)
+	if success:
+		_show_dialogue("Import Successful", "Save data imported! The game will reload with your imported data.", func():
+			_close_save_panel()
+			SaveManager.load_game()
+			get_tree().reload_current_scene()
+		)
+	else:
+		_show_dialogue("Import Failed", "The file does not contain valid save data.")
 
 
 func _show_export_dialog() -> void:
@@ -7379,11 +7525,11 @@ func _open_focus_dashboard() -> void:
 func _calculate_dashboard_data() -> void:
 	dashboard_data.clear()
 
-	dashboard_data["total_sessions"] = GameManager.player_data.get("total_focus_sessions", 0)
-	dashboard_data["total_minutes"] = GameManager.player_data.get("total_focus_minutes", 0)
+	dashboard_data["total_sessions"] = int(GameManager.player_data.get("total_focus_sessions", 0))
+	dashboard_data["total_minutes"] = int(GameManager.player_data.get("total_focus_minutes", 0))
 
-	var total_mins = dashboard_data["total_minutes"]
-	dashboard_data["total_hours"] = int(total_mins / 60)
+	var total_mins = int(dashboard_data["total_minutes"])
+	dashboard_data["total_hours"] = total_mins / 60
 	dashboard_data["remaining_minutes"] = total_mins % 60
 
 	if dashboard_data["total_sessions"] > 0:

@@ -4,7 +4,7 @@ extends Node
 
 # Version and Build Info
 const VERSION: String = "v0.1.0-prototype"
-const BUILD_TIMESTAMP: String = "20260328-042518"  # UTC timestamp: YYYYMMDD-HHMMSS
+const BUILD_TIMESTAMP: String = "20260328-205708"  # UTC timestamp: YYYYMMDD-HHMMSS
 
 # Game States
 enum GameState {
@@ -245,6 +245,70 @@ func _create_version_overlay() -> void:
 	hbox.add_child(reset_btn)
 
 	version_overlay.add_child(hbox)
+
+	# Feedback button - bottom left
+	var feedback_btn = Button.new()
+	feedback_btn.name = "FeedbackButton"
+	feedback_btn.text = "Report Bugs & Share Feedback <3"
+	feedback_btn.flat = true
+	feedback_btn.anchor_left = 0.0
+	feedback_btn.anchor_right = 0.0
+	feedback_btn.anchor_top = 1.0
+	feedback_btn.anchor_bottom = 1.0
+	feedback_btn.offset_left = 10
+	feedback_btn.offset_right = 280
+	feedback_btn.offset_top = -30
+	feedback_btn.offset_bottom = -10
+	feedback_btn.add_theme_font_size_override("font_size", 12)
+	feedback_btn.add_theme_color_override("font_color", Color(0.5, 0.7, 0.9, 0.5))
+	feedback_btn.add_theme_color_override("font_hover_color", Color(0.5, 0.7, 0.9, 0.9))
+	feedback_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	feedback_btn.pressed.connect(_open_feedback_form)
+	version_overlay.add_child(feedback_btn)
+
+
+const FEEDBACK_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScdsid2Df-lW4ceb0amrcb05w4-ez1BkZRaYFvESEakOoFSPQ/viewform"
+
+func _open_feedback_form() -> void:
+	# Build URL with auto-filled game context
+	var params = []
+
+	# Where in the game? (entry.627660145)
+	var scene = get_tree().current_scene.name if get_tree().current_scene else "Unknown"
+	params.append("entry.627660145=%s" % ("In " + scene).uri_encode())
+
+	# Game Version (entry.1489230046)
+	params.append("entry.1489230046=%s" % VERSION.uri_encode())
+
+	# Build Timestamp (entry.1011457111)
+	params.append("entry.1011457111=%s" % BUILD_TIMESTAMP.uri_encode())
+
+	# Platform (entry.283719882)
+	params.append("entry.283719882=%s" % OS.get_name().uri_encode())
+
+	# Player Name (entry.1945603037)
+	var name = player_data.get("name", "Unknown")
+	params.append("entry.1945603037=%s" % str(name).uri_encode())
+
+	# Evolution Level (entry.2079925202)
+	var evo = str(int(player_data.get("world_evolution_level", 0)))
+	params.append("entry.2079925202=%s" % evo.uri_encode())
+
+	# Focus Sessions (entry.834707953)
+	var sessions = str(int(player_data.get("total_focus_sessions", 0)))
+	params.append("entry.834707953=%s" % sessions.uri_encode())
+
+	# Current Chapter (entry.1198190424)
+	var chapter = ""
+	if CampaignManager:
+		chapter = CampaignManager.get_current_chapter().get("name", "Unknown")
+	params.append("entry.1198190424=%s" % chapter.uri_encode())
+
+	# Current Scene (entry.787920580)
+	params.append("entry.787920580=%s" % scene.uri_encode())
+
+	var url = FEEDBACK_FORM_URL + "?" + "&".join(params)
+	OS.shell_open(url)
 
 
 func _reset_current_scene() -> void:

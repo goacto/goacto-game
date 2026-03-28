@@ -45,10 +45,6 @@ MailManager="*res://autoload/MailManager.gd"
 RelationshipManager="*res://autoload/RelationshipManager.gd"
 MobileUIManager="*res://autoload/MobileUIManager.gd"
 
-[gui]
-
-theme/default_font="res://resources/default_font.tres"
-
 [display]
 
 window/size/viewport_width=1366
@@ -57,6 +53,10 @@ window/size/window_width_override=1366
 window/size/window_height_override=768
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
+
+[gui]
+
+theme/default_font="res://resources/default_font.tres"
 
 [input]
 

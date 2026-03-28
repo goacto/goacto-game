@@ -441,7 +441,9 @@ func _get_available_sfx_player() -> AudioStreamPlayer:
 		if not player.playing:
 			return player
 	# All players busy, return first one (will interrupt oldest sound)
-	return sfx_pool[0]
+	if sfx_pool.size() > 0:
+		return sfx_pool[0]
+	return null
 
 
 func _return_sfx_to_pool(player: AudioStreamPlayer) -> void:

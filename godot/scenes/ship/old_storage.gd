@@ -158,6 +158,7 @@ func _ready() -> void:
 	if not CampaignManager.has_seen_cutscene("old_storage_entered"):
 		await get_tree().create_timer(0.8).timeout
 		_show_dialogue("Old Storage Room", "*Dust particles float in the dim light...*\n\nThis room hasn't been opened in years. Ancient boxes and covered furniture fill the space.\n\n*Something glows faintly in the corner...*")
+		_play_voice("res://audio/voice/old_storage/room_enter.ogg")
 		CampaignManager.mark_cutscene_seen("old_storage_entered")
 
 	print("[OldStorage] Ancient storage room ready")
@@ -342,10 +343,13 @@ func _interact_with_object(object_id: String) -> void:
 			_pickup_mindscape_console()
 		"examine_chest":
 			_show_dialogue("Great-Elder's Chest", "A beautifully carved chest with Goactorian symbols.\n\nIt belonged to Great-Elder Zyx before they passed.\n\n*You run your fingers over the intricate patterns, feeling a connection to your ancestors.*")
+			_play_voice("res://audio/voice/old_storage/examine_chest.ogg")
 		"examine_shelf":
 			_show_dialogue("Dusty Shelf", "Old data crystals and memory cubes line the shelves.\n\nLabels have faded beyond reading.\n\n*These contain knowledge from generations past, waiting to be rediscovered.*")
+			_play_voice("res://audio/voice/old_storage/examine_shelf.ogg")
 		"examine_portrait":
 			_show_dialogue("Old Family Portrait", "A holographic family portrait from three generations ago.\n\nYou recognize Great-Elder Zyx as a young Goactorian.\n\n*They're holding a small device that looks familiar... is that the Mindscape Console?*")
+			_play_voice("res://audio/voice/old_storage/examine_portrait.ogg")
 
 
 func _pickup_mindscape_console() -> void:
@@ -369,6 +373,7 @@ func _pickup_mindscape_console() -> void:
 
 	# Show pickup message
 	_show_dialogue("Mindscape Console Found!", "You found Great-Elder Zyx's Mindscape Console!\n\n*The ancient device hums warmly in your hands, as if recognizing its new owner.*\n\nThis is how Goactorians connect with their human companions. Take it back to your room and set it up!\n\n*The console has been added to your inventory.*")
+	_play_voice("res://audio/voice/old_storage/console_found.ogg")
 
 
 func _animate_console() -> void:
@@ -438,6 +443,14 @@ func _close_dialogue() -> void:
 	if dialogue_callback.is_valid():
 		dialogue_callback.call()
 		dialogue_callback = Callable()
+
+
+func _play_voice(voice_path: String) -> void:
+	if not ResourceLoader.exists(voice_path):
+		return
+	var audio = get_node_or_null("/root/AudioManager")
+	if audio and audio.has_method("play_voice_from_path"):
+		audio.play_voice_from_path(voice_path)
 
 
 func _play_sfx(sfx_path: String, volume_db: float = 0.0) -> void:

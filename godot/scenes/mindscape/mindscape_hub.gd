@@ -7123,6 +7123,10 @@ func _finish_onboarding() -> void:
 	is_onboarding_active = false
 	GameManager.complete_onboarding()
 
+	# Mark all tutorial tooltips as seen (onboarding covers same content)
+	for tip_id in ["hub_focus_chamber", "hub_daily_rituals", "hub_journal", "hub_daily_summary", "hub_portals"]:
+		GameManager.mark_tutorial_seen(tip_id)
+
 	# Smooth fade out
 	if onboarding_panel:
 		var tween = create_tween()
@@ -11428,6 +11432,7 @@ func _create_tutorial_tooltip(tip_id: String, tip_data: Dictionary) -> void:
 	tutorial_highlight.name = "TutorialHighlight"
 	tutorial_highlight.set_anchors_preset(Control.PRESET_FULL_RECT)
 	tutorial_highlight.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tutorial_highlight.z_index = 25
 	add_child(tutorial_highlight)
 
 	var dim_bg = ColorRect.new()
@@ -11436,9 +11441,10 @@ func _create_tutorial_tooltip(tip_id: String, tip_data: Dictionary) -> void:
 	dim_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tutorial_highlight.add_child(dim_bg)
 
-	# Create tooltip panel
+	# Create tooltip panel (above zone labels and game world elements)
 	tutorial_tooltip_panel = PanelContainer.new()
 	tutorial_tooltip_panel.name = "TutorialTooltip"
+	tutorial_tooltip_panel.z_index = 30
 
 	var style = StyleBoxFlat.new()
 	style.bg_color = Color(0.1, 0.12, 0.18, 0.98)

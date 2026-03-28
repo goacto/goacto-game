@@ -92,6 +92,9 @@ func _ready() -> void:
 
 func _start_battle(enemy_type: String) -> void:
 	current_enemy_type = enemy_type
+	if not ENEMIES.has(enemy_type):
+		push_error("[Combat] Unknown enemy type: " + enemy_type)
+		return
 	current_enemy = ENEMIES[enemy_type].duplicate()
 	enemy_health = current_enemy.max_health
 

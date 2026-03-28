@@ -171,15 +171,15 @@ func _ready() -> void:
 
 	# Show intro hint after fade completes (only for first visit)
 	await get_tree().create_timer(0.6).timeout
-	if not CampaignManager.has_seen_cutscene("intro_part2"):
-		# First time - hasn't used mindscape yet
+	# Dr. Lumina's intro greeting - only plays once automatically
+	if not CampaignManager.has_seen_cutscene("intro_part2") and not GameManager.player_data.get("kitchen_intro_shown", false):
+		GameManager.player_data["kitchen_intro_shown"] = true
 		if not GameManager.has_item("mindscape_console"):
-			# Hasn't found the console yet - prompt to search for it
 			_show_dialogue("Dr. Lumina", "Your great-elder Zyx's Mindscape Console should be somewhere on the ship...\n\n*taps chin thoughtfully*\n\nExplore around - your father stored a lot of their old things when we moved aboard.", Callable(), "res://audio/voice/kitchen/lumina_go_find.ogg")
 		else:
-			# Has the console - tell them to set it up
 			_show_dialogue("Dr. Lumina", "You found Zyx's console! Now go set it up in your room.\n\n*gestures toward the door*\n\nI can't wait to hear about your first human!", Callable(), "res://audio/voice/kitchen/lumina_intro.ogg")
-	# Otherwise, no automatic dialogue - let player explore
+		SaveManager.save_game()
+	# Otherwise, player can interact with Mom manually
 
 	print("[Kitchen] Family dining area ready")
 

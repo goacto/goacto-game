@@ -1796,6 +1796,9 @@ const BUILD_TIMESTAMP: String = "YYYYMMDD-HHMMSS"  # UTC timestamp
 ```
 Set it to the current UTC time. This is displayed in the bottom-right of the game UI and shows "Xd ago" relative time. **Always update this when committing changes that will be deployed to Vercel.**
 
+### Pre-Commit: Update Textbook
+Before every commit pushed to GitHub, update `docs/TEXTBOOK.md` to reflect any new systems, patterns, bug fixes, or architectural changes made in that commit. The textbook teaches all concepts required to build this app from beginner to expert level. Add new content to the appropriate chapter or create new sections as needed.
+
 ### Code Conventions
 
 #### Naming
