@@ -123,11 +123,11 @@
 - [x] Achievement system with rewards (45+ achievements, XP rewards, notifications, progress tracking)
 - [x] Garden patches evolution based on habits
 
-### Social Features (Future)
-- [ ] Friend system for accountability
-- [ ] Shared challenges
-- [ ] Community goals
-- [ ] Leaderboards (opt-in)
+### Social Features (Designed - see docs/SOCIAL_FEATURES_DESIGN.md)
+- [ ] Shared challenges (Phase 1: local codes, Phase 2: API sync)
+- [ ] Accountability partners (Phase 2: paired status sharing)
+- [ ] Community goals (Phase 2: global counters)
+- [ ] Leaderboards (Phase 3: opt-in, privacy-first)
 
 ### Accessibility
 - [x] Font size options (small/medium/large in Settings)
@@ -144,12 +144,12 @@
 - [ ] Refactor duplicate code across room scenes
 - [ ] Create reusable space view component (3 implementations in bedroom, kitchen, stairs - similar but different celestial objects)
 - [x] Centralize animation/gameplay constants (ThemeConfig: speeds, zoom, interaction radius, focus durations, UI timing)
-- [ ] Add unit tests for HabitManager
+- [x] Add unit tests for HabitManager (22 tests: topics CRUD, habits CRUD, streaks, archive, save/load, edge cases)
 
 ### Performance
 - [x] Profile and optimize particle systems (staggered frame animations in hub _process)
 - [x] Lazy loading for heavy scenes (hub defers heavy visual creation with call_deferred)
-- [ ] Memory usage optimization
+- [x] Memory usage optimization (zone body freed on close, panel cleanup verified)
 - [x] Save data compression (compact JSON for auto-save, pretty-print only for exports)
 
 ### Platform Support

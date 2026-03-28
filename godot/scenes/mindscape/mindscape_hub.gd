@@ -4152,6 +4152,8 @@ func _clear_zone_body() -> void:
 func _close_zone() -> void:
 	zone_panel.visible = false
 	in_zone_panel = false
+	# Free zone body children to reclaim memory
+	_clear_zone_body()
 	_update_mobile_controls_visibility()
 
 
