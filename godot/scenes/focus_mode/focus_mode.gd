@@ -181,7 +181,11 @@ func _load_batch_script(index: int) -> void:
 	if index >= batch_script_ids.size():
 		return
 
-	var script = ScriptManager.scripts[batch_script_ids[index]]
+	var sid = batch_script_ids[index]
+	if not ScriptManager or not ScriptManager.scripts.has(sid):
+		push_error("[FocusMode] Script not found: " + str(sid))
+		return
+	var script = ScriptManager.scripts[sid]
 	script_id = script.id
 	script_lines = script.lines.duplicate()
 	script_aspect = script.aspect
@@ -1409,7 +1413,7 @@ func _show_block_continue_option(block_queue: Array) -> void:
 	vbox.add_child(title)
 
 	var remaining = block_queue.size()
-	var next_name = block_queue[0].get("topic", "Focus Session")
+	var next_name = block_queue[0].get("topic", "Focus Session") if remaining > 0 else "Focus Session"
 	var info_text = str(remaining) + " session" + ("s" if remaining > 1 else "") + " remaining"
 	info_text += "\nNext: " + next_name
 
@@ -1456,6 +1460,8 @@ func _continue_block(block_queue: Array) -> void:
 		block_continue_panel = null
 
 	# Get next session
+	if block_queue.is_empty():
+		return
 	var next_session = block_queue[0]
 	var remaining = block_queue.slice(1)
 

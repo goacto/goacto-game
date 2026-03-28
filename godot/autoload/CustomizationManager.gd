@@ -165,7 +165,7 @@ func get_owned_items_for_slot(slot: String) -> Array:
 
 	for item_id in ShopManager.owned_items:
 		var item = ShopManager.get_item(item_id)
-		if not item.is_empty() and item.get("category", -1) == category:
+		if item and item is Dictionary and not item.is_empty() and item.get("category", -1) == category:
 			items.append(item)
 
 	return items
@@ -184,7 +184,7 @@ func get_purchasable_items_for_slot(slot: String) -> Array:
 			continue
 
 		var item = ShopManager.get_item(item_id)
-		if not item.is_empty() and item.get("category", -1) == category:
+		if item and item is Dictionary and not item.is_empty() and item.get("category", -1) == category:
 			items.append(item)
 
 	return items
