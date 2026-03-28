@@ -11853,13 +11853,13 @@ func _open_experience_shop() -> void:
 	content_hbox.add_child(sidebar)
 
 	var categories = [
-		{"id": ShopManager.ItemCategory.COSMETIC_COLOR, "name": "Skin Colors", "icon": "[*]"},
-		{"id": ShopManager.ItemCategory.COSMETIC_OUTFIT, "name": "Outfits", "icon": "[+]"},
-		{"id": ShopManager.ItemCategory.COSMETIC_HAT, "name": "Hats", "icon": "[^]"},
-		{"id": ShopManager.ItemCategory.COSMETIC_CAPE, "name": "Capes", "icon": "[~]"},
-		{"id": ShopManager.ItemCategory.COSMETIC_GLASSES, "name": "Glasses", "icon": "[o]"},
-		{"id": ShopManager.ItemCategory.COSMETIC_AURA, "name": "Auras", "icon": "[.]"},
-		{"id": ShopManager.ItemCategory.ROOM_DECOR, "name": "Room Decor", "icon": "[#]"},
+		{"id": ShopManager.ItemCategory.COSMETIC_COLOR, "name": "Skin Colors", "icon": "🎨"},
+		{"id": ShopManager.ItemCategory.COSMETIC_OUTFIT, "name": "Outfits", "icon": "👕"},
+		{"id": ShopManager.ItemCategory.COSMETIC_HAT, "name": "Hats", "icon": "🎩"},
+		{"id": ShopManager.ItemCategory.COSMETIC_CAPE, "name": "Capes", "icon": "🦸"},
+		{"id": ShopManager.ItemCategory.COSMETIC_GLASSES, "name": "Glasses", "icon": "👓"},
+		{"id": ShopManager.ItemCategory.COSMETIC_AURA, "name": "Auras", "icon": "✨"},
+		{"id": ShopManager.ItemCategory.ROOM_DECOR, "name": "Room Decor", "icon": "🏠"},
 	]
 
 	for cat in categories:
@@ -11873,7 +11873,7 @@ func _open_experience_shop() -> void:
 
 	# IRL Gifts tab (special - uses focus coins, not aspect XP)
 	var irl_btn = Button.new()
-	irl_btn.text = "[!] IRL Gifts"
+	irl_btn.text = "🎁 IRL Gifts"
 	irl_btn.custom_minimum_size = Vector2(0, 45)
 	irl_btn.add_theme_font_size_override("font_size", 16)
 	irl_btn.add_theme_color_override("font_color", Color(0.95, 0.8, 0.4))
