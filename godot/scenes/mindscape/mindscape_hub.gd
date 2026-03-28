@@ -13363,8 +13363,8 @@ func _show_daily_reward_popup(login_result: Dictionary) -> void:
 		return
 
 	var reward = login_result.reward
-	var streak = GameManager.player_data.get("login_streak", 1)
-	var total_days = GameManager.player_data.get("total_login_days", 1)
+	var streak = int(GameManager.player_data.get("login_streak", 1))
+	var total_days = int(GameManager.player_data.get("total_login_days", 1))
 
 	# Create fullscreen overlay
 	daily_reward_panel = Control.new()
