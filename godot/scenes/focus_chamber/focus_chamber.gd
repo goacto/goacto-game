@@ -324,28 +324,29 @@ func _build_topics_content(container: VBoxContainer) -> void:
 
 			for topic in topics:
 				var topic_row = HBoxContainer.new()
-				topic_row.add_theme_constant_override("separation", 10)
+				topic_row.add_theme_constant_override("separation", 8)
 				container.add_child(topic_row)
 
+				# Topic button with session count in the label
+				var sessions = topic.get("total_sessions", 0)
 				var topic_btn = Button.new()
-				topic_btn.text = topic.name
+				topic_btn.text = "%s (%d)" % [topic.name, sessions]
 				topic_btn.custom_minimum_size = Vector2(0, 45)
 				topic_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 				topic_btn.add_theme_font_size_override("font_size", 16)
 				topic_btn.pressed.connect(_start_with_topic.bind(topic.id, topic.name))
 				topic_row.add_child(topic_btn)
 
-				# Session count indicator
-				var sessions = topic.get("total_sessions", 0)
-				var count_label = Label.new()
-				count_label.text = str(sessions) + "x"
-				count_label.add_theme_font_size_override("font_size", 14)
-				count_label.add_theme_color_override("font_color", Color(0.5, 0.6, 0.5) if sessions > 0 else Color(0.4, 0.4, 0.45))
-				count_label.custom_minimum_size = Vector2(40, 0)
-				count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-				count_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-				count_label.tooltip_text = str(sessions) + " sessions completed"
-				topic_row.add_child(count_label)
+				# Delete button
+				var delete_btn = Button.new()
+				delete_btn.text = "x"
+				delete_btn.custom_minimum_size = Vector2(35, 35)
+				delete_btn.add_theme_font_size_override("font_size", 14)
+				delete_btn.add_theme_color_override("font_color", Color(0.6, 0.4, 0.4))
+				delete_btn.add_theme_color_override("font_hover_color", Color(0.9, 0.4, 0.4))
+				delete_btn.tooltip_text = "Delete topic"
+				delete_btn.pressed.connect(_confirm_delete_topic_from_chamber.bind(topic.id, topic.name))
+				topic_row.add_child(delete_btn)
 
 	_add_spacer_to(container, 15)
 
@@ -911,6 +912,78 @@ func _update_difficulty_buttons() -> void:
 		var radio = hard_panel.find_child("HARDRadio", true, false)
 		if radio:
 			radio.set_pressed_no_signal(selected_difficulty == 1)
+
+
+func _confirm_delete_topic_from_chamber(topic_id: String, topic_name: String) -> void:
+	var dialog = PanelContainer.new()
+	dialog.name = "DeleteTopicDialog"
+	dialog.set_anchors_preset(Control.PRESET_CENTER)
+	dialog.offset_left = -200
+	dialog.offset_right = 200
+	dialog.offset_top = -120
+	dialog.offset_bottom = 120
+
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.08, 0.06, 0.1, 0.98)
+	style.border_color = Color(0.8, 0.4, 0.4, 0.7)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(12)
+	dialog.add_theme_stylebox_override("panel", style)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 20)
+	margin.add_theme_constant_override("margin_right", 20)
+	margin.add_theme_constant_override("margin_top", 20)
+	margin.add_theme_constant_override("margin_bottom", 20)
+	dialog.add_child(margin)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 15)
+	margin.add_child(vbox)
+
+	var title = Label.new()
+	title.text = "Delete Topic?"
+	title.add_theme_font_size_override("font_size", 22)
+	title.add_theme_color_override("font_color", Color(0.9, 0.5, 0.4))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(title)
+
+	var desc = Label.new()
+	desc.text = "Remove \"%s\" and all its session history?\nThis cannot be undone." % topic_name
+	desc.add_theme_font_size_override("font_size", 15)
+	desc.add_theme_color_override("font_color", Color(0.65, 0.68, 0.75))
+	desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	vbox.add_child(desc)
+
+	var btn_row = HBoxContainer.new()
+	btn_row.add_theme_constant_override("separation", 15)
+	btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_child(btn_row)
+
+	var keep_btn = Button.new()
+	keep_btn.text = "Keep"
+	keep_btn.custom_minimum_size = Vector2(100, 40)
+	keep_btn.add_theme_font_size_override("font_size", 16)
+	keep_btn.pressed.connect(func(): dialog.queue_free())
+	btn_row.add_child(keep_btn)
+
+	var delete_btn = Button.new()
+	delete_btn.text = "Delete"
+	delete_btn.custom_minimum_size = Vector2(100, 40)
+	delete_btn.add_theme_font_size_override("font_size", 16)
+	delete_btn.add_theme_color_override("font_color", Color(0.9, 0.4, 0.4))
+	delete_btn.pressed.connect(func():
+		if HabitManager and HabitManager.has_method("delete_topic"):
+			HabitManager.delete_topic(topic_id)
+			SaveManager.save_game()
+		dialog.queue_free()
+		# Refresh the topic list
+		_show_step(Step.FOCUS_SELECTION)
+	)
+	btn_row.add_child(delete_btn)
+
+	add_child(dialog)
 
 
 func _show_create_topic() -> void:
