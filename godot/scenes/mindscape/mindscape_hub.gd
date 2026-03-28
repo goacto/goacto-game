@@ -11836,13 +11836,13 @@ func _open_experience_shop() -> void:
 	content_hbox.add_child(sidebar)
 
 	var categories = [
-		{"id": ShopManager.ItemCategory.COSMETIC_COLOR, "name": "Skin Colors", "icon": "🎨"},
-		{"id": ShopManager.ItemCategory.COSMETIC_OUTFIT, "name": "Outfits", "icon": "👕"},
-		{"id": ShopManager.ItemCategory.COSMETIC_HAT, "name": "Hats", "icon": "🎩"},
-		{"id": ShopManager.ItemCategory.COSMETIC_CAPE, "name": "Capes", "icon": "🦸"},
-		{"id": ShopManager.ItemCategory.COSMETIC_GLASSES, "name": "Glasses", "icon": "👓"},
-		{"id": ShopManager.ItemCategory.COSMETIC_AURA, "name": "Auras", "icon": "✨"},
-		{"id": ShopManager.ItemCategory.ROOM_DECOR, "name": "Room Decor", "icon": "🏠"},
+		{"id": ShopManager.ItemCategory.COSMETIC_COLOR, "name": "Skin Colors", "icon": "[*]"},
+		{"id": ShopManager.ItemCategory.COSMETIC_OUTFIT, "name": "Outfits", "icon": "[+]"},
+		{"id": ShopManager.ItemCategory.COSMETIC_HAT, "name": "Hats", "icon": "[^]"},
+		{"id": ShopManager.ItemCategory.COSMETIC_CAPE, "name": "Capes", "icon": "[~]"},
+		{"id": ShopManager.ItemCategory.COSMETIC_GLASSES, "name": "Glasses", "icon": "[o]"},
+		{"id": ShopManager.ItemCategory.COSMETIC_AURA, "name": "Auras", "icon": "[.]"},
+		{"id": ShopManager.ItemCategory.ROOM_DECOR, "name": "Room Decor", "icon": "[#]"},
 	]
 
 	for cat in categories:
@@ -11856,7 +11856,7 @@ func _open_experience_shop() -> void:
 
 	# IRL Gifts tab (special - uses focus coins, not aspect XP)
 	var irl_btn = Button.new()
-	irl_btn.text = "🎁 IRL Gifts"
+	irl_btn.text = "[!] IRL Gifts"
 	irl_btn.custom_minimum_size = Vector2(0, 45)
 	irl_btn.add_theme_font_size_override("font_size", 16)
 	irl_btn.add_theme_color_override("font_color", Color(0.95, 0.8, 0.4))
@@ -13333,11 +13333,11 @@ func _check_daily_login() -> void:
 	var result = GameManager.check_daily_login()
 
 	if result.is_new_day:
-		# Show daily reward popup (wait for onboarding to finish first)
+		# Show daily reward popup (wait for onboarding and tutorials to finish first)
 		if result.reward and not result.reward.is_empty():
-			while is_onboarding_active:
+			while is_onboarding_active or tutorial_tooltip_panel != null:
 				await get_tree().create_timer(0.5).timeout
-			await get_tree().create_timer(1.0).timeout
+			await get_tree().create_timer(1.5).timeout
 			_show_daily_reward_popup(result)
 
 
@@ -13410,33 +13410,14 @@ func _show_daily_reward_popup(login_result: Dictionary) -> void:
 	day_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(day_label)
 
-	# Reward icon/visual
-	var reward_container = CenterContainer.new()
-	reward_container.custom_minimum_size = Vector2(0, 100)
-	vbox.add_child(reward_container)
-
-	var reward_visual = Node2D.new()
-	reward_container.add_child(reward_visual)
-
-	# XP orb visual
-	var orb = Polygon2D.new()
-	orb.color = Color(0.95, 0.85, 0.4, 0.9)
-	orb.polygon = PackedVector2Array([
-		Vector2(-30, 0), Vector2(-21, -21), Vector2(0, -30),
-		Vector2(21, -21), Vector2(30, 0), Vector2(21, 21),
-		Vector2(0, 30), Vector2(-21, 21)
-	])
-	reward_visual.add_child(orb)
-
-	var orb_glow = Polygon2D.new()
-	orb_glow.color = Color(1.0, 0.9, 0.5, 0.3)
-	orb_glow.polygon = PackedVector2Array([
-		Vector2(-45, 0), Vector2(-32, -32), Vector2(0, -45),
-		Vector2(32, -32), Vector2(45, 0), Vector2(32, 32),
-		Vector2(0, 45), Vector2(-32, 32)
-	])
-	reward_visual.add_child(orb_glow)
-	orb_glow.z_index = -1
+	# Reward icon - centered gold orb
+	var orb_label = Label.new()
+	orb_label.text = "<*>"
+	orb_label.add_theme_font_size_override("font_size", 48)
+	orb_label.add_theme_color_override("font_color", Color(0.95, 0.85, 0.4))
+	orb_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	orb_label.custom_minimum_size = Vector2(0, 80)
+	vbox.add_child(orb_label)
 
 	# Reward amount
 	var amount_label = Label.new()
