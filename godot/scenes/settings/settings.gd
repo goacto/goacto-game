@@ -695,8 +695,8 @@ func _show_feedback_form(feedback_type: String) -> void:
 	url += "&" + FORM_ENTRY_TYPE + "=" + ("Bug Report" if feedback_type == "bug" else "Feature Request").uri_encode()
 	url += "&" + FORM_ENTRY_DEVICE + "=" + (platform + " - " + device_info).uri_encode()
 
-	# Open in browser
-	OS.shell_open(url)
+	# Open in browser (web-safe)
+	GameManager.open_url(url)
 
 	print("[Settings] Opened feedback form: ", feedback_type)
 

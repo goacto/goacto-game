@@ -217,9 +217,6 @@ func _ready() -> void:
 	_setup_zone_interactions()
 	_setup_portal_interactions()
 
-	# Setup progress indicators (streak flames, evolution ring)
-	_setup_progress_indicators()
-
 	# Position player based on where we came from
 	_position_player_from_transition()
 
@@ -403,6 +400,14 @@ func _hide_interaction_prompt() -> void:
 
 
 var _frame_count: int = 0
+
+
+func _exit_tree() -> void:
+	# Reset state to prevent leaks between scene transitions
+	in_zone_panel = false
+	is_onboarding_active = false
+	near_exit_crystal = false
+
 
 func _process(delta: float) -> void:
 	_frame_count += 1
@@ -5728,6 +5733,7 @@ func _export_progress_data() -> void:
 	if file:
 		file.store_string(json_string)
 		file.close()
+		if SaveManager: SaveManager.sync_web_filesystem()
 
 		# Get the actual path for display
 		var actual_path = ProjectSettings.globalize_path(filename)
@@ -8331,6 +8337,7 @@ func _save_journal_entry(entry: Dictionary) -> void:
 	if file:
 		file.store_string(json_string)
 		file.close()
+		if SaveManager: SaveManager.sync_web_filesystem()
 
 
 func _load_journal() -> Array:
@@ -9492,6 +9499,7 @@ func _save_checkins(checkins: Array) -> void:
 	if file:
 		file.store_string(JSON.stringify(checkins, "\t"))
 		file.close()
+		if SaveManager: SaveManager.sync_web_filesystem()
 
 
 ## Get consecutive days with gratitude entries
@@ -10393,6 +10401,7 @@ func _save_weekly_reviews(reviews: Array) -> void:
 	if file:
 		file.store_string(JSON.stringify(reviews, "\t"))
 		file.close()
+		if SaveManager: SaveManager.sync_web_filesystem()
 
 
 # =============================================================================
@@ -12116,7 +12125,7 @@ func _on_shop_irl_gifts_selected() -> void:
 		browse_btn.custom_minimum_size = Vector2(100, 30)
 		browse_btn.add_theme_font_size_override("font_size", 12)
 		browse_btn.add_theme_color_override("font_color", Color(0.5, 0.7, 0.9))
-		browse_btn.pressed.connect(func(): OS.shell_open(gift.url))
+		browse_btn.pressed.connect(func(): GameManager.open_url(gift.url))
 		btn_row.add_child(browse_btn)
 
 	# Coming soon note
@@ -12139,7 +12148,7 @@ func _on_irl_gift_redeem(gift: Dictionary) -> void:
 	_show_dialogue(
 		"Code Unlocked!",
 		"Your discount code for %s:\n\n%s\n\nUse this code at goacto.shop for a special discount.\n\nThe code has been copied - visit the shop to redeem!" % [gift.name, code],
-		func(): OS.shell_open(gift.get("url", "https://goacto.shop"))
+		func(): GameManager.open_url(gift.get("url", "https://goacto.shop"))
 	)
 	DisplayServer.clipboard_set(code)
 
@@ -12705,6 +12714,7 @@ func _save_affirmations(data: Dictionary) -> void:
 	if file:
 		file.store_string(JSON.stringify(data, "\t"))
 		file.close()
+		if SaveManager: SaveManager.sync_web_filesystem()
 
 
 # =============================================================================

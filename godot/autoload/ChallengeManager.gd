@@ -293,6 +293,8 @@ func _save_challenges() -> void:
 	if file:
 		file.store_string(json_string)
 		file.close()
+		if SaveManager:
+			SaveManager.sync_web_filesystem()
 
 
 ## Load challenges from file

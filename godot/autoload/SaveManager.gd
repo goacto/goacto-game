@@ -45,7 +45,7 @@ func save_game() -> void:
 	if file:
 		file.store_string(json_string)
 		file.close()
-		_sync_web_filesystem()
+		sync_web_filesystem()
 		save_completed.emit()
 		print("[SaveManager] Game saved successfully")
 	else:
@@ -122,7 +122,7 @@ func load_game() -> bool:
 func delete_save() -> void:
 	if FileAccess.file_exists(SAVE_PATH):
 		DirAccess.remove_absolute(SAVE_PATH)
-		_sync_web_filesystem()
+		sync_web_filesystem()
 		print("[SaveManager] Save file deleted")
 
 
@@ -148,6 +148,7 @@ func save_settings(settings: Dictionary) -> void:
 	if file:
 		file.store_string(json_string)
 		file.close()
+		sync_web_filesystem()
 		print("[SaveManager] Settings saved")
 
 
@@ -284,7 +285,7 @@ func save_to_slot(slot: int, custom_name: String = "") -> bool:
 	if file:
 		file.store_string(json_string)
 		file.close()
-		_sync_web_filesystem()
+		sync_web_filesystem()
 		slot_saved.emit(slot)
 		print("[SaveManager] Saved to slot ", slot, " as '", save_data["slot_name"], "'")
 		return true
@@ -294,7 +295,7 @@ func save_to_slot(slot: int, custom_name: String = "") -> bool:
 
 
 ## Sync virtual filesystem to IndexedDB on web (prevents data loss on tab close)
-func _sync_web_filesystem() -> void:
+func sync_web_filesystem() -> void:
 	if OS.get_name() == "Web":
 		JavaScriptBridge.eval("if (typeof FS !== 'undefined' && FS.syncfs) { FS.syncfs(false, function(err) { if (err) console.warn('FS sync error:', err); }); }")
 
@@ -558,6 +559,7 @@ func import_to_slot(slot: int, json_string: String) -> bool:
 	if file:
 		file.store_string(JSON.stringify(save_data, "\t"))
 		file.close()
+		sync_web_filesystem()
 		print("[SaveManager] Imported to slot ", slot)
 		return true
 

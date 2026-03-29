@@ -1097,15 +1097,15 @@ func _get_consecutive_all_habits_days() -> int:
 
 func _setup_reminder_system() -> void:
 	## Initialize the reminder checking system
+	# Load saved reminders BEFORE starting timer to avoid race condition
+	_load_reminders()
+
 	reminder_check_timer = Timer.new()
 	reminder_check_timer.name = "ReminderCheckTimer"
 	reminder_check_timer.wait_time = 30.0  # Check every 30 seconds
 	reminder_check_timer.autostart = true
 	reminder_check_timer.timeout.connect(_check_reminders)
 	add_child(reminder_check_timer)
-
-	# Load saved reminders
-	_load_reminders()
 
 	print("[HabitManager] Reminder system initialized")
 
@@ -1148,7 +1148,7 @@ func _check_reminders() -> void:
 		var reminder_minute = int(time_parts[0]) * 60 + int(time_parts[1])
 
 		# Check if it's time (within 1 minute window)
-		if abs(current_minute - reminder_minute) > 0:
+		if abs(current_minute - reminder_minute) > 1:
 			continue
 
 		# Check if today is an enabled day
@@ -1274,6 +1274,8 @@ func _save_reminders() -> void:
 	if file:
 		file.store_string(JSON.stringify(habit_reminders, "\t"))
 		file.close()
+		if SaveManager:
+			SaveManager.sync_web_filesystem()
 
 
 func _load_reminders() -> void:

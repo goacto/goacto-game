@@ -299,6 +299,8 @@ func _save_goals() -> void:
 	if file:
 		file.store_string(json_string)
 		file.close()
+		if SaveManager:
+			SaveManager.sync_web_filesystem()
 
 
 ## Load goals from file

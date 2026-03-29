@@ -286,6 +286,13 @@ func _process(delta: float) -> void:
 	_update_camera()
 
 
+func _exit_tree() -> void:
+	# Reset state to prevent leaks between scene transitions
+	in_dialogue = false
+	is_waking_up = false
+	decoration_mode = false
+
+
 func _input(event: InputEvent) -> void:
 	var viewport = get_viewport()
 	if viewport == null:

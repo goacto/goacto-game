@@ -1465,6 +1465,8 @@ func _save_campaign() -> void:
 	if file:
 		file.store_string(json_string)
 		file.close()
+		if SaveManager:
+			SaveManager.sync_web_filesystem()
 
 
 func load_campaign() -> void:

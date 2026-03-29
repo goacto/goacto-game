@@ -725,6 +725,8 @@ func _save_os() -> void:
 	if file:
 		file.store_string(json_string)
 		file.close()
+		if SaveManager:
+			SaveManager.sync_web_filesystem()
 
 
 ## Load the OS from file

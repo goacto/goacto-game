@@ -308,11 +308,19 @@ func _open_feedback_form() -> void:
 	params.append("entry.787920580=%s" % scene.uri_encode())
 
 	var url = FEEDBACK_FORM_URL + "?" + "&".join(params)
-	OS.shell_open(url)
+	open_url(url)
 
 
 func _reset_current_scene() -> void:
 	get_tree().reload_current_scene()
+
+
+## Open a URL safely on all platforms (web uses JavaScriptBridge)
+func open_url(url: String) -> void:
+	if OS.get_name() == "Web":
+		JavaScriptBridge.eval("window.open('%s', '_blank')" % url.replace("'", "\\'"))
+	else:
+		OS.shell_open(url)
 
 
 # Transition overlay
