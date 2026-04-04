@@ -557,6 +557,7 @@ func _append_to_journal_file(entry: Dictionary) -> void:
 	if file:
 		file.store_string(json_string)
 		file.close()
+		if SaveManager: SaveManager.sync_web_filesystem()
 
 
 func _cancel_journal_entry() -> void:

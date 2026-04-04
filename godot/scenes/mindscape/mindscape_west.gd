@@ -3237,6 +3237,7 @@ func _save_all_shadows(shadows: Array) -> void:
 	if file:
 		file.store_string(json_string)
 		file.close()
+		if SaveManager: SaveManager.sync_web_filesystem()
 
 
 func _load_shadows() -> Array:
@@ -3832,4 +3833,5 @@ func _save_kindness_entries(entries: Array) -> void:
 	var file = FileAccess.open("user://kindness_log.json", FileAccess.WRITE)
 	if file:
 		file.store_string(JSON.stringify(entries, "\t"))
+		if SaveManager: SaveManager.sync_web_filesystem()
 		file.close()

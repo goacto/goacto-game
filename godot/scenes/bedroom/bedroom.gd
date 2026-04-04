@@ -5655,6 +5655,7 @@ func _bedroom_download_save() -> void:
 		if file:
 			file.store_string(save_json)
 			file.close()
+			if SaveManager: SaveManager.sync_web_filesystem()
 			_show_dialogue("Saved", "File saved to Downloads folder.")
 		else:
 			_show_dialogue("Error", "Could not save file.")

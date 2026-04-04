@@ -1224,6 +1224,7 @@ func _save_dream_entry(dream: Dictionary) -> void:
 	if file:
 		file.store_string(json_string)
 		file.close()
+		if SaveManager: SaveManager.sync_web_filesystem()
 
 
 func _load_dreams() -> Array:
@@ -1426,6 +1427,7 @@ func _save_gratitude_entry(entry: Dictionary) -> void:
 	var file = FileAccess.open(path, FileAccess.WRITE)
 	if file:
 		file.store_string(json_string)
+		if SaveManager: SaveManager.sync_web_filesystem()
 		file.close()
 
 
@@ -2048,6 +2050,7 @@ func _save_all_plants(plants: Array) -> void:
 	var path = SaveManager.get_plants_path()
 	var file = FileAccess.open(path, FileAccess.WRITE)
 	if file:
+		if SaveManager: SaveManager.sync_web_filesystem()
 		file.store_string(json_string)
 		file.close()
 
@@ -2506,6 +2509,7 @@ func _save_all_wishes(wishes: Array) -> void:
 	var json_string = JSON.stringify(wishes, "\t")
 	var path = SaveManager.get_wishes_path()
 	var file = FileAccess.open(path, FileAccess.WRITE)
+		if SaveManager: SaveManager.sync_web_filesystem()
 	if file:
 		file.store_string(json_string)
 		file.close()

@@ -1347,6 +1347,7 @@ func _save_journal_entry(entry: Dictionary) -> void:
 	if file:
 		file.store_string(json_string)
 		file.close()
+		if SaveManager: SaveManager.sync_web_filesystem()
 
 	# Check for bedroom unlocks (Data Archive unlocks after first journal)
 	if CampaignManager.has_method("check_bedroom_unlocks"):

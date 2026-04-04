@@ -2417,6 +2417,7 @@ func _save_core_values(values: Array) -> void:
 	if file:
 		file.store_string(JSON.stringify(values, "\t"))
 		file.close()
+		if SaveManager: SaveManager.sync_web_filesystem()
 
 
 func _show_values_alignment() -> void:
@@ -2596,4 +2597,5 @@ func _save_alignment_history(history: Array) -> void:
 	var file = FileAccess.open("user://values_alignment.json", FileAccess.WRITE)
 	if file:
 		file.store_string(JSON.stringify(history, "\t"))
+		if SaveManager: SaveManager.sync_web_filesystem()
 		file.close()

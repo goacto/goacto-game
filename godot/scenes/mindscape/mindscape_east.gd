@@ -1118,6 +1118,7 @@ func _save_journal_entry(entry: Dictionary) -> void:
 	if file:
 		file.store_string(json_string)
 		file.close()
+		if SaveManager: SaveManager.sync_web_filesystem()
 
 
 func _open_journal_viewer() -> void:
@@ -2429,6 +2430,7 @@ func _save_creatures(creatures: Array) -> void:
 	var file = FileAccess.open(path, FileAccess.WRITE)
 	if file:
 		file.store_string(json_string)
+		if SaveManager: SaveManager.sync_web_filesystem()
 		file.close()
 
 
@@ -2890,6 +2892,7 @@ func _save_all_bottles(bottles: Array) -> void:
 	var path = SaveManager.get_bottles_path()
 	var file = FileAccess.open(path, FileAccess.WRITE)
 	if file:
+		if SaveManager: SaveManager.sync_web_filesystem()
 		file.store_string(json_string)
 		file.close()
 
