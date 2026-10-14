@@ -917,6 +917,7 @@ func _check_master_key_unlock() -> void:
 
 	# Mark notification as shown
 	GameManager.player_data["master_key_bedroom_notification_shown"] = true
+	SaveManager.save_game()  # persist so it never re-fires
 
 	# Show notification after a short delay
 	await get_tree().create_timer(0.8).timeout
@@ -5595,9 +5596,9 @@ func _show_load_success_dialog(slot: int) -> void:
 
 	add_child(dialog)
 
-	# Reload after brief delay
+	# Resume in the room the save was made in after a brief delay
 	await get_tree().create_timer(1.5).timeout
-	get_tree().reload_current_scene()
+	GameManager.goto_scene(SaveManager.get_room_to_resume())
 
 
 func _close_save_panel() -> void:
@@ -5723,11 +5724,9 @@ func _poll_bedroom_upload() -> void:
 func _do_bedroom_import(json_content: String) -> void:
 	var success = SaveManager.import_save_data(json_content)
 	if success:
-		_show_dialogue("Import Successful", "Save data imported! The game will reload with your imported data.", func():
-			_close_save_panel()
-			SaveManager.load_game()
-			get_tree().reload_current_scene()
-		)
+		_close_save_panel()
+		SaveManager.load_game()
+		get_tree().reload_current_scene()
 	else:
 		_show_dialogue("Import Failed", "The file does not contain valid save data.")
 
@@ -6104,6 +6103,11 @@ var pause_menu: PanelContainer = null
 func _open_pause_menu() -> void:
 	if pause_menu:
 		return
+
+	# The menu replaces any open dialogue/examine box: it must not draw over the menu
+	# or resume as a stale line after Settings.
+	if dialogue_panel and dialogue_panel.visible:
+		dialogue_panel.visible = false
 
 	in_dialogue = true
 	interaction_prompt.visible = false
