@@ -496,6 +496,12 @@ func _open_pause_menu() -> void:
 	if pause_menu:
 		return
 
+	# The menu replaces any open dialogue/examine box: it must not draw over the menu
+	# or resume as a stale line after Settings.
+	if dialogue_panel and dialogue_panel.visible:
+		dialogue_callback = Callable()
+		_close_dialogue()
+
 	in_dialogue = true
 	if interaction_prompt:
 		interaction_prompt.visible = false

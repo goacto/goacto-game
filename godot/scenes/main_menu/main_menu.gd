@@ -1007,8 +1007,10 @@ func _load_from_slot(slot: int) -> void:
 	if SaveManager.load_from_slot(slot):
 		_close_load_panel()
 		# Set flag for wake-up animation
-		GameManager.player_data["wakeup_from_continue"] = true
-		_enter_mindscape()
+		var room = SaveManager.get_room_to_resume()
+		if room == SaveManager.DEFAULT_ROOM_SCENE:
+			GameManager.player_data["wakeup_from_continue"] = true
+		GameManager.goto_scene(room)
 	else:
 		print("[MainMenu] Failed to load slot ", slot)
 

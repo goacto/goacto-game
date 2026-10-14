@@ -228,6 +228,9 @@ func _load_accessibility_settings() -> void:
 	if not GameManager:
 		return
 
+	_ensure_option_items(font_size_option, ["Small", "Medium", "Large"])
+	_ensure_option_items(colorblind_option, ["None", "Deuteranopia (Green)", "Protanopia (Red)", "Tritanopia (Blue)"])
+
 	# Font size
 	var font_size = GameManager.get_font_size_multiplier()
 	var font_idx = 1  # Default to medium
@@ -252,29 +255,43 @@ func _load_accessibility_settings() -> void:
 		colorblind_option.select(0)
 
 
+## Dropdowns must always have their items so the selected value is visible.
+func _ensure_option_items(option: OptionButton, labels: Array) -> void:
+	if option.item_count == labels.size():
+		return
+	option.clear()
+	for i in labels.size():
+		option.add_item(labels[i], i)
+
+
 func _on_font_size_changed(idx: int) -> void:
 	if idx >= 0 and idx < FONT_SIZE_OPTIONS.size():
-		GameManager.set_accessibility_setting("font_size", FONT_SIZE_OPTIONS[idx])
+		GameManager.set_accessibility_option("font_size", FONT_SIZE_OPTIONS[idx])
 		print("[Settings] Font size set to: ", FONT_SIZE_OPTIONS[idx])
 
 
 func _on_high_contrast_toggled(pressed: bool) -> void:
-	GameManager.set_accessibility_setting("high_contrast", pressed)
+	GameManager.set_accessibility_option("high_contrast", pressed)
 	print("[Settings] High contrast: ", pressed)
 
 
 func _on_reduced_motion_toggled(pressed: bool) -> void:
-	GameManager.set_accessibility_setting("reduced_motion", pressed)
+	GameManager.set_accessibility_option("reduced_motion", pressed)
 	print("[Settings] Reduced motion: ", pressed)
 
 
 func _on_colorblind_changed(idx: int) -> void:
 	if idx >= 0 and idx < COLORBLIND_OPTIONS.size():
-		GameManager.set_accessibility_setting("colorblind_mode", COLORBLIND_OPTIONS[idx])
+		GameManager.set_accessibility_option("colorblind_mode", COLORBLIND_OPTIONS[idx])
 		print("[Settings] Colorblind mode: ", COLORBLIND_OPTIONS[idx])
 
 
+var _leaving := false
+
 func _on_back() -> void:
+	if _leaving:
+		return
+	_leaving = true
 	# Save settings
 	SaveManager.save_game()
 
@@ -293,7 +310,9 @@ func _on_back() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_cancel"):
+	if event.is_action_pressed("ui_cancel") and not event.is_echo():
+		# Consume Esc so it can't also reach the scene we return to.
+		get_viewport().set_input_as_handled()
 		_on_back()
 		get_viewport().set_input_as_handled()
 
@@ -337,9 +356,9 @@ func _save_slot(slot: int) -> void:
 func _load_slot(slot: int) -> void:
 	if SaveManager.load_from_slot(slot):
 		_show_message("Loaded from Slot %d" % slot)
-		# Reload current scene to apply loaded data
+		# Resume in the room the save was made in
 		await get_tree().process_frame
-		get_tree().reload_current_scene()
+		GameManager.goto_scene(SaveManager.get_room_to_resume())
 	else:
 		_show_message("Failed to load")
 

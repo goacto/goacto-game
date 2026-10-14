@@ -1,0 +1,128 @@
+extends Node
+## Verification-only harness (NOT committed). Driven by ?t=<test> in the URL.
+var test := ""
+func _ready() -> void:
+	if OS.has_feature("web"):
+		var q = JavaScriptBridge.eval("new URLSearchParams(location.search).get('t') || ''")
+		test = str(q)
+	if test == "": return
+	print("[HARNESS] test=", test)
+	await get_tree().create_timer(3.0).timeout
+	call("t_" + test)
+
+func log_(s: String) -> void:
+	print("[HARNESS] ", s)
+
+func click_at(pos: Vector2) -> void:
+	var e = InputEventMouseButton.new(); e.button_index = MOUSE_BUTTON_LEFT; e.position = pos; e.global_position = pos; e.pressed = true
+	Input.parse_input_event(e)
+	await get_tree().process_frame
+	var u = e.duplicate(); u.pressed = false
+	Input.parse_input_event(u)
+	await get_tree().create_timer(0.3).timeout
+
+func key(k: Key) -> void:
+	var e = InputEventKey.new(); e.keycode = k; e.physical_keycode = k; e.pressed = true
+	Input.parse_input_event(e); await get_tree().process_frame
+	var u = e.duplicate(); u.pressed = false; Input.parse_input_event(u)
+	await get_tree().create_timer(0.3).timeout
+
+func goto(path: String) -> Node:
+	GameManager.current_scene_path = path
+	get_tree().change_scene_to_file(path)
+	await get_tree().create_timer(2.5).timeout
+	return get_tree().current_scene
+
+func t_telescope() -> void:
+	GameManager.player_data["telescope_discoveries"] = []
+	CampaignManager.mark_cutscene_seen("observatory_first_visit")
+	var s = await goto("res://scenes/ship/observatory.tscn")
+	s._use_telescope()
+	await get_tree().create_timer(0.5).timeout
+	log_("before: " + s.telescope_panel.find_child("DiscoveredLabel", true, false).text)
+	await key(KEY_EQUAL)
+	log_("zoom after '=': %.2f" % s.telescope_zoom)
+	await key(KEY_MINUS)
+	log_("zoom after '-': %.2f" % s.telescope_zoom)
+	for i in range(6):
+		if s.telescope_panel == null:
+			s._use_telescope(); await get_tree().create_timer(0.5).timeout
+		var sc = s.telescope_panel.find_child("StarContainer", true, false)
+		var objs = sc.get_children().filter(func(o): return o.has_meta("celestial_data"))
+		var obj = objs[i]
+		var btn: Button = null
+		for c in obj.get_children():
+			if c is Button: btn = c
+		var p = btn.get_global_transform_with_canvas() * (btn.size / 2)
+		var view = s.telescope_panel.find_child("TelescopeView", true, false)
+		log_("click %s at %s inside_scope=%s" % [obj.name, p, view.get_global_rect().has_point(p)])
+		if i == 5:
+			await get_tree().create_timer(0.1).timeout
+		await click_at(p)
+		await get_tree().create_timer(0.8).timeout
+		if i < 5 and s.dialogue_panel.visible:
+			s._close_dialogue(); await get_tree().create_timer(0.3).timeout
+	log_("after: discovered=%d/6 saved=%d" % [s.telescope_discovered.size(), GameManager.player_data.get("telescope_discoveries", []).size()])
+
+func t_settings() -> void:
+	var s = await goto("res://scenes/settings/settings.tscn")
+	var sec = s.find_child("AccessibilitySection", true, false)
+	s.find_child("ScrollContainer", true, false).ensure_control_visible(sec)
+	await get_tree().create_timer(0.5).timeout
+	for n in ["FontSizeOption", "ColorblindOption"]:
+		var o: OptionButton = s.find_child(n, true, false)
+		log_("%s selected=%d text='%s' items=%d font_color=%s" % [n, o.selected, o.text, o.item_count, o.get_theme_color("font_color")])
+	log_("after: settings")
+
+func _shot(name: String) -> void:
+	print("[HARNESS] SHOT ", name)
+	await get_tree().create_timer(1.2).timeout
+
+func t_esc_settings() -> void:
+	GameManager.player_data["kitchen_intro_shown"] = false
+	var s = await goto("res://scenes/ship/kitchen.tscn")
+	await get_tree().create_timer(1.5).timeout
+	log_("kitchen dialogue visible=%s title=%s" % [s.dialogue_panel.visible, s.dialogue_title.text])
+	await key(KEY_ESCAPE)  # closes dialogue
+	await key(KEY_ESCAPE)  # opens pause
+	log_("pause open=%s" % [s.pause_menu != null])
+	s._go_to_settings()
+	await get_tree().create_timer(2.5).timeout
+	log_("now in %s" % get_tree().current_scene.name)
+	await key(KEY_ESCAPE)
+	await get_tree().create_timer(3.5).timeout
+	var k = get_tree().current_scene
+	log_("after: back in %s dialogue_visible=%s title='%s' text='%s'" % [k.name, k.dialogue_panel.visible, k.dialogue_title.text, k.dialogue_text.text.left(60)])
+
+func t_menu_overlap() -> void:
+	GameManager.player_data["kitchen_intro_shown"] = true
+	var s = await goto("res://scenes/ship/kitchen.tscn")
+	s._interact_with_object("FoodUnit")
+	await get_tree().create_timer(4.0).timeout
+	s._skip_typing() if s.dialogue_text.visible_ratio < 1.0 else null
+	s.menu_button.pressed.emit()
+	await get_tree().create_timer(0.5).timeout
+	log_("after: pause=%s dialogue_visible=%s" % [s.pause_menu != null, s.dialogue_panel.visible])
+
+func t_load_room() -> void:
+	GameManager.player_data["master_key_bedroom_notification_shown"] = false
+	if not GameManager.has_master_key():
+		GameManager.add_item("master_key") if GameManager.has_method("add_item") else GameManager.player_data.get("inventory", []).append("master_key")
+	GameManager.player_data["kitchen_intro_shown"] = true
+	var k = await goto("res://scenes/ship/kitchen.tscn")
+	log_("in %s has_master_key=%s" % [k.name, GameManager.has_master_key()])
+	SaveManager.save_to_slot(1)
+	var info = SaveManager.get_slot_info(1)
+	var js_local = JavaScriptBridge.eval("(()=>{const d=new Date(%d*1000);const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())})()" % int(info.timestamp))
+	log_("slot1 label='%s' browser_local='%s' tz=%s" % [info.date_string, js_local, JavaScriptBridge.eval("Intl.DateTimeFormat().resolvedOptions().timeZone")])
+	# Back to title, then Title > Load Game > Slot 1 > Load
+	var m = await goto("res://scenes/main_menu/main_menu.tscn")
+	m._load_from_slot(1)
+	var popups: Array = []
+	for i in range(16):
+		await get_tree().create_timer(0.5).timeout
+		var cs = get_tree().current_scene
+		if cs and "dialogue_panel" in cs and cs.dialogue_panel and cs.dialogue_panel.visible and "dialogue_title" in cs:
+			var t = cs.dialogue_title.text
+			if t not in popups: popups.append(t)
+	log_("after: resumed_in=%s popups=%s" % [get_tree().current_scene.name, popups])

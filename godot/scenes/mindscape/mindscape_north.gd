@@ -2509,10 +2509,10 @@ func _save_all_wishes(wishes: Array) -> void:
 	var json_string = JSON.stringify(wishes, "\t")
 	var path = SaveManager.get_wishes_path()
 	var file = FileAccess.open(path, FileAccess.WRITE)
-		if SaveManager: SaveManager.sync_web_filesystem()
 	if file:
 		file.store_string(json_string)
 		file.close()
+		if SaveManager: SaveManager.sync_web_filesystem()
 
 
 func _load_wishes() -> Array:
