@@ -420,7 +420,7 @@ func get_slot_info(slot: int) -> Dictionary:
 
 	# Format last saved date
 	if info["timestamp"] > 0:
-		var datetime = Time.get_datetime_dict_from_unix_time(int(info["timestamp"]))
+		var datetime = local_datetime_from_unix(int(info["timestamp"]))
 		info["date_string"] = "%04d-%02d-%02d %02d:%02d" % [
 			datetime.year, datetime.month, datetime.day,
 			datetime.hour, datetime.minute
@@ -428,7 +428,7 @@ func get_slot_info(slot: int) -> Dictionary:
 
 	# Format creation date
 	if info["created_timestamp"] > 0:
-		var datetime = Time.get_datetime_dict_from_unix_time(int(info["created_timestamp"]))
+		var datetime = local_datetime_from_unix(int(info["created_timestamp"]))
 		info["created_date_string"] = "%04d-%02d-%02d" % [
 			datetime.year, datetime.month, datetime.day
 		]
@@ -570,11 +570,55 @@ func import_to_slot(slot: int, json_string: String) -> bool:
 # HELPER FUNCTIONS
 # =============================================================================
 
+## Unix timestamps are UTC; slot labels must show the player's local time.
+func local_datetime_from_unix(unix_time: int) -> Dictionary:
+	return Time.get_datetime_dict_from_unix_time(unix_time + _utc_offset_seconds(unix_time))
+
+
+func _utc_offset_seconds(unix_time: int) -> int:
+	if OS.get_name() == "Web":
+		# Browser offset for that exact date (DST-correct). getTimezoneOffset() is minutes behind UTC.
+		var minutes_behind = JavaScriptBridge.eval("new Date(%d * 1000).getTimezoneOffset()" % unix_time)
+		if minutes_behind != null:
+			return -int(minutes_behind) * 60
+	return int(Time.get_time_zone_from_system().get("bias", 0)) * 60
+
+
+## Room scenes a save can resume into (menus, settings and cutscenes are not rooms).
+const NON_ROOM_SCENES = ["main_menu", "settings", "cutscene", "transition"]
+const DEFAULT_ROOM_SCENE = "res://scenes/bedroom/bedroom.tscn"
+
+## Scene stored in the most recently loaded slot.
+var loaded_room_scene: String = ""
+
+
+func _current_room_scene() -> String:
+	var scene = get_tree().current_scene
+	var path = scene.scene_file_path if scene else ""
+	if path == "" or not ResourceLoader.exists(path):
+		return ""
+	for marker in NON_ROOM_SCENES:
+		if path.contains(marker):
+			return ""
+	return path
+
+
+## Scene a loaded save should resume in.
+func get_room_to_resume() -> String:
+	if loaded_room_scene != "" and ResourceLoader.exists(loaded_room_scene):
+		return loaded_room_scene
+	return DEFAULT_ROOM_SCENE
+
+
 ## Create save data dictionary from current game state
 func _create_save_data() -> Dictionary:
+	var room = _current_room_scene()
+	if room == "":
+		room = GameManager.previous_scene_path if _is_room_path(GameManager.previous_scene_path) else ""
 	return {
 		"version": "0.3.2",
 		"timestamp": Time.get_unix_time_from_system(),
+		"room_scene": room,
 		"player": GameManager.player_data,
 		"habits": HabitManager.get_save_data(),
 		"goals": GoalManager.get_save_data(),
@@ -588,11 +632,26 @@ func _create_save_data() -> Dictionary:
 	}
 
 
+func _is_room_path(path: String) -> bool:
+	if path == "" or not ResourceLoader.exists(path):
+		return false
+	for marker in NON_ROOM_SCENES:
+		if path.contains(marker):
+			return false
+	return true
+
+
 ## Apply save data to game state
 func _apply_save_data(save_data: Dictionary) -> void:
+	loaded_room_scene = str(save_data.get("room_scene", ""))
+	# One-time notifications already seen this session stay seen after loading an older save.
+	var notification_seen = GameManager.player_data.get("master_key_bedroom_notification_shown", false)
+
 	# Restore player data
 	if save_data.has("player"):
 		_merge_dict(GameManager.player_data, save_data.player)
+	if notification_seen:
+		GameManager.player_data["master_key_bedroom_notification_shown"] = true
 
 	# Restore habit data
 	if save_data.has("habits"):

@@ -1784,7 +1784,7 @@ func _end_breathing_session(duration_minutes: int) -> void:
 	if audio and audio.has_method("play_ui_sound"):
 		audio.play_ui_sound("complete")
 
-	show_dialogue("Session Complete", "You completed a %d-minute meditation session.\n\n+%d Wisdom XP" % [duration_minutes, duration_minutes * 3])
+	_show_dialogue("Session Complete", "You completed a %d-minute meditation session.\n\n+%d Wisdom XP" % [duration_minutes, duration_minutes * 3])
 
 
 func _show_pool_affirmations() -> void:
@@ -2800,6 +2800,15 @@ func _get_high_level_response(aspect_id: String, level: int, streak: int, comple
 		"vitality": "Your life force is radiant! Level %d.\n\n%d days of honoring your body. You understand now that vitality is the foundation upon which all other aspects build.\n\nYour energy inspires others. The temple is strong and ready for any journey!" % [level, streak]
 	}
 	return responses.get(aspect_id, "You have reached great heights. Level %d. You are a beacon of growth." % level)
+
+
+func _add_label(text: String, font_size: int, color: Color) -> void:
+	var label = Label.new()
+	label.text = text
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", color)
+	zone_body.add_child(label)
 
 
 func _add_spacer(height: int) -> void:
