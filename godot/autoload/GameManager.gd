@@ -232,17 +232,18 @@ func _create_version_overlay() -> void:
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	hbox.add_child(label)
 
-	# Reset button - reloads current scene when things freeze
-	var reset_btn = Button.new()
-	reset_btn.name = "ResetButton"
-	reset_btn.text = "Reset Scene"
-	reset_btn.flat = true
-	reset_btn.add_theme_font_size_override("font_size", 12)
-	reset_btn.add_theme_color_override("font_color", Color(1, 0.6, 0.6, 0.5))
-	reset_btn.add_theme_color_override("font_hover_color", Color(1, 0.6, 0.6, 0.9))
-	reset_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	reset_btn.pressed.connect(_reset_current_scene)
-	hbox.add_child(reset_btn)
+	# Reset button - debug builds only (public release build must not show it)
+	if OS.is_debug_build():
+		var reset_btn = Button.new()
+		reset_btn.name = "ResetButton"
+		reset_btn.text = "Reset Scene"
+		reset_btn.flat = true
+		reset_btn.add_theme_font_size_override("font_size", 12)
+		reset_btn.add_theme_color_override("font_color", Color(1, 0.6, 0.6, 0.5))
+		reset_btn.add_theme_color_override("font_hover_color", Color(1, 0.6, 0.6, 0.9))
+		reset_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		reset_btn.pressed.connect(_reset_current_scene)
+		hbox.add_child(reset_btn)
 
 	version_overlay.add_child(hbox)
 

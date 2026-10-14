@@ -19,7 +19,7 @@ config/description="Grow your inner world through real-world action"
 config/version="0.1.0"
 run/main_scene="res://scenes/main_menu/main_menu.tscn"
 config/features=PackedStringArray("4.6", "Mobile")
-config/icon="res://assets/sprites/ui/icon.png"
+config/icon="res://assets/sprites/ui/icon.svg"
 
 [audio]
 
