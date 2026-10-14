@@ -1,0 +1,5 @@
+old stamp: 20260328-220038
+as of 2026-10-14T12:00:00+00:00: 199d ago
+matches menu text '(199d ago)': True
+new stamp in source: 20261014-121631
+new relative vs same now: -1d ago (expect 0)
