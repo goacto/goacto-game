@@ -44,6 +44,7 @@ CustomizationManager="*res://autoload/CustomizationManager.gd"
 MailManager="*res://autoload/MailManager.gd"
 RelationshipManager="*res://autoload/RelationshipManager.gd"
 MobileUIManager="*res://autoload/MobileUIManager.gd"
+HudOverlay="*res://autoload/HudOverlay.gd"
 
 [display]
 
