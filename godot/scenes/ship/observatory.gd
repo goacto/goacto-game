@@ -301,19 +301,48 @@ func _handle_telescope_pan(delta: float) -> void:
 	if pan_dir != Vector2.ZERO:
 		telescope_view_offset += pan_dir * pan_speed * delta
 		# Clamp to reasonable bounds (allows reaching all celestial objects)
-		telescope_view_offset.x = clamp(telescope_view_offset.x, -500, 500)
-		telescope_view_offset.y = clamp(telescope_view_offset.y, -450, 450)
+		telescope_view_offset.x = clamp(telescope_view_offset.x, -250, 250)
+		telescope_view_offset.y = clamp(telescope_view_offset.y, -220, 220)
+		_apply_telescope_transform()
 
-		# Update star container position
-		var star_container = telescope_panel.find_child("StarContainer", true, false)
-		if star_container:
-			star_container.position = Vector2(200, 175) + telescope_view_offset
+
+func _apply_telescope_transform() -> void:
+	if not telescope_panel:
+		return
+	var star_container = telescope_panel.find_child("StarContainer", true, false)
+	if star_container:
+		star_container.position = Vector2(200, 175) + telescope_view_offset
+		star_container.scale = Vector2.ONE * telescope_zoom
+
+
+func _zoom_telescope(step: float) -> void:
+	telescope_zoom = clamp(telescope_zoom + step, TELESCOPE_MIN_ZOOM, TELESCOPE_MAX_ZOOM)
+	_apply_telescope_transform()
+
+
+func _is_zoom_in_key(event: InputEventKey) -> bool:
+	return event.keycode in [KEY_PLUS, KEY_EQUAL, KEY_KP_ADD]
+
+
+func _is_zoom_out_key(event: InputEventKey) -> bool:
+	return event.keycode in [KEY_MINUS, KEY_KP_SUBTRACT]
 
 
 func _input(event: InputEvent) -> void:
 	var viewport = get_viewport()
 	if viewport == null:
 		return
+
+	# +/- zoom while the telescope is open
+	if telescope_panel and event is InputEventKey and event.pressed:
+		if _is_zoom_in_key(event):
+			_zoom_telescope(0.25)
+			viewport.set_input_as_handled()
+			return
+		if _is_zoom_out_key(event):
+			_zoom_telescope(-0.25)
+			viewport.set_input_as_handled()
+			return
 
 	# ESC to close panels or open pause menu
 	if event.is_action_pressed("ui_cancel"):
@@ -471,6 +500,10 @@ var telescope_panel: PanelContainer = null
 var telescope_view_offset: Vector2 = Vector2.ZERO
 var telescope_zoom: float = 1.0
 var telescope_discovered: Array = []  # Track discovered objects
+## Sky coordinates are authored on a ~1000px canvas; scale them into the 400x350 scope.
+const TELESCOPE_SKY_SCALE := 0.32
+const TELESCOPE_MIN_ZOOM := 0.6
+const TELESCOPE_MAX_ZOOM := 2.5
 
 const CELESTIAL_OBJECTS = [
 	{"name": "Nebula Primordis", "type": "nebula", "pos": Vector2(380, 280), "color": Color(0.6, 0.3, 0.8), "desc": "A swirling cloud of cosmic dust where new stars are born."},
@@ -602,7 +635,7 @@ func _populate_telescope_view(view: Control) -> void:
 func _create_celestial_object(data: Dictionary) -> Node2D:
 	var obj = Node2D.new()
 	obj.name = data.name.replace(" ", "_")
-	obj.position = data.pos
+	obj.position = data.pos * TELESCOPE_SKY_SCALE
 	obj.set_meta("celestial_data", data)
 
 	var is_discovered = data.name in telescope_discovered
@@ -668,10 +701,11 @@ func _create_celestial_object(data: Dictionary) -> Node2D:
 	# Add interaction area
 	var btn = Button.new()
 	btn.flat = true
-	btn.custom_minimum_size = Vector2(50, 50)
-	btn.position = Vector2(-25, -25)
+	btn.custom_minimum_size = Vector2(56, 56)
+	btn.position = Vector2(-28, -28)
 	btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	btn.pressed.connect(func(): _discover_celestial(data))
+	# Deferred: the handler closes the panel, which must not free this button mid-signal.
+	btn.pressed.connect(func(): _discover_celestial.call_deferred(data))
 	obj.add_child(btn)
 
 	# Label if discovered
@@ -715,6 +749,7 @@ func _close_telescope_viewer() -> void:
 		telescope_panel.queue_free()
 		telescope_panel = null
 	telescope_view_offset = Vector2.ZERO
+	telescope_zoom = 1.0
 	in_dialogue = false
 
 
@@ -1106,7 +1141,7 @@ func _create_focus_analytics_terminal() -> void:
 	# Create the Focus Analytics terminal visual
 	var terminal = Node2D.new()
 	terminal.name = "FocusAnalyticsTerminal"
-	terminal.position = object_positions["FocusAnalytics"]
+	terminal.position = object_positions.get("FocusAnalytics", Vector2(-250, 60))
 	isometric_base.add_child(terminal)
 
 	# Terminal base/stand
@@ -1271,6 +1306,12 @@ var pause_menu: PanelContainer = null
 func _open_pause_menu() -> void:
 	if pause_menu:
 		return
+
+	# The menu replaces any open dialogue/examine box: it must not draw over the menu
+	# or resume as a stale line after Settings.
+	if dialogue_panel and dialogue_panel.visible:
+		dialogue_callback = Callable()
+		_close_dialogue()
 
 	pause_menu = PanelContainer.new()
 	pause_menu.name = "PauseMenu"
