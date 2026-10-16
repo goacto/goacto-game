@@ -1,0 +1,10 @@
+Mindscape ping wiring proof (GOACTO REQ v0.3.1 §4.3/§4.6), 2026-10-15 ET
+Prod ships the committed build/web (vercel.json outputDirectory=build/web, no build step), so the ping is plain JS
+loaded by build/web/index.html. No Godot re-export is needed for the ping itself.
+- build/web/goacto-ping.js: one "mindscape" ping per local day to https://siagentspace.com/api/ping; body {v,app,day,aid,first}; credentials omit.
+- build/web/index.html: <script src="goacto-ping.js"> in <head>.
+- godot/export_presets.cfg (Web preset): html/head_include adds the same tag, so future exports keep it.
+- godot/scenes/settings/settings.gd: Settings > Privacy "Share anonymous usage count" CheckButton (web only, default on),
+  sets/clears localStorage goacto:usage-optout:v1. It ships with the next Godot web export (.pck); until then opt-out = GPC.
+COEP require-corp: preflight from Origin https://mindscape.goacto.com -> 204, ACAO echoes origin, CORP cross-origin.
+node --test tests/goacto-ping.test.cjs: 3/3 pass (one ping/day + minimal body; opt-out/GPC sends nothing; offline never throws).
