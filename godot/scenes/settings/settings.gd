@@ -121,6 +121,9 @@ func _ready() -> void:
 	# Build feedback section
 	_build_feedback_section()
 
+	# Anonymous usage count opt-out (web only)
+	_build_usage_toggle()
+
 	print("[Settings] Ready")
 
 
@@ -637,6 +640,41 @@ const FORM_ENTRY_DESC = "entry.1442389502"     # Description
 const FORM_ENTRY_DEVICE = "entry.2028626144"   # Platform/Browser
 
 var feedback_panel: PanelContainer = null
+
+
+## "Share anonymous usage count" (GOACTO REQ v0.3.1 §4.3). Web only: the ping lives in goacto-ping.js
+## and reads localStorage key goacto:usage-optout:v1. Off = no pings.
+func _build_usage_toggle() -> void:
+	if not OS.has_feature("web"):
+		return
+	var vbox = $Panel/Margin/ScrollContainer/VBox
+	if not vbox:
+		return
+	var section = VBoxContainer.new()
+	section.name = "PrivacySection"
+	var title = Label.new()
+	title.text = "Privacy"
+	title.add_theme_font_size_override("font_size", 18)
+	title.add_theme_color_override("font_color", Color(0.9, 0.85, 0.7))
+	section.add_child(title)
+	var toggle = CheckButton.new()
+	toggle.text = "Share anonymous usage count"
+	toggle.tooltip_text = "One anonymous count per day. No account, page or IP is stored."
+	var opted_out = str(JavaScriptBridge.eval("localStorage.getItem('goacto:usage-optout:v1')", true)) == "1"
+	toggle.button_pressed = not opted_out
+	toggle.toggled.connect(_on_usage_toggled)
+	section.add_child(toggle)
+	var button_row = vbox.get_node_or_null("ButtonRow")
+	vbox.add_child(section)
+	if button_row:
+		vbox.move_child(section, button_row.get_index())
+
+
+func _on_usage_toggled(pressed: bool) -> void:
+	if pressed:
+		JavaScriptBridge.eval("localStorage.removeItem('goacto:usage-optout:v1')", true)
+	else:
+		JavaScriptBridge.eval("localStorage.setItem('goacto:usage-optout:v1','1')", true)
 
 
 func _build_feedback_section() -> void:
