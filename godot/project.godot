@@ -20,6 +20,12 @@ config/version="0.1.0"
 run/main_scene="res://scenes/main_menu/main_menu.tscn"
 config/features=PackedStringArray("4.6", "Mobile")
 config/icon="res://assets/sprites/ui/icon.svg"
+boot_splash/bg_color=Color(0.949, 0.949, 0.941, 1)
+boot_splash/show_image=true
+boot_splash/image="res://assets/branding/goacto_splash.png"
+boot_splash/fullsize=false
+boot_splash/stretch_mode=1
+boot_splash/use_filter=true
 
 [audio]
 

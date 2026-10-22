@@ -12020,7 +12020,7 @@ func _on_shop_irl_gifts_selected() -> void:
 			"name": "GOACTO Sticker Pack",
 			"desc": "A set of motivational GOACTO stickers delivered to your door.",
 			"coins": 10,
-			"url": "https://goacto.shop/stickers",
+			"url": "https://goacto.com/products/goacto-guild-sticker-pack",
 			"discount": "FOCUS10",
 			"color": Color(0.4, 0.8, 0.6)
 		},
@@ -12028,7 +12028,7 @@ func _on_shop_irl_gifts_selected() -> void:
 			"name": "Growth Journal",
 			"desc": "Physical GOACTO growth journal with guided prompts and reflection pages.",
 			"coins": 25,
-			"url": "https://goacto.shop/journal",
+			"url": "https://goacto.com/products/goacto-daily-focus-hardcover-journal",
 			"discount": "FOCUS25",
 			"color": Color(0.5, 0.7, 0.9)
 		},
@@ -12036,7 +12036,7 @@ func _on_shop_irl_gifts_selected() -> void:
 			"name": "Mindscape Poster",
 			"desc": "Premium art print of your mindscape evolution. A reminder of your journey.",
 			"coins": 50,
-			"url": "https://goacto.shop/poster",
+			"url": "https://goacto.com/collections/goacto-picks",
 			"discount": "FOCUS50",
 			"color": Color(0.8, 0.6, 0.9)
 		},
@@ -12044,7 +12044,7 @@ func _on_shop_irl_gifts_selected() -> void:
 			"name": "Agent Goacto Figure",
 			"desc": "Collectible desk figure of Agent Goacto. Your companion in the real world.",
 			"coins": 100,
-			"url": "https://goacto.shop/figure",
+			"url": "https://goacto.com/collections/goacto-picks",
 			"discount": "FOCUS100",
 			"color": Color(0.95, 0.75, 0.3)
 		},
@@ -12147,8 +12147,8 @@ func _on_irl_gift_redeem(gift: Dictionary) -> void:
 	_close_experience_shop()
 	_show_dialogue(
 		"Code Unlocked!",
-		"Your discount code for %s:\n\n%s\n\nUse this code at goacto.shop for a special discount.\n\nThe code has been copied - visit the shop to redeem!" % [gift.name, code],
-		func(): GameManager.open_url(gift.get("url", "https://goacto.shop"))
+		"Your discount code for %s:\n\n%s\n\nUse this code at goacto.com for a special discount.\n\nThe code has been copied - visit the shop to redeem!" % [gift.name, code],
+		func(): GameManager.open_url(gift.get("url", "https://goacto.com/collections/goacto-picks"))
 	)
 	DisplayServer.clipboard_set(code)
 
