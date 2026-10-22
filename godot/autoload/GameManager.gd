@@ -4,7 +4,7 @@ extends Node
 
 # Version and Build Info
 const VERSION: String = "v0.1.0-prototype"
-const BUILD_TIMESTAMP: String = "20261022-202959"  # UTC timestamp: YYYYMMDD-HHMMSS
+const BUILD_TIMESTAMP: String = "20261022-210451"  # UTC timestamp: YYYYMMDD-HHMMSS
 
 # Game States
 enum GameState {
@@ -250,7 +250,7 @@ func _create_version_overlay() -> void:
 	# Feedback button - bottom left
 	var feedback_btn = Button.new()
 	feedback_btn.name = "FeedbackButton"
-	feedback_btn.text = "Report Bugs & Share Feedback <3"
+	feedback_btn.text = "Report Bugs and Share Feedback <3"
 	feedback_btn.flat = true
 	feedback_btn.anchor_left = 0.0
 	feedback_btn.anchor_right = 0.0
@@ -270,7 +270,7 @@ func _create_version_overlay() -> void:
 
 const EarlyTestingLinks := preload("res://scripts/ui/early_testing.gd")
 
-## Bottom-left "Report Bugs & Share Feedback" -> GOACTO feedback page, tagged with the build version.
+## Bottom-left "Report Bugs and Share Feedback" -> GOACTO feedback page, tagged with the build version.
 func _open_feedback_form() -> void:
 	open_url(EarlyTestingLinks.feedback_url(VERSION))
 

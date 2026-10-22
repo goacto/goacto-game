@@ -3,6 +3,8 @@ extends Control
 ## Contains Focus Chamber, Daily Rituals, and 4 region portals
 
 # Game world
+const FitViewport := preload("res://scripts/ui/fit_viewport.gd")
+
 @onready var game_world: Control = $GameWorld
 @onready var isometric_base: Node2D = $GameWorld/IsometricBase
 @onready var player: Node2D = $GameWorld/IsometricBase/Player
@@ -228,6 +230,10 @@ func _ready() -> void:
 
 	# Re-center when window resizes
 	get_tree().root.size_changed.connect(_center_base)
+
+	# Phones: keep the top HUD inside the screen (it was clipped on both sides at 390px)
+	_fit_header()
+	get_tree().root.size_changed.connect(_fit_header)
 
 	GameManager.change_state(GameManager.GameState.MINDSCAPE)
 
@@ -1205,6 +1211,7 @@ func _show_center_status_panel() -> void:
 	center_status_panel.offset_bottom = -12
 	center_status_panel.offset_top = -50
 	center_status_panel.offset_right = 320
+	_fit_status_panel(FitViewport.is_narrow(self))
 
 	var style = StyleBoxFlat.new()
 	style.bg_color = Color(0.06, 0.08, 0.12, 0.75)  # More transparent
@@ -1726,7 +1733,8 @@ func _setup_minimap() -> void:
 	minimap_container = Control.new()
 	minimap_container.name = "Minimap"
 	minimap_container.custom_minimum_size = Vector2(150, 100)
-	minimap_container.position = Vector2(20, get_viewport_rect().size.y - 120)
+	# 148 = 120 + 28 so the minimap clears the global feedback footer.
+	minimap_container.position = Vector2(20, get_viewport_rect().size.y - 148)
 	add_child(minimap_container)
 
 	# Background panel
@@ -13758,3 +13766,41 @@ func _add_companion_particles(stage: int) -> void:
 		# Position in orbit
 		var angle = (TAU / particle_count) * i
 		sparkle.position = Vector2(cos(angle) * 20, sin(angle) * 15)
+
+
+## Narrow canvases (phones) can't fit every header item at desktop spacing, and the row
+## overflowed off both edges. There: tighten spacing, drop the date and save-slot labels
+## (both are in the menu), and let the greeting shrink with an ellipsis instead of pushing.
+func _fit_header() -> void:
+	if not is_instance_valid(greeting_label):
+		return
+	var narrow := FitViewport.is_narrow(self)
+	var hbox := greeting_label.get_parent() as HBoxContainer
+	if hbox:
+		hbox.add_theme_constant_override("separation", 8 if narrow else 20)
+	var daily := habits_today_label.get_parent() as HBoxContainer
+	if daily:
+		daily.add_theme_constant_override("separation", 8 if narrow else 18)
+	greeting_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS if narrow else TextServer.OVERRUN_NO_TRIMMING
+	greeting_label.clip_text = narrow
+	greeting_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if narrow else HORIZONTAL_ALIGNMENT_CENTER
+	greeting_label.add_theme_font_size_override("font_size", 14 if narrow else 16)
+	date_label.visible = not narrow
+	var scene_slot := get_node_or_null("Header/Margin/HBox/SaveIndicator")
+	if scene_slot is Control:
+		(scene_slot as Control).visible = not narrow
+	if is_instance_valid(save_indicator):
+		save_indicator.visible = not narrow
+	# Bottom edge on phones: keyboard hints are noise next to the touch controls, and the
+	# status pill / minimap sit clear of the global "Report Bugs and Share Feedback <3" footer.
+	if is_instance_valid(control_hints):
+		control_hints.visible = not narrow
+	_fit_status_panel(narrow)
+
+
+func _fit_status_panel(narrow: bool) -> void:
+	if not is_instance_valid(center_status_panel):
+		return
+	var lift := 28  # clear the global feedback footer (offset -30..-10) at every width
+	center_status_panel.offset_bottom = -12 - lift
+	center_status_panel.offset_top = -50 - lift

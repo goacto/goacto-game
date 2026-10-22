@@ -90,6 +90,8 @@ var focus_dashboard: Control = null
 var focus_analytics_visual: Node2D = null
 
 # Interactive objects in room
+const FitViewport := preload("res://scripts/ui/fit_viewport.gd")
+
 const INTERACTIVE_OBJECTS = {
 	"Console": {
 		"name": "Mindscape Console",
@@ -5025,6 +5027,7 @@ func _show_save_panel() -> void:
 	vbox.add_child(btn_container)
 
 	add_child(save_panel)
+	FitViewport.keep_centered(save_panel, Vector2(760, 760))
 
 
 func _create_active_save_info() -> PanelContainer:
@@ -5876,6 +5879,7 @@ func _show_import_dialog() -> void:
 	btn_row.add_child(import_btn)
 
 	add_child(import_dialog)
+	FitViewport.keep_centered(import_dialog, Vector2(560, 440))
 
 
 func _close_import_dialog() -> void:

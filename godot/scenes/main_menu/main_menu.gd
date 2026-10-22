@@ -2,6 +2,8 @@ extends Control
 ## MainMenu - Entry point for the game
 ## Handles new game, continue, onboarding, and settings
 
+const FitViewport := preload("res://scripts/ui/fit_viewport.gd")
+
 # Main menu UI - updated paths for CenterContainer layout
 @onready var main_vbox: VBoxContainer = $CenterContainer/VBox
 @onready var start_button: Button = $CenterContainer/VBox/ButtonContainer/StartButton
@@ -1217,7 +1219,8 @@ func _create_json_dialog(title_text: String, is_import: bool) -> void:
 
 	# TextEdit for JSON
 	json_text_edit = TextEdit.new()
-	json_text_edit.custom_minimum_size = Vector2(580, 300)
+	json_text_edit.custom_minimum_size = Vector2(0, 300)
+	json_text_edit.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	json_text_edit.add_theme_font_size_override("font_size", 12)
 	json_text_edit.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
 
@@ -1261,6 +1264,7 @@ func _create_json_dialog(title_text: String, is_import: bool) -> void:
 		btn_row.add_child(copy_btn)
 
 	add_child(json_dialog)
+	FitViewport.keep_centered(json_dialog, Vector2(640, 500))
 
 	# Animate
 	json_dialog.modulate.a = 0.0
@@ -1566,9 +1570,11 @@ func _confirm_import_save(json_content: String) -> void:
 	slot_label.add_theme_color_override("font_color", Color(0.6, 0.65, 0.7))
 	vbox.add_child(slot_label)
 
-	var slot_row = HBoxContainer.new()
-	slot_row.add_theme_constant_override("separation", 10)
-	slot_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	# Flow row: one line on desktop, wraps on phones instead of pushing off-screen.
+	var slot_row = HFlowContainer.new()
+	slot_row.add_theme_constant_override("h_separation", 10)
+	slot_row.add_theme_constant_override("v_separation", 10)
+	slot_row.alignment = FlowContainer.ALIGNMENT_CENTER
 	vbox.add_child(slot_row)
 
 	# Auto-save slot button
@@ -1611,6 +1617,7 @@ func _confirm_import_save(json_content: String) -> void:
 	cancel_row.add_child(cancel_btn)
 
 	add_child(upload_confirm_dialog)
+	FitViewport.keep_centered(upload_confirm_dialog, Vector2(680, 400))
 
 	# Animate in
 	upload_confirm_dialog.modulate.a = 0.0
