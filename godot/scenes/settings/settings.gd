@@ -706,7 +706,7 @@ func _build_feedback_section() -> void:
 	var bug_btn = Button.new()
 	bug_btn.text = "Report Bug"
 	bug_btn.custom_minimum_size = Vector2(120, 40)
-	bug_btn.pressed.connect(_show_feedback_form.bind("bug"))
+	bug_btn.pressed.connect(_open_bug_report)
 	btn_row.add_child(bug_btn)
 
 	# Feature Request button
@@ -734,12 +734,20 @@ func _build_feedback_section() -> void:
 	info.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	section.add_child(info)
 
-	# Add to settings panel (before ButtonRow)
+	# Add to settings panel (before ButtonRow). add_child first: move_child on an
+	# unparented node is an error, which used to drop this whole section.
 	var button_row = vbox.get_node_or_null("ButtonRow")
+	vbox.add_child(section)
 	if button_row:
 		vbox.move_child(section, button_row.get_index())
-	else:
-		vbox.add_child(section)
+
+
+const EarlyTesting := preload("res://scripts/ui/early_testing.gd")
+
+
+## Report Bug goes to the GOACTO feedback page, tagged with the build version.
+func _open_bug_report() -> void:
+	GameManager.open_url(EarlyTesting.feedback_url(GameManager.VERSION))
 
 
 func _show_feedback_form(feedback_type: String) -> void:

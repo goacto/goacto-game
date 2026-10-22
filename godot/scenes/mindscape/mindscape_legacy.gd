@@ -3343,7 +3343,8 @@ func _on_about() -> void:
 
 
 func _on_feedback() -> void:
-	_show_dialogue("Feedback", "We'd love to hear from you!\n\nShare ideas, report bugs, or just say hello:\n\nsupport@mindscape.game\n\n(This is a placeholder - actual feedback integration coming soon!)", _close_dialogue)
+	var et = preload("res://scripts/ui/early_testing.gd")
+	GameManager.open_url(et.feedback_url(GameManager.VERSION))
 
 
 # ============ PAUSE MENU ============

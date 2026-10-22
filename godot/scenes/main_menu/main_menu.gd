@@ -115,6 +115,9 @@ func _ready() -> void:
 	# Create animated star background
 	_create_stars()
 
+	# "Early testing" badge (top-left) -> note + feedback page
+	_build_early_testing_badge()
+
 	# Defer button setup and entrance animation until layout is complete
 	call_deferred("_setup_button_effects")
 	call_deferred("_play_entrance_animation")
@@ -1661,3 +1664,98 @@ func _show_toast(message: String, success: bool) -> void:
 	var tween = create_tween()
 	tween.tween_property(toast, "modulate:a", 0.0, 0.5).set_delay(2.5)
 	tween.tween_callback(toast.queue_free)
+
+
+# ============ EARLY TESTING BADGE ============
+
+const EarlyTesting := preload("res://scripts/ui/early_testing.gd")
+var early_testing_panel: PanelContainer = null
+
+
+func _build_early_testing_badge() -> void:
+	var layer = CanvasLayer.new()
+	layer.name = "EarlyTestingLayer"
+	layer.layer = 5
+	add_child(layer)
+
+	var badge = Button.new()
+	badge.name = "EarlyTestingBadge"
+	badge.text = EarlyTesting.BADGE_TEXT + "  ›"
+	badge.tooltip_text = EarlyTesting.NOTE
+	badge.position = Vector2(16, 14)
+	badge.add_theme_font_size_override("font_size", 13)
+	badge.add_theme_color_override("font_color", Color(0.1, 0.08, 0.02))
+	badge.add_theme_color_override("font_hover_color", Color(0.1, 0.08, 0.02))
+	badge.add_theme_color_override("font_pressed_color", Color(0.1, 0.08, 0.02))
+	var sb = StyleBoxFlat.new()
+	sb.bg_color = Color(0.95, 0.75, 0.25)
+	sb.set_corner_radius_all(12)
+	sb.content_margin_left = 12
+	sb.content_margin_right = 12
+	sb.content_margin_top = 4
+	sb.content_margin_bottom = 4
+	var sb_hover = sb.duplicate()
+	sb_hover.bg_color = Color(1.0, 0.83, 0.35)
+	badge.add_theme_stylebox_override("normal", sb)
+	badge.add_theme_stylebox_override("hover", sb_hover)
+	badge.add_theme_stylebox_override("pressed", sb_hover)
+	badge.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	badge.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	badge.pressed.connect(_toggle_early_testing_panel.bind(layer))
+	layer.add_child(badge)
+
+
+func _toggle_early_testing_panel(layer: CanvasLayer) -> void:
+	if early_testing_panel and is_instance_valid(early_testing_panel):
+		early_testing_panel.queue_free()
+		early_testing_panel = null
+		return
+	var vp = get_viewport().get_visible_rect().size
+	var w = min(420.0, vp.x - 32.0)
+
+	var panel = PanelContainer.new()
+	panel.name = "EarlyTestingPanel"
+	var sb = StyleBoxFlat.new()
+	sb.bg_color = Color(0.08, 0.08, 0.13, 0.97)
+	sb.border_color = Color(0.95, 0.75, 0.25)
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(10)
+	sb.set_content_margin_all(18)
+	panel.add_theme_stylebox_override("panel", sb)
+	panel.custom_minimum_size = Vector2(w, 0)
+	panel.position = Vector2(16, 52)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 12)
+	panel.add_child(vbox)
+
+	var title = Label.new()
+	title.text = EarlyTesting.BADGE_TEXT
+	title.add_theme_font_size_override("font_size", 18)
+	title.add_theme_color_override("font_color", Color(0.95, 0.75, 0.25))
+	vbox.add_child(title)
+
+	var note = Label.new()
+	note.text = EarlyTesting.NOTE
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	note.custom_minimum_size = Vector2(w - 36.0, 0)
+	note.add_theme_font_size_override("font_size", 14)
+	note.add_theme_color_override("font_color", Color(0.88, 0.88, 0.92))
+	vbox.add_child(note)
+
+	var row = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	var open_btn = Button.new()
+	open_btn.text = "Share feedback"
+	open_btn.custom_minimum_size = Vector2(0, 36)
+	open_btn.pressed.connect(func(): GameManager.open_url(EarlyTesting.feedback_url(GameManager.VERSION)))
+	row.add_child(open_btn)
+	var close_btn = Button.new()
+	close_btn.text = "Close"
+	close_btn.custom_minimum_size = Vector2(0, 36)
+	close_btn.pressed.connect(_toggle_early_testing_panel.bind(layer))
+	row.add_child(close_btn)
+	vbox.add_child(row)
+
+	layer.add_child(panel)
+	early_testing_panel = panel
