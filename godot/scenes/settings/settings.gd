@@ -631,14 +631,6 @@ func _play_cutscene(cutscene_id: String) -> void:
 # FEEDBACK SYSTEM
 # =============================================================================
 
-# Google Form URL for feedback
-const GOOGLE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdSNUA6MVx7aP-uOkIk-VHGYg6knh9GOow_lD5Pm9FzDryW7w/viewform"
-
-# Entry IDs for pre-filling
-const FORM_ENTRY_TYPE = "entry.571787797"      # Bug Report / Feature Request
-const FORM_ENTRY_DESC = "entry.1442389502"     # Description
-const FORM_ENTRY_DEVICE = "entry.2028626144"   # Platform/Browser
-
 var feedback_panel: PanelContainer = null
 
 
@@ -706,14 +698,14 @@ func _build_feedback_section() -> void:
 	var bug_btn = Button.new()
 	bug_btn.text = "Report Bug"
 	bug_btn.custom_minimum_size = Vector2(120, 40)
-	bug_btn.pressed.connect(_show_feedback_form.bind("bug"))
+	bug_btn.pressed.connect(_open_bug_report)
 	btn_row.add_child(bug_btn)
 
 	# Feature Request button
 	var feature_btn = Button.new()
 	feature_btn.text = "Request Feature"
 	feature_btn.custom_minimum_size = Vector2(140, 40)
-	feature_btn.pressed.connect(_show_feedback_form.bind("feature"))
+	feature_btn.pressed.connect(_open_feature_request)
 	btn_row.add_child(feature_btn)
 
 	# Reset Game button (for stuck states)
@@ -734,28 +726,25 @@ func _build_feedback_section() -> void:
 	info.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	section.add_child(info)
 
-	# Add to settings panel (before ButtonRow)
+	# Add to settings panel (before ButtonRow). add_child first: move_child on an
+	# unparented node is an error, which used to drop this whole section.
 	var button_row = vbox.get_node_or_null("ButtonRow")
+	vbox.add_child(section)
 	if button_row:
 		vbox.move_child(section, button_row.get_index())
-	else:
-		vbox.add_child(section)
 
 
-func _show_feedback_form(feedback_type: String) -> void:
-	# Collect device info
-	var device_info = _get_device_info()
-	var platform = OS.get_name()
+const EarlyTesting := preload("res://scripts/ui/early_testing.gd")
 
-	# Build Google Form URL with pre-filled data
-	var url = GOOGLE_FORM_URL + "?usp=pp_url"
-	url += "&" + FORM_ENTRY_TYPE + "=" + ("Bug Report" if feedback_type == "bug" else "Feature Request").uri_encode()
-	url += "&" + FORM_ENTRY_DEVICE + "=" + (platform + " - " + device_info).uri_encode()
 
-	# Open in browser (web-safe)
-	GameManager.open_url(url)
+## Report Bug goes to the GOACTO feedback page, tagged with the build version.
+func _open_bug_report() -> void:
+	GameManager.open_url(EarlyTesting.feedback_url(GameManager.VERSION))
 
-	print("[Settings] Opened feedback form: ", feedback_type)
+
+## Request Feature -> GOACTO feedback page, tagged with build + type=feature.
+func _open_feature_request() -> void:
+	GameManager.open_url(EarlyTesting.feedback_url(GameManager.VERSION, "feature"))
 
 
 func _get_device_info() -> String:
