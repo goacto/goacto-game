@@ -92,6 +92,7 @@ var in_zone_panel: bool = false
 var current_journal_tab: String = "focus"
 
 # Exit crystal position
+const IRLGifts := preload("res://scripts/shop/irl_gifts.gd")
 const EXIT_CRYSTAL_POSITION = Vector2(0, -60)
 const EXIT_CRYSTAL_RADIUS = 80.0
 const INTERACTION_RADIUS = 120.0
@@ -12004,7 +12005,7 @@ func _on_shop_irl_gifts_selected() -> void:
 	header.add_child(coin_label)
 
 	var desc = Label.new()
-	desc.text = "Redeem focus coins for real-world rewards! Complete focus sessions to earn coins, then unlock discount codes for the GOACTO shop."
+	desc.text = IRLGifts.intro_text()
 	desc.add_theme_font_size_override("font_size", 13)
 	desc.add_theme_color_override("font_color", Color(0.6, 0.65, 0.7))
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -12014,41 +12015,9 @@ func _on_shop_irl_gifts_selected() -> void:
 	spacer.custom_minimum_size = Vector2(0, 12)
 	header.add_child(spacer)
 
-	# IRL Gift items
-	var irl_items = [
-		{
-			"name": "GOACTO Sticker Pack",
-			"desc": "A set of motivational GOACTO stickers delivered to your door.",
-			"coins": 10,
-			"url": "https://goacto.com/products/goacto-guild-sticker-pack",
-			"discount": "FOCUS10",
-			"color": Color(0.4, 0.8, 0.6)
-		},
-		{
-			"name": "Growth Journal",
-			"desc": "Physical GOACTO growth journal with guided prompts and reflection pages.",
-			"coins": 25,
-			"url": "https://goacto.com/products/goacto-daily-focus-hardcover-journal",
-			"discount": "FOCUS25",
-			"color": Color(0.5, 0.7, 0.9)
-		},
-		{
-			"name": "Mindscape Poster",
-			"desc": "Premium art print of your mindscape evolution. A reminder of your journey.",
-			"coins": 50,
-			"url": "https://goacto.com/collections/goacto-picks",
-			"discount": "FOCUS50",
-			"color": Color(0.8, 0.6, 0.9)
-		},
-		{
-			"name": "Agent Goacto Figure",
-			"desc": "Collectible desk figure of Agent Goacto. Your companion in the real world.",
-			"coins": 100,
-			"url": "https://goacto.com/collections/goacto-picks",
-			"discount": "FOCUS100",
-			"color": Color(0.95, 0.75, 0.3)
-		},
-	]
+	# IRL Gift items (catalog + code flag live in scripts/shop/irl_gifts.gd)
+	var codes_on := IRLGifts.codes_enabled()
+	var irl_items = IRLGifts.gifts()
 
 	# Gift cards grid
 	var gifts_grid = GridContainer.new()
@@ -12062,7 +12031,8 @@ func _on_shop_irl_gifts_selected() -> void:
 		card.custom_minimum_size = Vector2(330, 140)
 
 		var style = StyleBoxFlat.new()
-		var can_afford = focus_coins >= gift.coins
+		# With codes hidden there is nothing to unlock, so every card shows as available.
+		var can_afford = (not codes_on) or focus_coins >= gift.coins
 		style.bg_color = Color(0.1, 0.12, 0.16, 1) if can_afford else Color(0.08, 0.08, 0.1, 1)
 		style.corner_radius_top_left = 8
 		style.corner_radius_top_right = 8
@@ -12100,24 +12070,26 @@ func _on_shop_irl_gifts_selected() -> void:
 		desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		vbox.add_child(desc_label)
 
-		var cost_label = Label.new()
-		cost_label.text = "%d Focus Coins" % gift.coins
-		cost_label.add_theme_font_size_override("font_size", 13)
-		cost_label.add_theme_color_override("font_color", Color(0.95, 0.85, 0.4) if can_afford else Color(0.5, 0.5, 0.5))
-		vbox.add_child(cost_label)
+		if codes_on:
+			var cost_label = Label.new()
+			cost_label.text = "%d Focus Coins" % gift.coins
+			cost_label.add_theme_font_size_override("font_size", 13)
+			cost_label.add_theme_color_override("font_color", Color(0.95, 0.85, 0.4) if can_afford else Color(0.5, 0.5, 0.5))
+			vbox.add_child(cost_label)
 
 		var btn_row = HBoxContainer.new()
 		btn_row.add_theme_constant_override("separation", 10)
 		vbox.add_child(btn_row)
 
-		var redeem_btn = Button.new()
-		redeem_btn.text = "Unlock Code" if can_afford else "Need %d more" % (gift.coins - focus_coins)
-		redeem_btn.custom_minimum_size = Vector2(120, 30)
-		redeem_btn.add_theme_font_size_override("font_size", 12)
-		redeem_btn.disabled = not can_afford
-		if can_afford:
-			redeem_btn.pressed.connect(_on_irl_gift_redeem.bind(gift))
-		btn_row.add_child(redeem_btn)
+		if codes_on and gift.has("discount"):
+			var redeem_btn = Button.new()
+			redeem_btn.text = "Unlock Code" if can_afford else "Need %d more" % (gift.coins - focus_coins)
+			redeem_btn.custom_minimum_size = Vector2(120, 30)
+			redeem_btn.add_theme_font_size_override("font_size", 12)
+			redeem_btn.disabled = not can_afford
+			if can_afford:
+				redeem_btn.pressed.connect(_on_irl_gift_redeem.bind(gift))
+			btn_row.add_child(redeem_btn)
 
 		var browse_btn = Button.new()
 		browse_btn.text = "View in Shop"
@@ -12128,9 +12100,17 @@ func _on_shop_irl_gifts_selected() -> void:
 		browse_btn.pressed.connect(func(): GameManager.open_url(gift.url))
 		btn_row.add_child(browse_btn)
 
-	# Coming soon note
+	# Browse the wider GOACTO picks collection
+	var picks_btn = Button.new()
+	picks_btn.text = "Browse GOACTO Picks"
+	picks_btn.custom_minimum_size = Vector2(180, 32)
+	picks_btn.add_theme_font_size_override("font_size", 13)
+	picks_btn.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	picks_btn.pressed.connect(func(): GameManager.open_url(IRLGifts.PICKS_URL))
+	header.add_child(picks_btn)
+
 	var note = Label.new()
-	note.text = "More rewards coming soon! Every focus session earns you 1 coin."
+	note.text = IRLGifts.footer_text()
 	note.add_theme_font_size_override("font_size", 12)
 	note.add_theme_color_override("font_color", Color(0.45, 0.48, 0.55))
 	header.add_child(note)
@@ -12142,13 +12122,18 @@ func _on_irl_gift_redeem(gift: Dictionary) -> void:
 		_show_dialogue("Not Enough Coins", "You need %d focus coins but have %d.\n\nComplete more focus sessions to earn coins!" % [gift.coins, focus_coins])
 		return
 
+	# Codes hidden until they exist in Shopify: never show a code or code copy.
+	if not IRLGifts.codes_enabled() or not gift.has("discount"):
+		GameManager.open_url(gift.get("url", IRLGifts.PICKS_URL))
+		return
+
 	# Show the discount code
-	var code = gift.get("discount", "GOACTO")
+	var code: String = gift.discount
 	_close_experience_shop()
 	_show_dialogue(
 		"Code Unlocked!",
-		"Your discount code for %s:\n\n%s\n\nUse this code at goacto.com for a special discount.\n\nThe code has been copied - visit the shop to redeem!" % [gift.name, code],
-		func(): GameManager.open_url(gift.get("url", "https://goacto.com/collections/goacto-picks"))
+		IRLGifts.code_dialog_text(gift.name, code),
+		func(): GameManager.open_url(gift.get("url", IRLGifts.PICKS_URL))
 	)
 	DisplayServer.clipboard_set(code)
 
