@@ -34,6 +34,7 @@ var current_topic_id: String = ""
 # Difficulty mode
 enum DifficultyMode { EASY, HARD }
 var difficulty: DifficultyMode = DifficultyMode.EASY
+const AspectLabel := preload("res://scripts/ui/aspect_label.gd")
 const EASY_XP_MULTIPLIER: float = 0.7
 const HARD_XP_MULTIPLIER: float = 1.5
 const HARD_MIN_COMPLETION_RATIO: float = 1.0  # Must complete entire session for hard mode
@@ -1685,7 +1686,7 @@ func _show_session_summary() -> void:
 
 	_add_summary_stat(grid, "Time Focused", "%d min" % summary_minutes)
 	_add_summary_stat(grid, "Mode", "Standard" if difficulty == DifficultyMode.EASY else "Hard")
-	_add_summary_stat(grid, "Aspect", summary_domain.capitalize())
+	_add_summary_stat(grid, "Aspect", AspectLabel.display_name(_summary_aspect_source(), GameManager.ASPECTS))
 	_add_summary_stat(grid, "XP Multiplier", "%.1fx" % (EASY_XP_MULTIPLIER if difficulty == DifficultyMode.EASY else HARD_XP_MULTIPLIER))
 
 	# XP earned (big and golden)
@@ -1911,3 +1912,11 @@ func _end_break_early() -> void:
 		btn_center.queue_free()
 
 	_return_to_base()
+
+
+## Which Aspect the summary names: the habit's domain when a habit was picked (that is what
+## earns the XP), otherwise the script's Aspect, otherwise "productivity" (Discipline).
+func _summary_aspect_source() -> String:
+	if current_habit_id != "" and HabitManager.habits.has(current_habit_id):
+		return HabitManager._domain_to_string(HabitManager.habits[current_habit_id].domain)
+	return summary_domain

@@ -7,6 +7,7 @@ extends CanvasLayer
 
 const MS := preload("res://scripts/share/milestone_share.gd")
 const CARD_SIZE := Vector2i(1080, 1080)
+const EmojiFont := preload("res://scripts/ui/emoji_font.gd")
 
 var _queue: Array = []
 var _panel: PanelContainer
@@ -129,6 +130,7 @@ func render_card_image(card: Dictionary) -> Image:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		l.custom_minimum_size = Vector2(CARD_SIZE.x - 160, 0)
+		l.add_theme_font_override("font", EmojiFont.font())  # bundled emoji: no boxed codes on web
 		l.add_theme_font_size_override("font_size", spec[1])
 		l.add_theme_color_override("font_color", spec[2])
 		col.add_child(l)

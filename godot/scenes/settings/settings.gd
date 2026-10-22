@@ -4,6 +4,8 @@ extends Control
 
 signal settings_closed
 
+const FitViewport := preload("res://scripts/ui/fit_viewport.gd")
+
 # Audio sliders
 @onready var master_slider: HSlider = $Panel/Margin/ScrollContainer/VBox/AudioSection/MasterRow/MasterSlider
 @onready var music_slider: HSlider = $Panel/Margin/ScrollContainer/VBox/AudioSection/MusicRow/MusicSlider
@@ -78,6 +80,8 @@ const CUTSCENE_ORDER = [
 
 
 func _ready() -> void:
+	# Phones: shrink the 680x800 panel to the visible canvas (it overflowed at 390px).
+	FitViewport.keep_centered($Panel, Vector2(680, 800))
 	# Connect audio signals
 	back_button.pressed.connect(_on_back)
 	test_voice_button.pressed.connect(_test_voice)
@@ -386,9 +390,12 @@ func _show_slot_selection_for_import() -> void:
 	# Create a simple dialog to select slot
 	var dialog = AcceptDialog.new()
 	dialog.title = "Import to which slot?"
-	dialog.dialog_text = "Paste your save JSON from clipboard:"
-
+	# Prompt lives inside the VBox: AcceptDialog draws dialog_text underneath custom children,
+	# which overlapped the TextEdit.
 	var vbox = VBoxContainer.new()
+	var prompt := Label.new()
+	prompt.text = "Paste your save JSON from clipboard:"
+	vbox.add_child(prompt)
 
 	var text_edit = TextEdit.new()
 	text_edit.custom_minimum_size = Vector2(400, 150)

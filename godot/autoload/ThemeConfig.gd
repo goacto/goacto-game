@@ -2,6 +2,13 @@ extends Node
 ## ThemeConfig - GOACTO Brand Colors and Theme Constants
 ## "Growing Ourselves And Contributing To Others"
 
+const EmojiFont := preload("res://scripts/ui/emoji_font.gd")
+
+
+func _init() -> void:
+	# Web has no system fonts: give the default font a bundled emoji fallback before any UI draws.
+	EmojiFont.install()
+
 # ============ PRIMARY BRAND COLORS ============
 # From GOACTO logo
 const GOACTO_CHARCOAL = Color(0.24, 0.24, 0.24)        # #3D3D3D - Primary text/dark elements

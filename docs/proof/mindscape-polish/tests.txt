@@ -1,0 +1,101 @@
+Godot 4.6-stable headless; web export build stamp 20261022-210451 (UTC) = 17:04 EDT
+== test_mindscape_polish
+  PASS six Aspects defined
+  PASS productivity domain -> Discipline
+  PASS health domain -> Vitality
+  PASS mindfulness domain -> Wisdom
+  PASS learning domain -> Creativity
+  PASS social domain -> Compassion
+  PASS growth domain -> Courage
+  PASS aspect id passes through
+  PASS unknown -> Discipline fallback
+  PASS 'productivity' always names a real Aspect
+  PASS 'health' always names a real Aspect
+  PASS 'mindfulness' always names a real Aspect
+  PASS 'learning' always names a real Aspect
+  PASS 'social' always names a real Aspect
+  PASS 'growth' always names a real Aspect
+  PASS 'custom' always names a real Aspect
+  PASS '' always names a real Aspect
+  PASS 'wisdom' always names a real Aspect
+  PASS footer says 'and', not '&'
+  PASS default font falls back to bundled emoji font (web has no system fonts)
+  PASS base glyphs unchanged (built-in font is the base)
+  PASS install is idempotent
+  PASS default theme font is the emoji-capable font
+  PASS a plain Label resolves to the emoji-capable font
+  PASS bundled emoji font has 🎯
+  PASS bundled emoji font has 🌱
+  PASS bundled emoji font has 🔥
+  PASS bundled emoji font has 🏆
+  PASS bundled emoji font has ✨
+  PASS bundled emoji font has 🔊
+  PASS bundled emoji font has 🔇
+  PASS emoji import keeps embedded color bitmaps (CBDT)
+  PASS share-card renderer uses the emoji font
+  PASS theme installs the emoji font at startup
+  PASS desktop: width kept, height clamped
+  PASS 390 phone canvas: width clamped to screen
+  PASS small dialog unchanged on phone
+37 passed, 0 failed
+== test_milestone_share
+  PASS achievement card fields
+  PASS source achievement not mutated
+  PASS no journal text by default
+  PASS chapter card uses chapter name
+  PASS chapter card has no description/body text
+  PASS journal excluded without opt-in
+  PASS opt-in journal capped + single line
+  PASS with_journal returns a copy
+  PASS never offered in Focus Mode
+  PASS safe filename
+  PASS share js escapes args via JSON
+  PASS no network calls in share js
+milestone_share: 12 passed, 0 failed
+== test_early_testing
+  PASS feedback page url
+  PASS exact early-testing note
+  PASS build param appended
+  PASS build param is url-encoded
+  PASS settings.gd: no placeholder support email
+  PASS settings.gd: no 'coming soon' placeholder
+  PASS mindscape_legacy.gd: no placeholder support email
+  PASS mindscape_legacy.gd: no 'coming soon' placeholder
+  PASS main_menu.gd: no placeholder support email
+  PASS main_menu.gd: no 'coming soon' placeholder
+  PASS Report Bug uses feedback page + VERSION
+  PASS feature type param
+  PASS Request Feature uses feedback page + type=feature
+  PASS bottom-left feedback link uses feedback page + VERSION
+  PASS GameManager.gd: no Google Forms URL
+  PASS settings.gd: no Google Forms URL
+  PASS mindscape_legacy.gd: no Google Forms URL
+  PASS main_menu.gd: no Google Forms URL
+18 passed, 0 failed
+== test_irl_gifts
+  PASS codes flag ships off
+  PASS two gifts: sticker pack + journal
+  PASS no FOCUS10 when hidden
+  PASS no FOCUS25 when hidden
+  PASS no FOCUS50 when hidden
+  PASS no FOCUS100 when hidden
+  PASS sticker_pack has no discount when hidden
+  PASS sticker_pack links to goacto.com
+  PASS growth_journal has no discount when hidden
+  PASS growth_journal links to goacto.com
+  PASS no 'use this code' copy when hidden
+  PASS no 'discount' copy when hidden
+  PASS no 'unlock' copy when hidden
+  PASS no 'redeem' copy when hidden
+  PASS no 'art print' copy when hidden
+  PASS no 'desk figure' copy when hidden
+  PASS no 'poster' copy when hidden
+  PASS no 'figure' copy when hidden
+  PASS picks collection link kept
+  PASS codes come back when enabled
+  PASS FOCUS50/100 removed entirely
+  PASS enabled intro mentions codes
+22 passed, 0 failed
+== test_habit_manager
+SCRIPT ERROR: Compile Error: Identifier not found: HabitManager
+ERROR: Failed to load script "res://scripts/tests/test_habit_manager.gd" with error "Compilation failed".
