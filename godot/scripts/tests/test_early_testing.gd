@@ -25,5 +25,12 @@ func _init() -> void:
 		check(not src.contains("feedback integration coming soon"), "%s: no 'coming soon' placeholder" % path.get_file())
 	var settings := FileAccess.get_file_as_string("res://scenes/settings/settings.gd")
 	check(settings.contains("EarlyTesting.feedback_url(GameManager.VERSION)"), "Report Bug uses feedback page + VERSION")
+	check(E.feedback_url("v0.1.0-prototype", "feature") == "https://goacto.com/pages/mindscape-feedback?build=v0.1.0-prototype&type=feature", "feature type param")
+	check(settings.contains('EarlyTesting.feedback_url(GameManager.VERSION, "feature")'), "Request Feature uses feedback page + type=feature")
+	var gm := FileAccess.get_file_as_string("res://autoload/GameManager.gd")
+	check(gm.contains("EarlyTestingLinks.feedback_url(VERSION)"), "bottom-left feedback link uses feedback page + VERSION")
+	for path in ["res://autoload/GameManager.gd", "res://scenes/settings/settings.gd", "res://scenes/mindscape/mindscape_legacy.gd", "res://scenes/main_menu/main_menu.gd"]:
+		var src2 := FileAccess.get_file_as_string(path)
+		check(not src2.contains("docs.google.com/forms") and not src2.contains("forms.gle"), "%s: no Google Forms URL" % path.get_file())
 	print("%d passed, %d failed" % [passes, fails])
 	quit(1 if fails > 0 else 0)

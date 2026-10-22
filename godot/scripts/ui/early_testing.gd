@@ -7,5 +7,9 @@ const NOTE := "Mindscape is in early testing. Things will break and change. Tell
 
 
 ## Feedback page tagged with the build version, e.g. ...?build=v0.1.0-prototype
-static func feedback_url(build_version: String) -> String:
-	return FEEDBACK_URL + "?build=" + build_version.uri_encode()
+## Optional type (e.g. "feature") is appended as &type=feature.
+static func feedback_url(build_version: String, type: String = "") -> String:
+	var url := FEEDBACK_URL + "?build=" + build_version.uri_encode()
+	if type != "":
+		url += "&type=" + type.uri_encode()
+	return url
