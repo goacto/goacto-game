@@ -1932,7 +1932,7 @@ func _gather_journey_stats() -> Array:
 
 	# Best streak
 	var streak = AchievementManager.stats.get("best_streak", 0) if AchievementManager else 0
-	stats.append({"icon": "🔥", "label": "Days you showed up", "value": str(streak)})
+	stats.append({"icon": "🌱", "label": "Days you showed up", "value": str(streak)})
 
 	# Meditations
 	var meditations = AchievementManager.stats.get("meditations_completed", 0) if AchievementManager else 0

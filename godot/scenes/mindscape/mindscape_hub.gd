@@ -3852,15 +3852,9 @@ func _add_habit_spacer(height: int) -> void:
 	zone_body.add_child(spacer)
 
 
-func _get_streak_fire(streak: int) -> String:
-	if streak >= 100:
-		return "🔥🔥🔥🔥"  # Legendary
-	elif streak >= 30:
-		return "🔥🔥🔥"  # On fire
-	elif streak >= 7:
-		return "🔥🔥"  # Warming up
-	else:
-		return "🔥"  # Starting
+func _get_streak_fire(_streak: int) -> String:
+	# Soft streaks: one calm seedling, no escalating fire.
+	return "🌱"
 
 
 func _get_streak_color(streak: int) -> Color:
@@ -3933,7 +3927,7 @@ func _show_streak_recovery_section(at_risk: Array) -> void:
 
 		# Habit name with streak
 		var name_label = Label.new()
-		name_label.text = habit.name + " (🔥" + str(break_info.streak_value) + ")"
+		name_label.text = habit.name + " (🌱" + str(break_info.streak_value) + ")"
 		name_label.add_theme_font_size_override("font_size", 18)
 		name_label.add_theme_color_override("font_color", Color(0.9, 0.75, 0.5))
 		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -6050,7 +6044,7 @@ func _update_daily_progress() -> void:
 	# Update streaks label
 	if streaks_label:
 		if active_streaks > 0:
-			streaks_label.text = "🔥 %d" % active_streaks
+			streaks_label.text = "🌱 %d" % active_streaks
 		else:
 			streaks_label.text = "Ready to start"
 
@@ -8248,7 +8242,7 @@ func _get_streaks_summary() -> Array:
 			elif streak >= 7:
 				color = Color(0.9, 0.7, 0.3)  # Yellow-orange for warm
 			items.append({
-				"icon": "🔥",
+				"icon": "🌱",
 				"text": habit.name,
 				"value": "%d days" % streak,
 				"value_color": color,

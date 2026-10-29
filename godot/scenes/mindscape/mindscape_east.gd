@@ -840,7 +840,7 @@ func _add_insights_summary() -> void:
 
 	if current_streaks > 0:
 		var streaks_label = Label.new()
-		streaks_label.text = "🔥 " + str(current_streaks) + " habits practiced"
+		streaks_label.text = "🌱 " + str(current_streaks) + " habits practiced"
 		streaks_label.add_theme_font_size_override("font_size", 14)
 		streaks_label.add_theme_color_override("font_color", Color(0.9, 0.6, 0.3))
 		zone_body.add_child(streaks_label)
