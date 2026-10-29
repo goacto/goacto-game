@@ -1,4 +1,5 @@
 extends MindscapeRegionBase
+const GrowGive := preload("res://scripts/ui/grow_give.gd")
 ## Western Depths - Shadow Work and Aspect Shrine
 ## A mysterious underwater cavern area for confronting fears and developing aspects
 ## EXPANDED VERSION with dramatic underwater depths landscape
@@ -3288,7 +3289,7 @@ func _open_kindness_log() -> void:
 	_clear_zone_body()
 
 	var intro = Label.new()
-	intro.text = "Track your acts of kindness and contribution. Every compassionate action ripples outward."
+	intro.text = GrowGive.KINDNESS_INTRO
 	intro.autowrap_mode = TextServer.AUTOWRAP_WORD
 	zone_body.add_child(intro)
 
@@ -3308,9 +3309,6 @@ func _open_kindness_log() -> void:
 	var total_stat = _create_stat_display("All Time", str(total), Color(0.5, 0.6, 0.7))
 	stats_row.add_child(total_stat)
 
-	var streak = _calculate_kindness_streak(entries)
-	var streak_stat = _create_stat_display("Day Streak", str(streak), Color(0.8, 0.6, 0.3))
-	stats_row.add_child(streak_stat)
 
 	zone_body.add_child(stats_row)
 
