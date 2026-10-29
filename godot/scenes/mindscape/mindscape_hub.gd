@@ -1631,7 +1631,7 @@ func _show_contextual_tip() -> void:
 		# Check specific conditions for targeted tips
 		var stats = HabitManager.get_weekly_stats() if HabitManager else {}
 		if stats.get("active_streaks", 0) == 0:
-			tip = "Start a habit streak today! Even small steps count."
+			tip = "Pick one small habit today. Every day you show up counts."
 		elif stats.get("this_week_completions", 0) < stats.get("last_week_completions", 1):
 			tip = "You completed fewer habits this week. Let's get back on track!"
 		else:
@@ -2971,12 +2971,12 @@ func _submit_habit_note(skip_note: bool) -> void:
 			_spawn_celebration_effects(milestone)
 			var msg = "🎉 " + habit.name + " MILESTONE! 🎉\n\n"
 			msg += _get_milestone_message(milestone) + "\n\n"
-			msg += "+" + str(exp + streak_bonus) + " XP\n🔥 " + str(streak) + " day streak!"
+			msg += "+" + str(exp + streak_bonus) + " XP\n🌱 " + str(streak) + " days you showed up"
 			if note_text != "":
 				msg += "\n\n📝 Note saved to journal"
-			_show_dialogue("🏆 Streak Milestone!", msg, _open_habits_zone)
+			_show_dialogue("🏆 Showed Up Milestone!", msg, _open_habits_zone)
 		else:
-			var msg = habit.name + " done!\n\n+" + str(exp + streak_bonus) + " XP (includes streak bonus)\n🔥 " + str(streak) + " day streak!"
+			var msg = habit.name + " done!\n\n+" + str(exp + streak_bonus) + " XP (includes showing-up bonus)\n🌱 " + str(streak) + " days you showed up"
 			if note_text != "":
 				msg += "\n\n📝 Note saved to journal"
 			_show_dialogue("Habit Complete!", msg, _open_habits_zone)
@@ -3172,7 +3172,7 @@ func _show_habit_stats(habit_id: String) -> void:
 	var current_vbox = VBoxContainer.new()
 	current_vbox.add_theme_constant_override("separation", 2)
 	var current_label = Label.new()
-	current_label.text = "Current Streak"
+	current_label.text = "Days You Showed Up"
 	current_label.add_theme_font_size_override("font_size", 16)
 	current_label.add_theme_color_override("font_color", Color(0.5, 0.55, 0.65))
 	current_vbox.add_child(current_label)
@@ -3187,7 +3187,7 @@ func _show_habit_stats(habit_id: String) -> void:
 	var best_vbox = VBoxContainer.new()
 	best_vbox.add_theme_constant_override("separation", 2)
 	var best_label = Label.new()
-	best_label.text = "Best Streak"
+	best_label.text = "Most Days Showed Up"
 	best_label.add_theme_font_size_override("font_size", 16)
 	best_label.add_theme_color_override("font_color", Color(0.5, 0.55, 0.65))
 	best_vbox.add_child(best_label)
@@ -3361,7 +3361,7 @@ func _show_habit_stats(habit_id: String) -> void:
 		var progress_in_cycle = streak % HabitManager.GRACE_DAY_RECHARGE_STREAK
 		var days_until = HabitManager.GRACE_DAY_RECHARGE_STREAK - progress_in_cycle
 		var grace_info = Label.new()
-		grace_info.text = "Grace day in " + str(days_until) + " more days of streak"
+		grace_info.text = "Grace day in " + str(days_until) + " more days you show up"
 		grace_info.add_theme_font_size_override("font_size", 16)
 		grace_info.add_theme_color_override("font_color", Color(0.6, 0.65, 0.5))
 		grace_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -3620,7 +3620,7 @@ func _create_habit_from_form() -> void:
 	var domain_name = domain_names[_selected_habit_domain] if _selected_habit_domain < domain_names.size() else "Custom"
 	var icon_emoji = HabitManager.HABIT_ICONS.get(_selected_habit_icon, {}).get("emoji", "⭐")
 	var tags_str = ", ".join(tags) if tags.size() > 0 else "none"
-	_show_dialogue("Habit Created", icon_emoji + " '" + habit_name + "' has been added!\n\nCategory: " + domain_name + "\nTags: " + tags_str + "\n\nComplete it daily to build your streak.", _open_habits_zone)
+	_show_dialogue("Habit Created", icon_emoji + " '" + habit_name + "' has been added!\n\nCategory: " + domain_name + "\nTags: " + tags_str + "\n\nEvery day you do it counts.", _open_habits_zone)
 
 
 func _archive_habit(habit_id: String) -> void:
@@ -3912,13 +3912,13 @@ func _show_streak_recovery_section(at_risk: Array) -> void:
 
 	# Warning header
 	var header = Label.new()
-	header.text = "⚠️ Streaks at Risk!"
+	header.text = "🌱 Ready when you are"
 	header.add_theme_font_size_override("font_size", 22)
 	header.add_theme_color_override("font_color", Color(0.9, 0.6, 0.3))
 	warning_container.add_child(header)
 
 	var subtext = Label.new()
-	subtext.text = "Complete today or use a grace day to save your streak."
+	subtext.text = "No pressure. Your days still count."
 	subtext.add_theme_font_size_override("font_size", 16)
 	subtext.add_theme_color_override("font_color", Color(0.65, 0.6, 0.55))
 	subtext.autowrap_mode = TextServer.AUTOWRAP_WORD
@@ -3957,7 +3957,7 @@ func _use_grace_day_for_habit(habit_id: String) -> void:
 		var habit = HabitManager.habits.get(habit_id, {})
 		var name = habit.get("name", "Habit")
 		_close_zone()
-		_show_dialogue("Streak Saved!", "Used 1 grace day to save your " + name + " streak!\n\nGrace days remaining: " + str(HabitManager.get_grace_days()), _open_habits_zone)
+		_show_dialogue("Welcome back!", "Used 1 grace day for " + name + ".\n\nGrace days remaining: " + str(HabitManager.get_grace_days()), _open_habits_zone)
 	else:
 		_show_dialogue("Failed", "Could not use grace day.")
 
@@ -4084,7 +4084,7 @@ func _show_topic_stats(topic_id: String) -> void:
 	var streak_row = HBoxContainer.new()
 	streak_row.add_theme_constant_override("separation", 10)
 	var streak_label = Label.new()
-	streak_label.text = "Current Streak:"
+	streak_label.text = "Days You Showed Up:"
 	streak_label.add_theme_font_size_override("font_size", 20)
 	streak_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	streak_row.add_child(streak_label)
@@ -4441,7 +4441,7 @@ func _show_progress_tab() -> void:
 
 	# Perfect days and streaks
 	_add_stat_row("Perfect Days", "%d / 7" % weekly_stats.perfect_days)
-	_add_stat_row("Active Streaks", "%d habits" % weekly_stats.active_streaks)
+	_add_stat_row("Habits Practiced", "%d habits" % weekly_stats.active_streaks)
 
 	# Focus time this week
 	var focus_minutes = int(GameManager.player_data.get("total_focus_minutes", 0))
@@ -5453,7 +5453,7 @@ func _format_requirement(req: Dictionary) -> String:
 		"habits_created":
 			return "Create %d habits" % req.count
 		"streak_days":
-			return "Reach a %d-day streak" % req.count
+			return "Show up on %d days" % req.count
 		"journal_entries":
 			return "Write %d journal entries" % req.count
 		"goals_created":
@@ -5473,7 +5473,7 @@ func _format_requirement(req: Dictionary) -> String:
 			var enemy = req.get("enemy", "any")
 			return "Defeat %s" % enemy.capitalize() if enemy != "any" else "Win a battle"
 		"streak_recovered":
-			return "Recover a broken streak"
+			return "Come back after a break"
 		"aspects_talked_to":
 			return "Commune with %d aspects" % req.count
 		"weekly_goal_set":
@@ -6052,7 +6052,7 @@ func _update_daily_progress() -> void:
 		if active_streaks > 0:
 			streaks_label.text = "🔥 %d" % active_streaks
 		else:
-			streaks_label.text = "No streaks"
+			streaks_label.text = "Ready to start"
 
 
 func _is_habit_due_today(habit: Dictionary) -> bool:
@@ -7555,7 +7555,7 @@ func _show_achievements_view() -> void:
 	var categories = {
 		AchievementManager.AchievementCategory.FOCUS: {"name": "Focus", "icon": "🎯", "achievements": []},
 		AchievementManager.AchievementCategory.HABITS: {"name": "Habits", "icon": "✅", "achievements": []},
-		AchievementManager.AchievementCategory.STREAKS: {"name": "Streaks", "icon": "🔥", "achievements": []},
+		AchievementManager.AchievementCategory.STREAKS: {"name": "Showing Up", "icon": "🌱", "achievements": []},
 		AchievementManager.AchievementCategory.GROWTH: {"name": "Growth", "icon": "🌱", "achievements": []},
 		AchievementManager.AchievementCategory.EXPLORATION: {"name": "Exploration", "icon": "⭐", "achievements": []},
 		AchievementManager.AchievementCategory.SPECIAL: {"name": "Special", "icon": "✨", "achievements": []}
@@ -7977,7 +7977,7 @@ func _show_shortcuts_guide() -> void:
 	right_col.add_child(tip2)
 
 	var tip3 = Label.new()
-	tip3.text = "• Complete habits daily to build streaks"
+	tip3.text = "• Every day you show up counts"
 	tip3.add_theme_font_size_override("font_size", 16)
 	tip3.add_theme_color_override("font_color", Color(0.5, 0.55, 0.65))
 	right_col.add_child(tip3)
@@ -8125,7 +8125,7 @@ func _show_daily_summary() -> void:
 	_add_summary_section(content, "Focus Time", _get_focus_summary())
 
 	# Streaks section
-	_add_summary_section(content, "Active Streaks", _get_streaks_summary())
+	_add_summary_section(content, "Days You Showed Up", _get_streaks_summary())
 
 	# Weekly progress
 	_add_summary_section(content, "This Week", _get_weekly_summary())
@@ -8256,7 +8256,7 @@ func _get_streaks_summary() -> Array:
 			})
 
 	if items.is_empty():
-		items.append({"icon": "—", "text": "No active streaks", "color": Color(0.5, 0.5, 0.55)})
+		items.append({"icon": "—", "text": "Ready to start", "color": Color(0.5, 0.5, 0.55)})
 
 	return items
 
@@ -8935,7 +8935,7 @@ func _add_journal_entry_card(entry: Dictionary) -> void:
 		if streak > 0:
 			var streak_label = Label.new()
 			streak_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			streak_label.text = "🔥 " + str(streak) + " day streak"
+			streak_label.text = "🌱 " + str(streak) + " days showed up"
 			streak_label.add_theme_font_size_override("font_size", 14)
 			streak_label.add_theme_color_override("font_color", Color(0.9, 0.7, 0.4))
 			vbox.add_child(streak_label)
@@ -10483,7 +10483,7 @@ func _build_habit_entry_details(entry: Dictionary) -> void:
 	# Streak info
 	var streak = entry.get("streak", 0)
 	if streak > 0:
-		var streak_box = _create_detail_row("🔥 Streak", "%d days" % streak, Color(0.9, 0.6, 0.3))
+		var streak_box = _create_detail_row("🌱 Showed up", "%d days" % streak, Color(0.9, 0.6, 0.3))
 		zone_body.add_child(streak_box)
 		_add_habit_spacer(8)
 
@@ -11296,7 +11296,7 @@ func _create_progress_indicators() -> void:
 	if current_streak > 0:
 		var streak_label = Label.new()
 		streak_label.name = "StreakLabel"
-		streak_label.text = str(current_streak) + " day streak"
+		streak_label.text = str(current_streak) + " days showed up"
 		streak_label.add_theme_font_size_override("font_size", 14)
 		streak_label.add_theme_color_override("font_color", Color(0.95, 0.7, 0.3))
 		streak_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -12401,7 +12401,7 @@ func _build_affirmations_tab() -> void:
 	var streak = affirmations.get("streak", 0)
 	var total = affirmations.get("total_affirmed", 0)
 
-	var streak_stat = _create_affirmation_stat("Streak", str(streak) + " days", Color(0.9, 0.6, 0.3))
+	var streak_stat = _create_affirmation_stat("Showed up", str(streak) + " days", Color(0.9, 0.6, 0.3))
 	stats_row.add_child(streak_stat)
 
 	var total_stat = _create_affirmation_stat("Total", str(total), Color(0.5, 0.7, 0.9))
@@ -13429,7 +13429,7 @@ func _show_daily_reward_popup(login_result: Dictionary) -> void:
 
 	# Day counter
 	var day_label = Label.new()
-	day_label.text = "Day " + str(total_days) + " • Streak: " + str(streak) + " days"
+	day_label.text = "Day " + str(total_days) + " • Showed up: " + str(streak) + " days"
 	day_label.add_theme_font_size_override("font_size", 16)
 	day_label.add_theme_color_override("font_color", Color(0.7, 0.75, 0.9))
 	day_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

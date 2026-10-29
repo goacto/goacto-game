@@ -45,6 +45,9 @@ var last_date: String = ""
 
 # Grace days system - allows streak recovery
 const MAX_GRACE_DAYS: int = 3  # Maximum grace days a player can have
+## Soft streaks: "streak" now means days you showed up. It never resets.
+const SOFT_STREAKS: bool = true
+const SHOWED_UP_BONUS_CAP: int = 10
 const GRACE_DAY_RECHARGE_STREAK: int = 7  # Earn 1 grace day per 7-day streak
 var grace_days_available: int = 1  # Start with 1 grace day
 var pending_streak_breaks: Dictionary = {}  # habit_id -> { missed_date, streak_value }
@@ -202,7 +205,7 @@ func complete_habit(habit_id: String) -> Dictionary:
 		print("[HabitManager] Milestone reached! ", habit.streak, " day streak - grace day earned!")
 
 	# Calculate rewards (streaks multiply!)
-	var streak_multiplier = 1.0 + (habit.streak * 0.1)  # 10% bonus per streak day
+	var streak_multiplier = 1.0 + (min(int(habit.streak), SHOWED_UP_BONUS_CAP) * 0.1)  # gentle bonus, capped; count never resets
 	var exp_earned = int(habit.exp_reward * streak_multiplier)
 	var evolution_earned = habit.evolution_reward * streak_multiplier
 
@@ -256,6 +259,8 @@ func _check_daily_reset() -> void:
 func _process_daily_reset() -> void:
 	# Check each habit - if not completed yesterday, mark for potential recovery
 	for habit_id in habits:
+		if SOFT_STREAKS:
+			break  # Soft streaks: a missed day changes nothing. No "at risk", no reset.
 		if not todays_completions.get(habit_id, false):
 			var habit = habits[habit_id]
 			if habit.streak > 0:
@@ -276,7 +281,7 @@ func _process_daily_reset() -> void:
 	for topic_id in topics:
 		if not topics_completions.get(topic_id, false):
 			var topic = topics[topic_id]
-			if topic.streak > 0:
+			if topic.streak > 0 and not SOFT_STREAKS:
 				print("[HabitManager] Topic streak ended for: ", topic.name, " (was ", topic.streak, " days)")
 				topic.streak = 0
 
@@ -284,6 +289,9 @@ func _process_daily_reset() -> void:
 	for topic_id in topics_completions:
 		topics_completions[topic_id] = false
 
+	# Soft streaks: drop any "at risk" entries from older saves.
+	if SOFT_STREAKS:
+		pending_streak_breaks.clear()
 	# Clear old pending breaks (older than 1 day)
 	_expire_old_pending_breaks()
 
@@ -311,7 +319,7 @@ func _expire_old_pending_breaks() -> void:
 		if today_day - missed_day > 1:
 			to_expire.append(habit_id)
 			# Actually break the streak now
-			if habits.has(habit_id):
+			if habits.has(habit_id) and not SOFT_STREAKS:
 				var habit = habits[habit_id]
 				print("[HabitManager] Streak expired for: ", habit.name, " (was ", habit.streak, " days)")
 				habit.streak = 0

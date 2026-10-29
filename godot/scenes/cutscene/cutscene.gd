@@ -251,7 +251,7 @@ const CUTSCENES = {
 				"dialogues": [
 					{"speaker": "narrator", "text": "Evening meal aboard the Stellar Wanderer. The family gathers..."},
 					{"speaker": "lumina", "text": "You've been spending a lot of time in your room lately. How is your project going?"},
-					{"speaker": "goacto", "text": "It's amazing, Mom! My human completed another streak today. Vitality just awakened!"},
+					{"speaker": "goacto", "text": "It's amazing, Mom! My human showed up again today. Vitality just awakened!"},
 					{"speaker": "zyx", "text": "*looks up from food*\n\nWait wait wait - can the human SEE you?"},
 					{"speaker": "goacto", "text": "Well... not exactly. The connection is more like..."},
 					{"speaker": "lumina", "text": "The connection is felt, not seen. When the human feels motivated, supported, guided... that's Goacto's influence."},

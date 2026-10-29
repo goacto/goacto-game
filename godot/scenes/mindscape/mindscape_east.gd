@@ -840,7 +840,7 @@ func _add_insights_summary() -> void:
 
 	if current_streaks > 0:
 		var streaks_label = Label.new()
-		streaks_label.text = "🔥 " + str(current_streaks) + " active habit streak(s)"
+		streaks_label.text = "🔥 " + str(current_streaks) + " habits practiced"
 		streaks_label.add_theme_font_size_override("font_size", 14)
 		streaks_label.add_theme_color_override("font_color", Color(0.9, 0.6, 0.3))
 		zone_body.add_child(streaks_label)
@@ -1928,8 +1928,8 @@ func _open_insights_panel() -> void:
 	zone_body.add_child(habit_stats)
 
 	_add_stat_row(habit_stats, "Total Completions:", str(stats.habit_completions))
-	_add_stat_row(habit_stats, "Active Streaks:", str(stats.active_streaks))
-	_add_stat_row(habit_stats, "Longest Streak:", str(stats.longest_streak) + " days" if stats.longest_streak > 0 else "N/A")
+	_add_stat_row(habit_stats, "Habits Practiced:", str(stats.active_streaks))
+	_add_stat_row(habit_stats, "Most Days Showed Up:", str(stats.longest_streak) + " days" if stats.longest_streak > 0 else "N/A")
 	_add_stat_row(habit_stats, "Best Habit:", stats.best_habit if stats.best_habit != "" else "N/A")
 
 	_add_pool_spacer(15)

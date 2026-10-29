@@ -591,7 +591,7 @@ func _show_bulletin_board() -> void:
 	var streak = GameManager.player_data.get("current_streak", 0)
 	var streak_msg = ""
 	if streak > 0:
-		streak_msg = "\n\n📊 Current Streak: " + str(streak) + " days!"
+		streak_msg = "\n\n🌱 Days you showed up: " + str(streak)
 
 	var content = "═══ CREW NOTICES ═══\n\n"
 	content += "💡 Daily Tip:\n\"" + random_tip + "\"\n"
@@ -639,9 +639,9 @@ func _show_achievement_display() -> void:
 	if focus_sessions >= 25:
 		achievements.append("⭐ Quarter Century - Complete 25 sessions")
 	if streak >= 3:
-		achievements.append("📅 Three-peat - Maintain a 3-day streak")
+		achievements.append("📅 Three-peat - Show up on 3 days")
 	if streak >= 7:
-		achievements.append("🌟 Week Warrior - Maintain a 7-day streak")
+		achievements.append("🌟 Week Warrior - Show up on 7 days")
 	if evolution >= 2:
 		achievements.append("🌱 Growing - Reach Evolution Level 2")
 	if evolution >= 5:

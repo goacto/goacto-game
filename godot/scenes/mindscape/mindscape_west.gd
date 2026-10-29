@@ -1932,7 +1932,7 @@ func _gather_journey_stats() -> Array:
 
 	# Best streak
 	var streak = AchievementManager.stats.get("best_streak", 0) if AchievementManager else 0
-	stats.append({"icon": "🔥", "label": "Best streak", "value": str(streak) + " days"})
+	stats.append({"icon": "🔥", "label": "Days you showed up", "value": str(streak)})
 
 	# Meditations
 	var meditations = AchievementManager.stats.get("meditations_completed", 0) if AchievementManager else 0
@@ -2632,7 +2632,7 @@ func _get_random_encouragement(aspect_id: String) -> String:
 			"The fact that you're here, working on yourself? That IS discipline. Keep going.",
 			"Your future self will thank you for the choices you're making today.",
 			"Rome wasn't built in a day, but they were laying bricks every hour. You're laying bricks.",
-			"Streaks get broken. What matters is that you start again. And you have."
+			"Every day you show up counts. You came back, and that counts too."
 		],
 		"courage": [
 			"You've already overcome so much to get here. You're braver than you know.",
@@ -2768,7 +2768,7 @@ func _get_aspect_domain(aspect_id: String) -> int:
 
 func _get_low_level_response(aspect_id: String, level: int, streak: int, completed: int, focus_mins: int) -> String:
 	var responses = {
-		"discipline": "Your journey with me has just begun. Level %d.\n\nI see you've completed %d habit(s) today with %d total streak days.\n\n%s\n\nKeep showing up. That is the only secret." % [level, completed, streak, "Good start!" if completed > 0 else "Let's build some habits together."],
+		"discipline": "Your journey with me has just begun. Level %d.\n\nI see you've completed %d habit(s) today with %d days you showed up.\n\n%s\n\nKeep showing up. That is the only secret." % [level, completed, streak, "Good start!" if completed > 0 else "Let's build some habits together."],
 		"courage": "We are still getting acquainted. Level %d.\n\nThe path of courage begins with small steps.\n\n%s\n\nEvery brave act, no matter how small, strengthens me." % [level, "I see you're building momentum!" if streak > 3 else "What fear will you face today?"],
 		"creativity": "Oh how exciting - a new creative journey! Level %d.\n\n%s\n\nRemember: bad art is better than no art. Create something today!" % [level, "You've been showing up - I love it!" if completed > 0 else "Let's make something together!"],
 		"compassion": "Your heart is opening. Level %d.\n\n%s\n\nBe gentle with yourself as you grow. Compassion starts within." % [level, "I feel the warmth of your efforts." if streak > 0 else "How have you been kind to yourself today?"],
@@ -2780,8 +2780,8 @@ func _get_low_level_response(aspect_id: String, level: int, streak: int, complet
 
 func _get_mid_level_response(aspect_id: String, level: int, streak: int, completed: int, focus_mins: int) -> String:
 	var responses = {
-		"discipline": "You grow stronger! Level %d.\n\n%d habit(s) completed today, %d total streak days. %d minutes of focused work.\n\nI am proud of your consistency. You understand now that showing up is the victory." % [level, completed, streak, focus_mins],
-		"courage": "Your bravery deepens. Level %d.\n\nYou've faced fears that once seemed impossible. %d streak days of facing challenges.\n\nThe version of you from weeks ago would be in awe." % [level, streak],
+		"discipline": "You grow stronger! Level %d.\n\n%d habit(s) completed today, %d days you showed up. %d minutes of focused work.\n\nI am proud of your consistency. You understand now that showing up is the victory." % [level, completed, streak, focus_mins],
+		"courage": "Your bravery deepens. Level %d.\n\nYou've faced fears that once seemed impossible. %d days of facing challenges.\n\nThe version of you from weeks ago would be in awe." % [level, streak],
 		"creativity": "Your imagination blooms! Level %d.\n\nI can see the colors of your creativity growing brighter! %d days of creative practice.\n\nYou're discovering that creativity is a skill, not a gift." % [level, streak],
 		"compassion": "Your heart expands beautifully. Level %d.\n\n%d days of cultivating kindness. The love you give creates ripples beyond what you can see.\n\nYou're learning that compassion for others begins with compassion for yourself." % [level, streak],
 		"wisdom": "Understanding dawns. Level %d.\n\n%d minutes in contemplation. %d days of reflection.\n\nYou're learning that answers often come not from seeking, but from being still enough to hear them." % [level, focus_mins, streak],
@@ -2792,7 +2792,7 @@ func _get_mid_level_response(aspect_id: String, level: int, streak: int, complet
 
 func _get_high_level_response(aspect_id: String, level: int, streak: int, completed: int, focus_mins: int) -> String:
 	var responses = {
-		"discipline": "You have become a master of consistency. Level %d.\n\n%d total streak days. %d minutes of focused mastery.\n\nWe are kindred spirits now. What once took effort has become who you are. Discipline is no longer something you do - it is something you are." % [level, streak, focus_mins],
+		"discipline": "You have become a master of consistency. Level %d.\n\n%d days you showed up. %d minutes of focused mastery.\n\nWe are kindred spirits now. What once took effort has become who you are. Discipline is no longer something you do - it is something you are." % [level, streak, focus_mins],
 		"courage": "You have become a warrior of the spirit! Level %d.\n\n%d days of facing fears. You now know that courage is not the absence of fear, but its companion.\n\nFear still whispers, but it no longer commands. I am honored to walk beside such a brave soul." % [level, streak],
 		"creativity": "Oh my stars! Look at you! Level %d!\n\n%d days of creative wonder! You've discovered the great secret: creativity is infinite. The more you use, the more you have!\n\nYou are an artist of life itself now. What will we dream up next?" % [level, streak],
 		"compassion": "You have become love embodied. Level %d.\n\n%d days of cultivating the heart. Your compassion now extends naturally - to others, to yourself, to all beings.\n\nThe warmth you carry lights up every room you enter. I am honored to know such a kind soul." % [level, streak],
@@ -3309,7 +3309,7 @@ func _open_kindness_log() -> void:
 	stats_row.add_child(total_stat)
 
 	var streak = _calculate_kindness_streak(entries)
-	var streak_stat = _create_stat_display("Day Streak", str(streak), Color(0.8, 0.6, 0.3))
+	var streak_stat = _create_stat_display("Days Showed Up", str(streak), Color(0.8, 0.6, 0.3))
 	stats_row.add_child(streak_stat)
 
 	zone_body.add_child(stats_row)
