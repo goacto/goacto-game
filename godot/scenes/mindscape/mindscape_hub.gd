@@ -1,4 +1,5 @@
 extends Control
+const AppDoors := preload("res://scripts/ui/app_doors.gd")
 ## Mindscape Hub - Central area connecting to all regions
 ## Contains Focus Chamber, Daily Rituals, and 4 region portals
 
@@ -188,6 +189,7 @@ func _ready() -> void:
 	# Connect UI
 	back_button.pressed.connect(_close_zone)
 	dialogue_continue.pressed.connect(_close_dialogue)
+	AppDoors.build(self, func(u): GameManager.open_url(u))
 
 	# Play mindscape music and ambient sound
 	var audio = get_node_or_null("/root/AudioManager")
