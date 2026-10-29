@@ -1,4 +1,5 @@
 extends Control
+const ProSlots := preload("res://scripts/ui/pro_slots.gd")
 ## MainMenu - Entry point for the game
 ## Handles new game, continue, onboarding, and settings
 
@@ -838,7 +839,9 @@ func _show_load_panel() -> void:
 	slots_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(slots_label)
 
-	for i in range(1, 4):
+	for i in range(1, ProSlots.total() + 1):
+		if i == ProSlots.FREE_SLOTS + 1:
+			ProSlots.add_header(vbox)
 		var slot_row = _create_load_slot_row(i)
 		vbox.add_child(slot_row)
 

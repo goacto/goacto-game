@@ -1,4 +1,5 @@
 extends Control
+const ProSlots := preload("res://scripts/ui/pro_slots.gd")
 ## Bedroom - Agent Goacto's cabin on the Stellar Wanderer
 ## The "real world" space before entering the Mindscape via headset
 
@@ -4940,7 +4941,9 @@ func _show_save_panel() -> void:
 	vbox.add_child(slots_label)
 
 	# Save slots
-	for i in range(1, 4):
+	for i in range(1, ProSlots.total() + 1):
+		if i == ProSlots.FREE_SLOTS + 1:
+			ProSlots.add_header(vbox)
 		var slot_row = _create_save_slot_row(i)
 		vbox.add_child(slot_row)
 

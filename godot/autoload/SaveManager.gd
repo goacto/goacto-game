@@ -1,13 +1,13 @@
 extends Node
 ## SaveManager - Handles game persistence
 ## Saves player progress, habits, world state to local storage
-## Supports 3 save slots and export/import functionality
+## Supports 6 save slots (4-6 are a Pro preview) and export/import functionality
 
 const SAVE_PATH = "user://mindscape_save.json"  # Default/auto-save
 const SETTINGS_PATH = "user://mindscape_settings.json"
 const SAVE_SLOT_PREFIX = "user://mindscape_save_slot_"
 const JOURNAL_SLOT_PREFIX = "user://mindscape_journal_slot_"
-const NUM_SAVE_SLOTS = 3
+const NUM_SAVE_SLOTS = 6  # 1-3 free, 4-6 Pro preview (scripts/ui/pro_slots.gd); no payment wired
 
 var current_slot: int = 0  # 0 = auto-save, 1-3 = manual slots
 
