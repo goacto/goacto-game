@@ -1,4 +1,5 @@
 extends Control
+const GrowGive := preload("res://scripts/ui/grow_give.gd")
 ## Mindscape Hub - Central area connecting to all regions
 ## Contains Focus Chamber, Daily Rituals, and 4 region portals
 
@@ -10036,20 +10037,47 @@ func _start_weekly_synthesis(is_edit: bool) -> void:
 
 	# Wins section
 	var wins_label = Label.new()
-	wins_label.text = "What were your wins this week?"
+	wins_label.text = GrowGive.GROW_LABEL
 	wins_label.add_theme_font_size_override("font_size", 16)
 	wins_label.add_theme_color_override("font_color", Color(0.5, 0.8, 0.5))
 	zone_body.add_child(wins_label)
 
 	var wins_input = TextEdit.new()
 	wins_input.name = "WinsInput"
-	wins_input.placeholder_text = "Celebrate your achievements, big and small..."
+	wins_input.placeholder_text = "Something you practiced, tried or learned..."
 	wins_input.custom_minimum_size = Vector2(0, 60)
 	wins_input.add_theme_font_size_override("font_size", 14)
 	wins_input.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
 	if existing.size() > 0:
 		wins_input.text = existing[0].get("wins", "")
 	zone_body.add_child(wins_input)
+
+	_add_habit_spacer(10)
+
+	# Give section (aligned with the Kindness Log)
+	var give_label = Label.new()
+	give_label.text = GrowGive.GIVE_LABEL
+	give_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	give_label.add_theme_font_size_override("font_size", 16)
+	give_label.add_theme_color_override("font_color", Color(0.5, 0.75, 0.8))
+	zone_body.add_child(give_label)
+
+	var give_hint = Label.new()
+	give_hint.name = "GiveHint"
+	give_hint.text = GrowGive.give_line(GrowGive.give_count_this_week(GrowGive.load_kindness(), int(Time.get_unix_time_from_system())))
+	give_hint.add_theme_font_size_override("font_size", 13)
+	give_hint.add_theme_color_override("font_color", Color(0.55, 0.6, 0.65))
+	zone_body.add_child(give_hint)
+
+	var give_input = TextEdit.new()
+	give_input.name = "GiveInput"
+	give_input.placeholder_text = "A favor, a call, a kind word..."
+	give_input.custom_minimum_size = Vector2(0, 50)
+	give_input.add_theme_font_size_override("font_size", 14)
+	give_input.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+	if existing.size() > 0:
+		give_input.text = existing[0].get("give", "")
+	zone_body.add_child(give_input)
 
 	_add_habit_spacer(10)
 
@@ -10074,14 +10102,14 @@ func _start_weekly_synthesis(is_edit: bool) -> void:
 
 	# Lessons section
 	var lessons_label = Label.new()
-	lessons_label.text = "What did you learn?"
+	lessons_label.text = GrowGive.OPEN_LABEL
 	lessons_label.add_theme_font_size_override("font_size", 16)
 	lessons_label.add_theme_color_override("font_color", Color(0.6, 0.7, 0.8))
 	zone_body.add_child(lessons_label)
 
 	var lessons_input = TextEdit.new()
 	lessons_input.name = "LessonsInput"
-	lessons_input.placeholder_text = "Key insights and realizations..."
+	lessons_input.placeholder_text = "Optional."
 	lessons_input.custom_minimum_size = Vector2(0, 50)
 	lessons_input.add_theme_font_size_override("font_size", 14)
 	lessons_input.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
@@ -10181,13 +10209,15 @@ func _save_weekly_synthesis() -> void:
 	var challenges_input = zone_body.find_child("ChallengesInput", true, false) as TextEdit
 	var lessons_input = zone_body.find_child("LessonsInput", true, false) as TextEdit
 	var intentions_input = zone_body.find_child("IntentionsInput", true, false) as TextEdit
+	var give_input = zone_body.find_child("GiveInput", true, false) as TextEdit
+	var give = give_input.text.strip_edges() if give_input else ""
 
 	var wins = wins_input.text.strip_edges() if wins_input else ""
 	var challenges = challenges_input.text.strip_edges() if challenges_input else ""
 	var lessons = lessons_input.text.strip_edges() if lessons_input else ""
 	var intentions = intentions_input.text.strip_edges() if intentions_input else ""
 
-	if wins == "" and challenges == "" and lessons == "" and intentions == "":
+	if wins == "" and give == "" and challenges == "" and lessons == "" and intentions == "":
 		_show_dialogue("Nothing Entered", "Please fill in at least one section of your weekly review.")
 		return
 
@@ -10204,6 +10234,7 @@ func _save_weekly_synthesis() -> void:
 		"year": Time.get_date_dict_from_system().year,
 		"timestamp": Time.get_unix_time_from_system(),
 		"wins": wins,
+		"give": give,
 		"challenges": challenges,
 		"lessons": lessons,
 		"intentions": intentions,
