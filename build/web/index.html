@@ -102,10 +102,43 @@ body {
 	text-align: center;
 	z-index: 1;
 }
+
+#gate-progress-wrap {
+	display: none;
+	width: min(28rem, 90vw);
+	margin: 0 auto 8px;
+	text-align: left;
+}
+#gate-progress-wrap[data-active="1"] {
+	display: block;
+}
+#gate-progress {
+	width: 100%;
+	height: 12px;
+	background: #333;
+	border-radius: 999px;
+	overflow: hidden;
+}
+#gate-progress-fill {
+	height: 100%;
+	width: 0%;
+	background: #E8A33D;
+	border-radius: 999px;
+	transition: width 120ms linear;
+}
+#gate-progress-label {
+	margin: 8px 0 0;
+	font-size: 0.9rem;
+	opacity: 0.9;
+}
+#status-progress {
+	accent-color: #E8A33D;
+}
 		</style>
 		<link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
 <link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
 <script src="goacto-ping.js"></script>
+<script src="play-progress.js"></script>
 	</head>
 	<body>
 		<canvas id="canvas">
@@ -118,7 +151,7 @@ body {
 
 		<div id="status">
 			<img id="status-splash" class="show-image--true fullsize--false use-filter--true" src="index.png" alt="">
-			<progress id="status-progress"></progress>
+			<progress id="status-progress" role="progressbar" aria-label="Game download progress" aria-valuemin="0"></progress>
 			<div id="status-notice"></div>
 		</div>
 
@@ -130,6 +163,12 @@ body {
 			<p style="margin:0 0 20px;opacity:.9;max-width:28rem">A calm focus game from Team GOACTO. Growing Ourselves and Contributing To Others.</p>
 			<p style="margin:0 0 24px;font-size:.9rem;opacity:.7">Loads about 85 MB the first time. Wi‑Fi helps.</p>
 			<button id="play-btn" type="button" style="appearance:none;border:0;border-radius:999px;padding:14px 28px;background:#E8A33D;color:#1a1a1a;font-weight:700;font-size:1.05rem;cursor:pointer">Play</button>
+			<div id="gate-progress-wrap" data-active="0" aria-live="polite">
+				<div id="gate-progress" role="progressbar" aria-label="Game download progress" aria-valuemin="0">
+					<div id="gate-progress-fill"></div>
+				</div>
+				<p id="gate-progress-label"></p>
+			</div>
 		</div>
 		<script>
 (function () {
@@ -148,15 +187,36 @@ body {
 		});
 	}
 
+	const gateProgressWrap = document.getElementById('gate-progress-wrap');
+	const gateProgress = document.getElementById('gate-progress');
+	const gateProgressLabel = document.getElementById('gate-progress-label');
+	const PP = window.GoactoPlayProgress || {
+		formatBytes: function (n) { return String(n); },
+		expectedTotalBytes: function () { return 0; },
+		updateProgressBar: function () { return { determinate: false, percent: 0, label: 'Downloading…' }; },
+	};
+
+	function showGateProgress() {
+		btn.style.display = 'none';
+		gateProgressWrap.setAttribute('data-active', '1');
+		PP.updateProgressBar(gateProgress, gateProgressLabel, 0, 0, {});
+	}
+
+	function hideGate() {
+		gate.style.display = 'none';
+	}
+
 	function startEngine() {
 		if (started) return;
 		started = true;
 		btn.disabled = true;
 		btn.textContent = 'Loading…';
+		showGateProgress();
 
 		loadScript('index.js').then(function () {
 			const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":true,"fileSizes":{"index.pck":50460312,"index.wasm":37686550},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
 			const GODOT_THREADS_ENABLED = false;
+			const expectedTotal = PP.expectedTotalBytes(GODOT_CONFIG.fileSizes);
 			const engine = new Engine(GODOT_CONFIG);
 
 			const statusOverlay = document.getElementById('status');
@@ -203,9 +263,16 @@ body {
 				}
 				setStatusMode('notice');
 				initializing = false;
+				gateProgressWrap.setAttribute('data-active', '0');
+				btn.style.display = '';
 				btn.disabled = false;
 				btn.textContent = 'Try again';
 				started = false;
+			}
+
+			function applyProgress(current, total) {
+				PP.updateProgressBar(gateProgress, gateProgressLabel, current, total, { expectedTotal: expectedTotal });
+				PP.updateProgressBar(statusProgress, null, current, total, { expectedTotal: expectedTotal });
 			}
 
 			const missing = Engine.getMissingFeatures({
@@ -218,23 +285,21 @@ body {
 				return;
 			}
 
-			gate.style.display = 'none';
+			// Keep Play gate visible with honest byte bar; mirror onto Godot status bar.
 			setStatusMode('progress');
+			applyProgress(0, expectedTotal);
 			engine.startGame({
 				'onProgress': function (current, total) {
-					if (current > 0 && total > 0) {
-						statusProgress.value = current;
-						statusProgress.max = total;
-					} else {
-						statusProgress.removeAttribute('value');
-						statusProgress.removeAttribute('max');
-					}
+					applyProgress(current, total);
 				},
 			}).then(() => {
+				hideGate();
 				setStatusMode('hidden');
 			}, displayFailureNotice);
 		}).catch(function (err) {
 			console.error(err);
+			gateProgressWrap.setAttribute('data-active', '0');
+			btn.style.display = '';
 			btn.disabled = false;
 			btn.textContent = 'Try again';
 			started = false;
