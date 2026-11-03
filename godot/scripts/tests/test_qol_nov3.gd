@@ -56,6 +56,9 @@ func _init() -> void:
 
 	# 2.6 Menus
 	check(not menu_tscn.contains("TitleGlow"), "2.6 TitleGlow duplicate removed from main_menu.tscn")
+	var menu_gd := FileAccess.get_file_as_string("res://scenes/main_menu/main_menu.gd")
+	check(not menu_gd.contains("$CenterContainer/VBox/TitleContainer/TitleGlow"), "2.6 main_menu.gd has no @onready TitleGlow path")
+	check(menu_gd.contains("get_node_or_null(\"CenterContainer/VBox/TitleContainer/TitleGlow\")"), "2.6 main_menu.gd uses get_node_or_null for TitleGlow")
 	check(menu.contains("continue_button.disabled = not has_save"), "2.6 Continue reserved in layout via disabled, not removed")
 	check(cutscene.contains("PRESET_CENTER") and cutscene.contains("SkipConfirm"), "2.6 skip confirm centered with anchors")
 
