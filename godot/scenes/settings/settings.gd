@@ -508,9 +508,9 @@ func _build_controls_section() -> void:
 		return
 	vbox.add_child(section)
 	# Prefer near top of dynamic sections (before Separator3 / cutscene theater)
-	var sep = vbox.get_node_or_null("Separator3")
-	if sep:
-		vbox.move_child(section, sep.get_index())
+	var sep3 = vbox.get_node_or_null("Separator3")
+	if sep3:
+		vbox.move_child(section, sep3.get_index())
 	else:
 		var button_row = vbox.get_node_or_null("ButtonRow")
 		if button_row:

@@ -35,6 +35,13 @@ func _init() -> void:
 	check(kitchen_tscn.contains("WASD / Arrows move") and kitchen_tscn.contains("E or SPACE"), "2.2 ControlHints MoveHint lists WASD and E/SPACE")
 	check(kitchen.contains("_refresh_control_hints_visibility"), "2.2 hints not hidden solely by prompt")
 	check(settings.contains("ControlsSection") and settings.contains("WASD / Arrow keys"), "2.2 Settings Controls section with WASD")
+	# Parse safety: Controls section must not redeclare `sep` (Godot parse error)
+	var sep_decls := 0
+	for line in settings.split("\n"):
+		var stripped := line.strip_edges()
+		if stripped.begins_with("var sep ") or stripped.begins_with("var sep="):
+			sep_decls += 1
+	check(sep_decls <= 1, "2.2 settings ControlsSection no duplicate sep")
 	check(kitchen.contains("ControlsButton") and kitchen.contains("_open_controls_from_pause"), "2.2 pause menu Controls button")
 	check(controls.contains("WASD") and controls.contains("SPACE"), "2.2 shared ControlsHelp copy")
 
