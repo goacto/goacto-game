@@ -41,6 +41,8 @@ var type_speed: float = 0.03
 var type_timer: float = 0.0
 var is_finishing: bool = false
 var animation_time: float = 0.0
+var _hold_ff_idle: float = 0.0
+var _hold_skip_chip: Label = null
 
 # Character definitions
 const CHARACTERS = {
@@ -1029,6 +1031,29 @@ func _on_back() -> void:
 
 
 var skip_confirm_panel: PanelContainer = null
+
+func _update_hold_skip_chip(holding: bool) -> void:
+	# Design 2.5: show "Hold to skip" chip while SPACE / accept / right-click held
+	if holding:
+		if _hold_skip_chip == null or not is_instance_valid(_hold_skip_chip):
+			var chip := Label.new()
+			chip.name = "HoldSkipChip"
+			chip.text = "Hold to skip"
+			chip.add_theme_font_size_override("font_size", 16)
+			chip.add_theme_color_override("font_color", Color(0.9, 0.85, 0.7, 0.95))
+			chip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			chip.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+			chip.offset_left = -80
+			chip.offset_right = 80
+			chip.offset_top = -120
+			chip.offset_bottom = -90
+			add_child(chip)
+			_hold_skip_chip = chip
+		_hold_skip_chip.visible = true
+	elif _hold_skip_chip != null and is_instance_valid(_hold_skip_chip):
+		_hold_skip_chip.visible = false
+
 
 func _on_skip() -> void:
 	if skip_confirm_panel:

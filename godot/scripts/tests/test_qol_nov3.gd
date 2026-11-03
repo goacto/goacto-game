@@ -48,7 +48,7 @@ func _init() -> void:
 	check(kitchen.contains("your father stored"), "2.4 Lumina go-find string still includes 'your father'")
 
 	# 2.5 Faster intro / hold-FF
-	check(cutscene.contains("Hold to skip") or cutscene.contains("_update_hold_skip_chip"), "2.5 hold-to-FF chip")
+	check(cutscene.contains("Hold to skip") and cutscene.contains("_update_hold_skip_chip"), "2.5 hold-to-FF chip")
 	check(cutscene.contains("holding_ff") or cutscene.contains("Hold SPACE"), "2.5 hold accelerates typing")
 	# Dead-air cap: intro hold intervals should not be 2.0s anymore in title sequence
 	check(not cutscene.contains("# Hold for dramatic effect (2 seconds)"), "2.5 dramatic 2s hold comment removed/capped")
