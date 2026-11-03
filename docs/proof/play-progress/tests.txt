@@ -1,0 +1,13 @@
+✔ formatBytes uses KB/MB for human labels (0.695402ms)
+✔ expectedTotalBytes sums Godot fileSizes (0.152466ms)
+✔ updateProgressBar sets a11y attrs for determinate bytes (0.317281ms)
+✔ updateProgressBar falls back to expectedTotal when Godot total unknown (0.148238ms)
+✔ updateProgressBar indeterminate when no totals (0.129344ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 55.291917
