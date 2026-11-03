@@ -117,14 +117,6 @@ text = "MINDSCAPE"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="TitleGlow" type="Label" parent="CenterContainer/VBox/TitleContainer"]
-modulate = Color(0.83, 0.66, 0.29, 0.3)
-layout_mode = 2
-theme_override_font_sizes/font_size = 56
-text = "MINDSCAPE"
-horizontal_alignment = 1
-vertical_alignment = 1
-
 [node name="Subtitle" type="Label" parent="CenterContainer/VBox/TitleContainer" unique_id=91289600]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.83, 0.66, 0.29, 1)

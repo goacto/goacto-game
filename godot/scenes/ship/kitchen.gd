@@ -1,4 +1,5 @@
 extends Control
+const ControlsHelp := preload("res://scripts/ui/controls_help.gd")
 ## Kitchen - Family dining area on the Stellar Wanderer
 ## Part of intro flow: Kitchen -> Hallway -> Stairs -> Bedroom
 
@@ -119,6 +120,12 @@ var object_positions: Dictionary = {
 
 # Reference to key visual (set in _ready)
 var master_key_visual: Node2D = null
+var proximity_highlight: Polygon2D = null
+var save_toast: Label = null
+var _hints_move_done := false
+var _hints_interact_done := false
+const NPC_PRIORITY := {"Mom": 40.0}  # distance bonus so Mom beats Table when both in range
+const PROXIMITY_RADIUS := 100.0
 
 # Background sprite reference
 @onready var background_sprite: Sprite2D = $GameWorld/IsometricBase/BackgroundSprite
@@ -169,19 +176,20 @@ func _ready() -> void:
 	# Fade in from black
 	_fade_in()
 
-	# Show intro hint after fade completes (only for first visit)
-	await get_tree().create_timer(0.6).timeout
-	# Dr. Lumina's intro greeting - only plays once automatically
-	if not CampaignManager.has_seen_cutscene("intro_part2") and not GameManager.player_data.get("kitchen_intro_shown", false):
-		GameManager.player_data["kitchen_intro_shown"] = true
-		if not GameManager.has_item("mindscape_console"):
-			_show_dialogue("Dr. Lumina", "Your great-elder Zyx's Mindscape Console should be somewhere on the ship...\n\n*taps chin thoughtfully*\n\nExplore around - your father stored a lot of their old things when we moved aboard.", Callable(), "res://audio/voice/kitchen/lumina_go_find.ogg")
-		else:
-			_show_dialogue("Dr. Lumina", "You found Zyx's console! Now go set it up in your room.\n\n*gestures toward the door*\n\nI can't wait to hear about your first human!", Callable(), "res://audio/voice/kitchen/lumina_intro.ogg")
-		SaveManager.save_game()
-	# Otherwise, player can interact with Mom manually
+	# Web focus hardening after cutscene / Play gate (design 2.1)
+	if OS.has_feature("web"):
+		grab_focus()
+		JavaScriptBridge.eval("document.getElementById('canvas')?.focus()")
 
-	print("[Kitchen] Family dining area ready")
+	_ensure_proximity_highlight()
+	_ensure_save_toast()
+	if SaveManager and not SaveManager.save_completed.is_connected(_on_save_completed_toast):
+		SaveManager.save_completed.connect(_on_save_completed_toast)
+
+	# Defer Lumina auto-dialogue until player is near Mom and presses Interact (design 2.1 preferred).
+	# Objective banner already tells them what to do; no silent in_dialogue lock on enter.
+	await get_tree().create_timer(0.6).timeout
+	print("[Kitchen] Family dining area ready — movement unlocked")
 
 
 func _fade_in() -> void:
@@ -296,6 +304,8 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		if nearby_object != "" and interaction_prompt.visible:
 			_interact_with_object(nearby_object)
+		else:
+			_toast_walk_closer_if_distant_click(event.position)
 
 	# Zoom with mouse wheel
 	if event is InputEventMouseButton:
@@ -330,6 +340,9 @@ func _handle_movement(delta: float) -> void:
 		new_pos.y = clamp(new_pos.y, player_bounds.position.y, player_bounds.position.y + player_bounds.size.y)
 
 		player.position = new_pos
+		if not _hints_move_done:
+			_hints_move_done = true
+			_refresh_control_hints_visibility()
 
 		# Play movement sound
 		is_moving = true
@@ -359,14 +372,17 @@ func _apply_zoom(amount: float) -> void:
 
 func _check_object_proximity() -> void:
 	var closest_object: String = ""
-	var closest_distance: float = 100.0  # Interaction radius
+	var best_score: float = PROXIMITY_RADIUS
 
 	for object_name in object_positions:
 		var obj_pos = object_positions[object_name]
 		var distance = player.position.distance_to(obj_pos)
-
-		if distance < closest_distance:
-			closest_distance = distance
+		if distance > PROXIMITY_RADIUS:
+			continue
+		# Prefer NPCs (Mom) so E talks to Lumina instead of examining the table
+		var score = distance - float(NPC_PRIORITY.get(object_name, 0.0))
+		if score < best_score:
+			best_score = score
 			closest_object = object_name
 
 	if closest_object != nearby_object:
@@ -375,6 +391,7 @@ func _check_object_proximity() -> void:
 			_show_interaction_prompt(nearby_object)
 		else:
 			_hide_interaction_prompt()
+	_update_proximity_highlight()
 
 
 func _show_interaction_prompt(object_id: String) -> void:
@@ -386,17 +403,22 @@ func _show_interaction_prompt(object_id: String) -> void:
 	prompt_text_label.text = obj_data.get("prompt", "Press SPACE to interact")
 
 	interaction_prompt.visible = true
-	control_hints.visible = false
+	# Keep controls hint visible alongside the prompt (design 2.2)
+	_refresh_control_hints_visibility()
 
 
 func _hide_interaction_prompt() -> void:
 	interaction_prompt.visible = false
-	control_hints.visible = true
+	_refresh_control_hints_visibility()
+	_update_proximity_highlight()
 
 
 func _interact_with_object(object_id: String) -> void:
 	var obj_data = INTERACTIVE_OBJECTS.get(object_id, {})
 	var action = obj_data.get("action", "")
+	if not _hints_interact_done:
+		_hints_interact_done = true
+		_refresh_control_hints_visibility()
 
 	match action:
 		"go_hallway":
@@ -422,6 +444,16 @@ func _talk_to_mom() -> void:
 	var has_discipline = CampaignManager.has_seen_cutscene("discipline_awakens")
 	var has_console = GameManager.has_item("mindscape_console")
 	var needs_placement = GameManager.player_data.get("needs_console_placement", false)
+
+	# Deferred first-visit greeting (was auto-modal that locked movement)
+	if not has_used_mindscape and not GameManager.player_data.get("kitchen_intro_shown", false):
+		GameManager.player_data["kitchen_intro_shown"] = true
+		if not has_console:
+			_show_dialogue("Dr. Lumina", "Your great-elder Zyx's Mindscape Console should be somewhere on the ship...\n\n*taps chin thoughtfully*\n\nExplore around - your father stored a lot of their old things when we moved aboard.", Callable(), "res://audio/voice/kitchen/lumina_go_find.ogg")
+		else:
+			_show_dialogue("Dr. Lumina", "You found Zyx's console! Now go set it up in your room.\n\n*gestures toward the door*\n\nI can't wait to hear about your first human!", Callable(), "res://audio/voice/kitchen/lumina_intro.ogg")
+		SaveManager.save_game()
+		return
 
 	if not has_used_mindscape:
 		if not has_console:
@@ -504,6 +536,11 @@ func _show_dialogue(title: String, text: String, callback: Callable = Callable()
 	dialogue_panel.visible = true
 	in_dialogue = true
 	interaction_prompt.visible = false
+	# Fixed box: never clip mid-word; expand/scroll via min height (design 2.4)
+	if dialogue_text:
+		dialogue_text.clip_text = false
+		dialogue_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		dialogue_text.custom_minimum_size = Vector2(0, 120)
 	dialogue_callback = callback
 	voice_finished = false
 	has_voice = voice_path != ""
@@ -1336,8 +1373,8 @@ func _open_pause_menu() -> void:
 	pause_menu.set_anchors_preset(Control.PRESET_CENTER)
 	pause_menu.offset_left = -200
 	pause_menu.offset_right = 200
-	pause_menu.offset_top = -200
-	pause_menu.offset_bottom = 200
+	pause_menu.offset_top = -280
+	pause_menu.offset_bottom = 280
 
 	var margin = MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 30)
@@ -1369,6 +1406,24 @@ func _open_pause_menu() -> void:
 	resume_btn.pressed.connect(_close_pause_menu)
 	vbox.add_child(resume_btn)
 
+	# Save (local FileAccess / IDBFS — no new network)
+	var save_btn = Button.new()
+	save_btn.text = "Save"
+	save_btn.name = "SaveButton"
+	save_btn.custom_minimum_size = Vector2(0, 50)
+	save_btn.add_theme_font_size_override("font_size", 20)
+	save_btn.pressed.connect(_pause_save)
+	vbox.add_child(save_btn)
+
+	# Controls
+	var controls_btn = Button.new()
+	controls_btn.text = "Controls"
+	controls_btn.name = "ControlsButton"
+	controls_btn.custom_minimum_size = Vector2(0, 50)
+	controls_btn.add_theme_font_size_override("font_size", 20)
+	controls_btn.pressed.connect(_open_controls_from_pause)
+	vbox.add_child(controls_btn)
+
 	# Settings button
 	var settings_btn = Button.new()
 	settings_btn.text = "Settings"
@@ -1385,6 +1440,16 @@ func _open_pause_menu() -> void:
 	main_menu_btn.add_theme_color_override("font_color", Color(0.8, 0.6, 0.6))
 	main_menu_btn.pressed.connect(_go_to_main_menu)
 	vbox.add_child(main_menu_btn)
+
+	# Auto-save note under buttons
+	var autosave_note = Label.new()
+	autosave_note.name = "AutoSaveNote"
+	autosave_note.text = "Progress auto-saves on your device"
+	autosave_note.add_theme_font_size_override("font_size", 12)
+	autosave_note.add_theme_color_override("font_color", Color(0.55, 0.55, 0.65))
+	autosave_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	autosave_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	vbox.add_child(autosave_note)
 
 	add_child(pause_menu)
 
@@ -1405,3 +1470,143 @@ func _go_to_main_menu() -> void:
 	_close_pause_menu()
 	SaveManager.save_game()
 	get_tree().change_scene_to_file("res://scenes/main_menu/main_menu.tscn")
+
+
+func _refresh_control_hints_visibility() -> void:
+	if control_hints == null:
+		return
+	# Fade after first successful move AND interact; otherwise keep visible even with prompt up
+	control_hints.visible = not (_hints_move_done and _hints_interact_done)
+
+
+func _ensure_proximity_highlight() -> void:
+	if proximity_highlight != null or isometric_base == null:
+		return
+	proximity_highlight = Polygon2D.new()
+	proximity_highlight.name = "ProximityHighlight"
+	proximity_highlight.z_index = 5
+	proximity_highlight.color = Color(0.95, 0.85, 0.35, 0.35)
+	proximity_highlight.polygon = PackedVector2Array([
+		Vector2(0, -28), Vector2(36, 0), Vector2(0, 28), Vector2(-36, 0)
+	])
+	proximity_highlight.visible = false
+	isometric_base.add_child(proximity_highlight)
+
+
+func _update_proximity_highlight() -> void:
+	if proximity_highlight == null:
+		return
+	if nearby_object == "" or not object_positions.has(nearby_object):
+		proximity_highlight.visible = false
+		return
+	proximity_highlight.position = object_positions[nearby_object]
+	proximity_highlight.visible = true
+
+
+func _ensure_save_toast() -> void:
+	if save_toast != null:
+		return
+	save_toast = Label.new()
+	save_toast.name = "SaveToast"
+	save_toast.text = "Saved!"
+	save_toast.visible = false
+	save_toast.add_theme_font_size_override("font_size", 22)
+	save_toast.add_theme_color_override("font_color", Color(0.85, 0.95, 0.75))
+	save_toast.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	save_toast.add_theme_constant_override("outline_size", 6)
+	save_toast.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	save_toast.offset_top = 90
+	save_toast.offset_bottom = 130
+	save_toast.offset_left = -80
+	save_toast.offset_right = 80
+	save_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	save_toast.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(save_toast)
+
+
+func _on_save_completed_toast() -> void:
+	_show_saved_toast()
+
+
+func _show_saved_toast() -> void:
+	_ensure_save_toast()
+	save_toast.visible = true
+	save_toast.modulate.a = 1.0
+	var tw = create_tween()
+	tw.tween_interval(2.0)
+	tw.tween_property(save_toast, "modulate:a", 0.0, 0.4)
+	tw.tween_callback(func():
+		if save_toast:
+			save_toast.visible = false
+			save_toast.modulate.a = 1.0
+	)
+
+
+func _pause_save() -> void:
+	SaveManager.save_game()
+	# toast via save_completed signal
+
+
+func _open_controls_from_pause() -> void:
+	_close_pause_menu()
+	var panel = PanelContainer.new()
+	panel.name = "ControlsPanel"
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.06, 0.05, 0.1, 0.98)
+	style.border_color = Color(0.5, 0.4, 0.7, 0.6)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(12)
+	panel.add_theme_stylebox_override("panel", style)
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.offset_left = -260
+	panel.offset_right = 260
+	panel.offset_top = -220
+	panel.offset_bottom = 220
+	var margin = MarginContainer.new()
+	for s in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
+		margin.add_theme_constant_override(s, 24)
+	panel.add_child(margin)
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 12)
+	margin.add_child(vbox)
+	var title = Label.new()
+	title.text = "Controls"
+	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_color_override("font_color", Color(0.83, 0.66, 0.29))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(title)
+	var body = Label.new()
+	body.name = "ControlsBody"
+	body.text = ControlsHelp.keyboard_and_touch_text()
+	body.add_theme_font_size_override("font_size", 16)
+	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	vbox.add_child(body)
+	var close_btn = Button.new()
+	close_btn.text = "Close"
+	close_btn.custom_minimum_size = Vector2(0, 44)
+	close_btn.pressed.connect(func():
+		panel.queue_free()
+		in_dialogue = false
+	)
+	vbox.add_child(close_btn)
+	in_dialogue = true
+	add_child(panel)
+
+
+func _toast_walk_closer_if_distant_click(screen_pos: Vector2) -> void:
+	# MVP: no click-to-pathfind — tell the player to walk with WASD
+	if save_toast == null:
+		_ensure_save_toast()
+	save_toast.text = "Walk closer with WASD / Arrows"
+	save_toast.visible = true
+	save_toast.modulate.a = 1.0
+	var tw = create_tween()
+	tw.tween_interval(1.6)
+	tw.tween_property(save_toast, "modulate:a", 0.0, 0.3)
+	tw.tween_callback(func():
+		if save_toast:
+			save_toast.visible = false
+			save_toast.text = "Saved!"
+			save_toast.modulate.a = 1.0
+	)
+

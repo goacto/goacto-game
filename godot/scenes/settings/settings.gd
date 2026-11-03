@@ -119,6 +119,9 @@ func _ready() -> void:
 	# Setup button sounds
 	_setup_ui_sounds()
 
+	# Controls help (keyboard + touch)
+	_build_controls_section()
+
 	# Build cutscene theater section
 	_build_cutscene_theater()
 
@@ -474,6 +477,45 @@ func _show_message(text: String) -> void:
 # =============================================================================
 # CUTSCENE THEATER
 # =============================================================================
+
+func _build_controls_section() -> void:
+	var section = VBoxContainer.new()
+	section.name = "ControlsSection"
+	section.add_theme_constant_override("separation", 8)
+	var title = Label.new()
+	title.name = "ControlsSectionTitle"
+	title.text = "Controls"
+	title.add_theme_font_size_override("font_size", 18)
+	title.add_theme_color_override("font_color", Color(0.83, 0.66, 0.29))
+	section.add_child(title)
+	var body = Label.new()
+	body.name = "ControlsSectionBody"
+	body.text = (
+		"WASD / Arrow keys — move\n"
+		+ "E or SPACE — interact / continue\n"
+		+ "ESC — pause menu\n"
+		+ "Click does not walk — use WASD to reach distant doors\n"
+		+ "Touch: on-screen D-pad moves; Tap Interact talks / examines"
+	)
+	body.add_theme_font_size_override("font_size", 14)
+	body.add_theme_color_override("font_color", Color(0.75, 0.75, 0.82))
+	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	section.add_child(body)
+	var sep = HSeparator.new()
+	section.add_child(sep)
+	var vbox = $Panel/Margin/ScrollContainer/VBox
+	if not vbox:
+		return
+	vbox.add_child(section)
+	# Prefer near top of dynamic sections (before Separator3 / cutscene theater)
+	var sep = vbox.get_node_or_null("Separator3")
+	if sep:
+		vbox.move_child(section, sep.get_index())
+	else:
+		var button_row = vbox.get_node_or_null("ButtonRow")
+		if button_row:
+			vbox.move_child(section, button_row.get_index())
+
 
 func _build_cutscene_theater() -> void:
 	# Get the VBox container and find the separator before Back button

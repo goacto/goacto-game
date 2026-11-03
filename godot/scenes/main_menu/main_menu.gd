@@ -78,9 +78,18 @@ func _ready() -> void:
 	if audio and audio.has_method("stop_voice"):
 		audio.stop_voice()
 
-	# Check if save exists
+	# Check if save exists — keep Continue in layout to avoid jump (design 2.6)
 	var has_save = SaveManager.has_save()
-	continue_button.visible = has_save
+	continue_button.visible = true
+	continue_button.disabled = not has_save
+	continue_button.modulate = Color(1, 1, 1, 1.0 if has_save else 0.0)
+	continue_button.mouse_filter = Control.MOUSE_FILTER_STOP if has_save else Control.MOUSE_FILTER_IGNORE
+
+	# Single title: TitleGlow removed from scene (design 2.6); keep guard if old save packs linger
+	if has_node("CenterContainer/VBox/TitleContainer/TitleGlow"):
+		var title_glow = get_node("CenterContainer/VBox/TitleContainer/TitleGlow")
+		title_glow.get_parent().remove_child(title_glow)
+		title_glow.queue_free()
 
 	# Load button is always visible (for importing saves)
 	load_button.visible = true
