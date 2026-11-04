@@ -68,6 +68,9 @@ func _init() -> void:
 	check(menu_gd.contains("get_node_or_null(\"CenterContainer/VBox/TitleContainer/TitleGlow\")"), "2.6 main_menu.gd uses get_node_or_null for TitleGlow")
 	check(menu.contains("continue_button.disabled = not has_save"), "2.6 Continue reserved in layout via disabled, not removed")
 	check(cutscene.contains("PRESET_CENTER") and cutscene.contains("SkipConfirm"), "2.6 skip confirm centered with anchors")
+	check(cutscene.contains("skip_confirm_panel.z_index = 100"), "2.6 SkipConfirm z_index above ClickArea")
+	check(cutscene.contains("click_area.mouse_filter = Control.MOUSE_FILTER_IGNORE"), "2.6 ClickArea ignored while SkipConfirm open")
+	check(cutscene.contains("if skip_confirm_panel:") and cutscene.contains("func _on_click_area"), "2.6 click_area no-ops under SkipConfirm")
 
 	# 2.7 Save in pause + toast
 	check(kitchen.contains("SaveButton") and kitchen.contains("_pause_save"), "2.7 pause Save button")

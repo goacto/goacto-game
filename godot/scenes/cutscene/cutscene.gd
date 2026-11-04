@@ -590,6 +590,9 @@ func _input(event: InputEvent) -> void:
 
 func _on_click_area() -> void:
 	# Handle clicks on the full-screen click area
+	# SkipConfirm sits centered above dialogue; never advance under it.
+	if skip_confirm_panel:
+		return
 	print("[Cutscene] Click area pressed")
 	_advance_dialogue()
 
@@ -1121,21 +1124,39 @@ func _on_skip() -> void:
 	skip_btn.pressed.connect(_confirm_skip)
 	btn_row.add_child(skip_btn)
 
-	# Center on viewport (design 2.6)
+	# Center on viewport (design 2.6). Raise above full-screen ClickArea
+	# (z_index 0) so Keep Watching / Skip receive taps on tall phone viewports.
+	skip_confirm_panel.z_index = 100
+	skip_confirm_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	skip_confirm_panel.set_anchors_preset(Control.PRESET_CENTER)
-	skip_confirm_panel.custom_minimum_size = Vector2(360, 0)
-	skip_confirm_panel.offset_left = -180
-	skip_confirm_panel.offset_right = 180
-	skip_confirm_panel.offset_top = -90
-	skip_confirm_panel.offset_bottom = 90
+	# Keep ~48 CSS-px touch targets when canvas_items+expand shrinks UI.
+	var win := get_window().size
+	var vp := get_viewport().get_visible_rect().size
+	var screen_scale := minf(win.x / maxf(vp.x, 1.0), win.y / maxf(vp.y, 1.0))
+	var touch_pad := screen_scale < 0.5
+	var panel_w := 420.0 if touch_pad else 360.0
+	var panel_h := 220.0 if touch_pad else 180.0
+	var btn_h := 72.0 if touch_pad else 45.0
+	keep_btn.custom_minimum_size = Vector2(160 if touch_pad else 140, btn_h)
+	skip_btn.custom_minimum_size = Vector2(120 if touch_pad else 100, btn_h)
+	skip_confirm_panel.custom_minimum_size = Vector2(panel_w, 0)
+	skip_confirm_panel.offset_left = -panel_w * 0.5
+	skip_confirm_panel.offset_right = panel_w * 0.5
+	skip_confirm_panel.offset_top = -panel_h * 0.5
+	skip_confirm_panel.offset_bottom = panel_h * 0.5
 
 	add_child(skip_confirm_panel)
+	# ClickArea is full-screen at z=0; ignore it while confirm is up.
+	if click_area:
+		click_area.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
 func _dismiss_skip_confirm() -> void:
 	if skip_confirm_panel:
 		skip_confirm_panel.queue_free()
 		skip_confirm_panel = null
+	if click_area:
+		click_area.mouse_filter = Control.MOUSE_FILTER_STOP
 
 
 func _confirm_skip() -> void:
@@ -1147,6 +1168,8 @@ func _confirm_skip() -> void:
 	if skip_confirm_panel:
 		skip_confirm_panel.queue_free()
 		skip_confirm_panel = null
+	if click_area:
+		click_area.mouse_filter = Control.MOUSE_FILTER_STOP
 
 	print("[Cutscene] Skip confirmed - calling _finish_cutscene()")
 	_finish_cutscene()
