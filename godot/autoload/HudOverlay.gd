@@ -15,6 +15,7 @@ const SPACE_PROMPT := "Press SPACE"
 
 var is_touch_layout := false
 var _objective_label: Label
+var _objective_pill: Control
 var _touch_root: Control
 var _dpad: Control
 
@@ -74,15 +75,29 @@ func _apply_canvas_scaling() -> void:
 # ---------------------------------------------------------------- objective tracker
 
 func _build_objective_tracker() -> void:
+	var pill := PanelContainer.new()
+	pill.name = "ObjectivePill"
+	pill.position = Vector2(12, 56)
+	pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.05, 0.04, 0.1, 0.78)
+	style.set_corner_radius_all(10)
+	style.set_content_margin_all(10)
+	style.border_color = Color(0.83, 0.66, 0.29, 0.45)
+	style.set_border_width_all(1)
+	pill.add_theme_stylebox_override("panel", style)
 	_objective_label = Label.new()
 	_objective_label.name = "ObjectiveTracker"
-	_objective_label.position = Vector2(16, 62)
-	_objective_label.add_theme_font_size_override("font_size", 15)
-	_objective_label.add_theme_color_override("font_color", Color(0.95, 0.85, 0.5, 0.95))
-	_objective_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
-	_objective_label.add_theme_constant_override("outline_size", 4)
+	_objective_label.add_theme_font_size_override("font_size", 17)
+	_objective_label.add_theme_color_override("font_color", Color(0.98, 0.92, 0.7, 1.0))
+	_objective_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+	_objective_label.add_theme_constant_override("outline_size", 5)
+	_objective_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_objective_label.custom_minimum_size = Vector2(420, 0)
 	_objective_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_objective_label)
+	pill.add_child(_objective_label)
+	_objective_pill = pill
+	add_child(pill)
 
 
 ## One line, derived from story progress.
@@ -164,12 +179,18 @@ func _is_room_scene(scene: Node) -> bool:
 func _process(_delta: float) -> void:
 	var scene := get_tree().current_scene
 	var in_room := _is_room_scene(scene)
-	_objective_label.visible = in_room
-	if in_room:
+	if _objective_pill:
+		_objective_pill.visible = in_room
+	elif _objective_label:
+		_objective_label.visible = in_room
+	if in_room and _objective_label:
 		_objective_label.text = current_objective()
 	_touch_root.visible = in_room and is_touch_layout
 	# bedroom / hub ship their own joystick; don't stack a second movement control
-	var in_dialogue: bool = scene != null and bool(scene.get("in_dialogue"))
+	var in_dialogue := false
+	if scene != null:
+		var raw = scene.get("in_dialogue")
+		in_dialogue = raw == true
 	_dpad.visible = not in_dialogue and scene != null and scene.find_child("VirtualJoystick", true, false) == null
 	if in_room:
 		_update_interact_hint(scene)

@@ -41,6 +41,8 @@ var type_speed: float = 0.03
 var type_timer: float = 0.0
 var is_finishing: bool = false
 var animation_time: float = 0.0
+var _hold_ff_idle: float = 0.0
+var _hold_skip_chip: Label = null
 
 # Character definitions
 const CHARACTERS = {
@@ -509,17 +511,34 @@ func _process(delta: float) -> void:
 	if character_system.visible:
 		_animate_system_character()
 
+	# Hold SPACE / E / right-click to fast-forward typewriter (design 2.5)
+	var holding_ff := (
+		Input.is_action_pressed("ui_accept")
+		or Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
+	)
+	_update_hold_skip_chip(holding_ff)
+
 	if is_typing:
+		var speed = type_speed * (0.08 if holding_ff else 1.0)
 		type_timer += delta
-		if type_timer >= type_speed:
+		if type_timer >= speed:
 			type_timer = 0.0
-			displayed_chars += 1
+			var step := 4 if holding_ff else 1
+			displayed_chars += step
 			if displayed_chars >= full_text.length():
 				dialogue_label.text = full_text
 				is_typing = false
 				continue_hint.visible = true
 			else:
 				dialogue_label.text = full_text.substr(0, displayed_chars)
+	elif holding_ff and not skip_confirm_panel:
+		# Cap dead air: if text done and player holds, advance after short grace
+		_hold_ff_idle += delta
+		if _hold_ff_idle >= 0.35:
+			_hold_ff_idle = 0.0
+			_advance_dialogue()
+	else:
+		_hold_ff_idle = 0.0
 
 
 func _animate_system_character() -> void:
@@ -571,6 +590,9 @@ func _input(event: InputEvent) -> void:
 
 func _on_click_area() -> void:
 	# Handle clicks on the full-screen click area
+	# SkipConfirm sits centered above dialogue; never advance under it.
+	if skip_confirm_panel:
+		return
 	print("[Cutscene] Click area pressed")
 	_advance_dialogue()
 
@@ -648,8 +670,8 @@ func _play_cinematic_intro() -> void:
 	# Fade from black (2 seconds)
 	tween.tween_property(fade_overlay, "color:a", 0.0, 2.0).set_ease(Tween.EASE_OUT)
 
-	# Pause to let visuals settle (1 second)
-	tween.tween_interval(1.0)
+	# Pause to let visuals settle
+	tween.tween_interval(0.35)
 
 	# Fade in title (1.5 seconds)
 	tween.tween_property(title, "theme_override_colors/font_color:a", 1.0, 1.5).set_ease(Tween.EASE_OUT)
@@ -657,8 +679,8 @@ func _play_cinematic_intro() -> void:
 	# Fade in subtitle (1 second)
 	tween.tween_property(subtitle, "theme_override_colors/font_color:a", 1.0, 1.0).set_ease(Tween.EASE_OUT)
 
-	# Hold for dramatic effect (2 seconds)
-	tween.tween_interval(2.0)
+	# Hold capped (design 2.5 dead-air)
+	tween.tween_interval(0.4)
 
 	# Fade out title and subtitle (1 second)
 	tween.set_parallel(true)
@@ -666,8 +688,8 @@ func _play_cinematic_intro() -> void:
 	tween.tween_property(subtitle, "theme_override_colors/font_color:a", 0.0, 1.0)
 	tween.set_parallel(false)
 
-	# Brief pause (0.5 seconds)
-	tween.tween_interval(0.5)
+	# Brief pause
+	tween.tween_interval(0.2)
 
 	# Clean up and start the actual cutscene
 	tween.tween_callback(func():
@@ -1013,6 +1035,29 @@ func _on_back() -> void:
 
 var skip_confirm_panel: PanelContainer = null
 
+func _update_hold_skip_chip(holding: bool) -> void:
+	# Design 2.5: show "Hold to skip" chip while SPACE / accept / right-click held
+	if holding:
+		if _hold_skip_chip == null or not is_instance_valid(_hold_skip_chip):
+			var chip := Label.new()
+			chip.name = "HoldSkipChip"
+			chip.text = "Hold to skip"
+			chip.add_theme_font_size_override("font_size", 16)
+			chip.add_theme_color_override("font_color", Color(0.9, 0.85, 0.7, 0.95))
+			chip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			chip.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+			chip.offset_left = -80
+			chip.offset_right = 80
+			chip.offset_top = -120
+			chip.offset_bottom = -90
+			add_child(chip)
+			_hold_skip_chip = chip
+		_hold_skip_chip.visible = true
+	elif _hold_skip_chip != null and is_instance_valid(_hold_skip_chip):
+		_hold_skip_chip.visible = false
+
+
 func _on_skip() -> void:
 	if skip_confirm_panel:
 		return  # Already showing
@@ -1079,20 +1124,39 @@ func _on_skip() -> void:
 	skip_btn.pressed.connect(_confirm_skip)
 	btn_row.add_child(skip_btn)
 
-	# Center on screen
-	skip_confirm_panel.position = Vector2(
-		(get_viewport_rect().size.x - 350) / 2,
-		(get_viewport_rect().size.y - 150) / 2
-	)
-	skip_confirm_panel.custom_minimum_size = Vector2(350, 0)
+	# Center on viewport (design 2.6). Raise above full-screen ClickArea
+	# (z_index 0) so Keep Watching / Skip receive taps on tall phone viewports.
+	skip_confirm_panel.z_index = 100
+	skip_confirm_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	skip_confirm_panel.set_anchors_preset(Control.PRESET_CENTER)
+	# Keep ~48 CSS-px touch targets when canvas_items+expand shrinks UI.
+	var win := get_window().size
+	var vp := get_viewport().get_visible_rect().size
+	var screen_scale := minf(win.x / maxf(vp.x, 1.0), win.y / maxf(vp.y, 1.0))
+	var touch_pad := screen_scale < 0.5
+	var panel_w := 420.0 if touch_pad else 360.0
+	var panel_h := 220.0 if touch_pad else 180.0
+	var btn_h := 72.0 if touch_pad else 45.0
+	keep_btn.custom_minimum_size = Vector2(160 if touch_pad else 140, btn_h)
+	skip_btn.custom_minimum_size = Vector2(120 if touch_pad else 100, btn_h)
+	skip_confirm_panel.custom_minimum_size = Vector2(panel_w, 0)
+	skip_confirm_panel.offset_left = -panel_w * 0.5
+	skip_confirm_panel.offset_right = panel_w * 0.5
+	skip_confirm_panel.offset_top = -panel_h * 0.5
+	skip_confirm_panel.offset_bottom = panel_h * 0.5
 
 	add_child(skip_confirm_panel)
+	# ClickArea is full-screen at z=0; ignore it while confirm is up.
+	if click_area:
+		click_area.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
 func _dismiss_skip_confirm() -> void:
 	if skip_confirm_panel:
 		skip_confirm_panel.queue_free()
 		skip_confirm_panel = null
+	if click_area:
+		click_area.mouse_filter = Control.MOUSE_FILTER_STOP
 
 
 func _confirm_skip() -> void:
@@ -1104,6 +1168,8 @@ func _confirm_skip() -> void:
 	if skip_confirm_panel:
 		skip_confirm_panel.queue_free()
 		skip_confirm_panel = null
+	if click_area:
+		click_area.mouse_filter = Control.MOUSE_FILTER_STOP
 
 	print("[Cutscene] Skip confirmed - calling _finish_cutscene()")
 	_finish_cutscene()

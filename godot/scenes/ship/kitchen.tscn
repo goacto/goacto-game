@@ -479,7 +479,7 @@ alignment = 1
 [node name="MoveHint" type="Label" parent="ControlHints"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 12
-text = "WASD/Arrows: Move"
+text = "WASD / Arrows move · E or SPACE interact · ESC menu"
 
 [node name="DialoguePanel" type="PanelContainer" parent="."]
 visible = false
@@ -489,10 +489,10 @@ anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = -400.0
-offset_top = -180.0
-offset_right = 400.0
-offset_bottom = -30.0
+offset_left = -420.0
+offset_top = -280.0
+offset_right = 420.0
+offset_bottom = -24.0
 grow_horizontal = 2
 grow_vertical = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_dialogue")
@@ -515,11 +515,14 @@ text = "Speaker"
 horizontal_alignment = 1
 
 [node name="DialogueText" type="Label" parent="DialoguePanel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 120)
 layout_mode = 2
-theme_override_font_sizes/font_size = 14
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 15
 text = "Dialogue text goes here..."
 horizontal_alignment = 1
-autowrap_mode = 2
+autowrap_mode = 3
+clip_text = false
 
 [node name="DialogueButton" type="Button" parent="DialoguePanel/Margin/VBox"]
 layout_mode = 2

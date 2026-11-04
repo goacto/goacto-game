@@ -18,7 +18,7 @@ const FitViewport := preload("res://scripts/ui/fit_viewport.gd")
 # Visual effects
 @onready var stars_container: Control = $StarsContainer
 @onready var glow_orb: Control = $GlowOrb
-@onready var title_glow: Label = $CenterContainer/VBox/TitleContainer/TitleGlow
+var title_glow: Label = null  # TitleGlow removed (QoL 2.6); kept nullable for safe animate
 
 # Load game panel
 var load_panel: PanelContainer = null
@@ -78,9 +78,19 @@ func _ready() -> void:
 	if audio and audio.has_method("stop_voice"):
 		audio.stop_voice()
 
-	# Check if save exists
+	# Check if save exists — keep Continue in layout to avoid jump (design 2.6)
 	var has_save = SaveManager.has_save()
-	continue_button.visible = has_save
+	continue_button.visible = true
+	continue_button.disabled = not has_save
+	continue_button.modulate = Color(1, 1, 1, 1.0 if has_save else 0.0)
+	continue_button.mouse_filter = Control.MOUSE_FILTER_STOP if has_save else Control.MOUSE_FILTER_IGNORE
+
+	# Single title: TitleGlow removed from scene (design 2.6); keep guard if old save packs linger
+	title_glow = get_node_or_null("CenterContainer/VBox/TitleContainer/TitleGlow") as Label
+	if title_glow:
+		title_glow.get_parent().remove_child(title_glow)
+		title_glow.queue_free()
+		title_glow = null
 
 	# Load button is always visible (for importing saves)
 	load_button.visible = true
