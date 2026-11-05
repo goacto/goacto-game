@@ -34,6 +34,7 @@ var current_topic_id: String = ""
 # Difficulty mode
 enum DifficultyMode { EASY, HARD }
 var difficulty: DifficultyMode = DifficultyMode.EASY
+const QuietLink := preload("res://scripts/ui/quiet_link.gd")
 const AspectLabel := preload("res://scripts/ui/aspect_label.gd")
 const EASY_XP_MULTIPLIER: float = 0.7
 const HARD_XP_MULTIPLIER: float = 1.5
@@ -1715,6 +1716,9 @@ func _show_session_summary() -> void:
 	continue_btn.add_theme_font_size_override("font_size", 22)
 	continue_btn.pressed.connect(_close_summary_show_journal)
 	vbox.add_child(continue_btn)
+
+	# One quiet link to the $7 workbook (no pop-up).
+	vbox.add_child(QuietLink.make())
 
 	# Center the panel on screen
 	summary_panel.position = Vector2(
