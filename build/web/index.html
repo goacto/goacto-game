@@ -134,6 +134,31 @@ body {
 #status-progress {
 	accent-color: #E8A33D;
 }
+/* Landscape plays best: the scene is 16:9 (1366×768). On a phone held upright
+   (about 390px wide) show one hint. It stays in the top center so it does not
+   cover Skip (top right) or Report Bugs and Share Feedback (bottom left). */
+#rotate-hint {
+	display: none;
+	position: fixed;
+	top: 10px;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 40;
+	max-width: calc(100vw - 200px);
+	padding: 8px 12px;
+	border-radius: 999px;
+	background: #E8A33D;
+	color: #1a1a1a;
+	font-family: system-ui, -apple-system, sans-serif;
+	font-weight: 700;
+	font-size: 0.85rem;
+	line-height: 1.2;
+	text-align: center;
+	pointer-events: none;
+}
+@media (orientation: portrait) and (max-width: 500px) {
+	#rotate-hint { display: block; }
+}
 		</style>
 		<link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
 <link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
@@ -141,6 +166,7 @@ body {
 <script src="play-progress.js"></script>
 	</head>
 	<body>
+		<div id="rotate-hint" role="status">Turn your phone sideways</div>
 		<canvas id="canvas">
 			Your browser does not support the canvas tag.
 		</canvas>
@@ -161,7 +187,10 @@ body {
 			<img src="index.icon.png" width="96" height="96" alt="" style="margin-bottom:16px;border-radius:16px" />
 			<h1 style="margin:0 0 8px;font-size:1.75rem;color:#E8A33D">Mindscape</h1>
 			<p style="margin:0 0 20px;opacity:.9;max-width:28rem">A calm focus game from Team GOACTO. Growing Ourselves and Contributing To Others.</p>
-			<p style="margin:0 0 24px;font-size:.9rem;opacity:.7">Loads about 85 MB the first time. Wi‑Fi helps.</p>
+			<!-- Zach: please approve the three lines under the tagline before we lock the copy. -->
+			<p id="session-what" style="margin:0 0 10px;font-size:.95rem;opacity:.9;max-width:28rem">A session is a few quiet minutes of real focus.</p>
+			<p id="wifi-hint" style="margin:0 0 8px;font-size:.9rem;opacity:.85">Use Wi-Fi</p>
+			<p id="load-size" style="margin:0 0 24px;font-size:.9rem;opacity:.7">Loads about 85 MB the first time.</p>
 			<button id="play-btn" type="button" style="appearance:none;border:0;border-radius:999px;padding:14px 28px;background:#E8A33D;color:#1a1a1a;font-weight:700;font-size:1.05rem;cursor:pointer">Play</button>
 			<div id="gate-progress-wrap" data-active="0" aria-live="polite">
 				<div id="gate-progress" role="progressbar" aria-label="Game download progress" aria-valuemin="0">
@@ -214,7 +243,7 @@ body {
 		showGateProgress();
 
 		loadScript('index.js').then(function () {
-			const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":true,"fileSizes":{"index.pck":50463024,"index.wasm":37686550},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
+			const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":true,"fileSizes":{"index.pck":50476412,"index.wasm":37686550},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
 			const GODOT_THREADS_ENABLED = false;
 			const expectedTotal = PP.expectedTotalBytes(GODOT_CONFIG.fileSizes);
 			const engine = new Engine(GODOT_CONFIG);

@@ -5,6 +5,7 @@ extends Control
 signal settings_closed
 
 const FitViewport := preload("res://scripts/ui/fit_viewport.gd")
+const PhoneChrome := preload("res://scripts/ui/phone_chrome.gd")
 
 # Audio sliders
 @onready var master_slider: HSlider = $Panel/Margin/ScrollContainer/VBox/AudioSection/MasterRow/MasterSlider
@@ -124,6 +125,9 @@ func _ready() -> void:
 
 	# Build feedback section
 	_build_feedback_section()
+
+	# Build stamp used to sit on the feedback link. It lives here now.
+	_build_build_stamp()
 
 	# Anonymous usage count opt-out (web only)
 	_build_usage_toggle()
@@ -742,6 +746,26 @@ func _build_feedback_section() -> void:
 
 
 const EarlyTesting := preload("res://scripts/ui/early_testing.gd")
+
+
+## Version + timestamp. Not drawn on the gameplay footer.
+func _build_build_stamp() -> void:
+	var vbox = $Panel/Margin/ScrollContainer/VBox
+	if not vbox:
+		return
+	var label := Label.new()
+	label.name = "BuildStamp"
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.add_theme_font_size_override("font_size", 13)
+	label.add_theme_color_override("font_color", Color(0.55, 0.58, 0.65))
+	var relative := ""
+	if GameManager.has_method("_get_relative_time"):
+		relative = GameManager._get_relative_time(GameManager.BUILD_TIMESTAMP)
+	label.text = PhoneChrome.build_stamp_line(GameManager.VERSION, GameManager.BUILD_TIMESTAMP, relative)
+	vbox.add_child(label)
+	var title = vbox.get_node_or_null("TitleLabel")
+	if title:
+		vbox.move_child(label, title.get_index() + 1)
 
 
 ## Report Bug goes to the GOACTO feedback page, tagged with the build version.
