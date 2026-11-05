@@ -117,14 +117,6 @@ text = "MINDSCAPE"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="TitleGlow" type="Label" parent="CenterContainer/VBox/TitleContainer"]
-modulate = Color(0.83, 0.66, 0.29, 0.3)
-layout_mode = 2
-theme_override_font_sizes/font_size = 56
-text = "MINDSCAPE"
-horizontal_alignment = 1
-vertical_alignment = 1
-
 [node name="Subtitle" type="Label" parent="CenterContainer/VBox/TitleContainer" unique_id=91289600]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.83, 0.66, 0.29, 1)
@@ -179,23 +171,6 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.5, 0.42, 0.25, 0.8)
 theme_override_font_sizes/font_size = 14
 text = "Growing Ourselves And Contributing To Others"
-horizontal_alignment = 1
-
-[node name="VersionLabel" type="Label" parent="." unique_id=1450300690]
-layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -100.0
-offset_top = -40.0
-offset_right = 100.0
-grow_horizontal = 2
-grow_vertical = 0
-theme_override_colors/font_color = Color(0.35, 0.38, 0.45, 1)
-theme_override_font_sizes/font_size = 14
-text = "v0.1.0 - Prototype"
 horizontal_alignment = 1
 
 [node name="AudioControls" type="HBoxContainer" parent="."]

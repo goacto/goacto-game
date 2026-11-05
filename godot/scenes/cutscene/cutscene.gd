@@ -4,6 +4,8 @@ extends Control
 
 signal cutscene_finished(cutscene_id: String)
 
+const CutsceneFrame := preload("res://scripts/ui/cutscene_frame.gd")
+
 # Voice clip cache - loaded on demand
 var voice_clips: Dictionary = {}
 var voice_base_path: String = "res://audio/voice/"
@@ -41,6 +43,9 @@ var type_speed: float = 0.03
 var type_timer: float = 0.0
 var is_finishing: bool = false
 var animation_time: float = 0.0
+var _intro_root: Control = null
+var _intro_title: Label = null
+var _intro_subtitle: Label = null
 
 # Character definitions
 const CHARACTERS = {
@@ -470,6 +475,9 @@ const CUTSCENES = {
 
 func _ready() -> void:
 	# Signals are connected in the TSCN file
+	if not get_viewport().size_changed.is_connected(_apply_cutscene_frame):
+		get_viewport().size_changed.connect(_apply_cutscene_frame)
+	_apply_cutscene_frame()
 
 	# Hide characters initially
 	character_left.visible = false
@@ -604,6 +612,81 @@ func play_cutscene(cutscene_id: String) -> void:
 		_show_scene(0)
 
 
+## Letterbox the intro into the phone safe area. Desktop sizes keep the scene file.
+func _apply_cutscene_frame() -> void:
+	var vp := get_viewport_rect().size
+	if vp.x < 2.0 or vp.y < 2.0 or not CutsceneFrame.needs_reflow(vp):
+		_position_intro_title()
+		return
+	_place_control(skip_button, CutsceneFrame.skip_rect(vp))
+	_place_control(back_button, CutsceneFrame.back_rect(vp))
+	skip_button.z_index = 30
+	back_button.z_index = 30
+	_place_control(location_label, CutsceneFrame.location_rect(vp))
+	location_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	location_label.clip_text = true
+	location_label.z_index = 5
+	_place_control(dialogue_panel, CutsceneFrame.dialogue_rect(vp))
+	var stage := CutsceneFrame.stage_rect(vp)
+	spaceship.position = stage.get_center()
+	spaceship.scale = Vector2.ONE * CutsceneFrame.ship_scale(vp)
+	stars.position = stage.get_center()
+	if kitchen_elements:
+		kitchen_elements.position = stage.get_center()
+	var cscale := CutsceneFrame.character_offset_scale(vp)
+	_fit_character(character_left, -350.0, -150.0, -300.0, 0.0, cscale)
+	_fit_character(character_right, 150.0, 350.0, -300.0, 0.0, cscale)
+	_fit_character(character_center, -100.0, 100.0, -350.0, 0.0, cscale)
+	scene_container.offset_top = CutsceneFrame.location_rect(vp).end.y
+	scene_container.offset_bottom = -(vp.y - CutsceneFrame.dialogue_rect(vp).position.y)
+	_position_intro_title()
+
+
+func _fit_character(node: Control, left: float, right: float, top: float, bottom: float, cscale: float) -> void:
+	node.offset_left = left * cscale
+	node.offset_right = right * cscale
+	node.offset_top = top
+	node.offset_bottom = bottom
+
+
+func _place_control(ctrl: Control, rect: Rect2) -> void:
+	ctrl.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	ctrl.offset_left = rect.position.x
+	ctrl.offset_top = rect.position.y
+	ctrl.offset_right = rect.end.x
+	ctrl.offset_bottom = rect.end.y
+
+
+func _position_intro_title() -> void:
+	if _intro_title == null or not is_instance_valid(_intro_title):
+		return
+	var vp := get_viewport_rect().size
+	if CutsceneFrame.needs_reflow(vp):
+		var block := CutsceneFrame.intro_block(vp)
+		_intro_title.add_theme_font_size_override("font_size", int(block.font))
+		_place_control(_intro_title, block.title)
+		if _intro_subtitle:
+			_place_control(_intro_subtitle, block.subtitle)
+		return
+	# Desktop: the card stays centered, same offsets the scene used before the phone pass.
+	if _intro_root:
+		_intro_root.set_anchors_preset(Control.PRESET_CENTER)
+		_intro_root.offset_left = 0
+		_intro_root.offset_top = 0
+		_intro_root.offset_right = 0
+		_intro_root.offset_bottom = 0
+	_intro_title.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_intro_title.add_theme_font_size_override("font_size", 72)
+	_intro_title.position = Vector2(-200, -80)
+	_intro_title.custom_minimum_size = Vector2(400, 0)
+	_intro_title.size = Vector2(400, 80)
+	if _intro_subtitle:
+		_intro_subtitle.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		_intro_subtitle.position = Vector2(-200, 20)
+		_intro_subtitle.custom_minimum_size = Vector2(400, 0)
+		_intro_subtitle.size = Vector2(400, 36)
+
+
 func _play_cinematic_intro() -> void:
 	# Setup the space scene with ship
 	background.color = Color(0.02, 0.02, 0.06, 1.0)
@@ -618,29 +701,35 @@ func _play_cinematic_intro() -> void:
 	character_center.visible = false
 	character_system.visible = false
 
-	# Create title text
+	# Create title text. On a phone the card is placed in the 16:9 letterbox, clear of Skip.
 	var title_container = Control.new()
 	title_container.name = "IntroTitle"
-	title_container.set_anchors_preset(Control.PRESET_CENTER)
+	title_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	title_container.z_index = 2
+	title_container.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(title_container)
+	_intro_root = title_container
 
 	var title = Label.new()
 	title.text = "MINDSCAPE"
 	title.add_theme_font_size_override("font_size", 72)
 	title.add_theme_color_override("font_color", Color(0.83, 0.66, 0.29, 0.0))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.position = Vector2(-200, -80)
-	title.custom_minimum_size = Vector2(400, 0)
+	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	title_container.add_child(title)
+	_intro_title = title
 
 	var subtitle = Label.new()
 	subtitle.text = "A Journey Within"
 	subtitle.add_theme_font_size_override("font_size", 24)
 	subtitle.add_theme_color_override("font_color", Color(0.7, 0.75, 0.85, 0.0))
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	subtitle.position = Vector2(-200, 20)
-	subtitle.custom_minimum_size = Vector2(400, 0)
+	subtitle.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	subtitle.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	title_container.add_child(subtitle)
+	_intro_subtitle = subtitle
+	_position_intro_title()
 
 	# Animate the intro sequence
 	var tween = create_tween()
@@ -672,6 +761,9 @@ func _play_cinematic_intro() -> void:
 	# Clean up and start the actual cutscene
 	tween.tween_callback(func():
 		title_container.queue_free()
+		_intro_root = null
+		_intro_title = null
+		_intro_subtitle = null
 		_show_scene(0)
 	)
 
@@ -752,6 +844,7 @@ func _create_kitchen_elements() -> void:
 	kitchen_elements.name = "KitchenElements"
 	kitchen_elements.position = Vector2(683, 350)
 	add_child(kitchen_elements)
+	_apply_cutscene_frame()
 	move_child(kitchen_elements, 2)  # After Background and Stars
 
 	# Floor
