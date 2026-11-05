@@ -729,7 +729,9 @@ func _play_cinematic_intro() -> void:
 	subtitle.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	title_container.add_child(subtitle)
 	_intro_subtitle = subtitle
-	_position_intro_title()
+	# Frame again now that the title exists, so a portrait canvas centers the ship
+	# and the card together (a _ready pass can run before either is on screen).
+	_apply_cutscene_frame()
 
 	# Animate the intro sequence
 	var tween = create_tween()

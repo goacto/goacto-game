@@ -34,12 +34,46 @@ func _assert_frame(vp: Vector2) -> void:
 	var stage := Frame.stage_rect(vp)
 	var aspect := stage.size.x / maxf(stage.size.y, 1.0)
 	check(absf(aspect - 16.0 / 9.0) < 0.05, "stage is 16:9 %s (got %.3f)" % [vp, aspect])
+	if vp.y > vp.x:
+		var ideal_y := (vp.y - stage.size.y) * 0.5
+		check(absf(stage.position.y - ideal_y) <= 1.5, "letterbox vertically centered %s (y %.1f, ideal %.1f)" % [vp, stage.position.y, ideal_y])
+		check(stage.has_point(title.get_center()), "title sits in the centered letterbox %s" % vp)
+
+
+## HTML #rotate-hint at 390×844, mapped into a viewport that fills that window.
+## top 10px, padding 8px, one 0.85rem line at 1.2, side gutters of 100px
+## (max-width: calc(100vw - 200px)).
+func _rotate_hint_rect(viewport: Vector2, css: Vector2) -> Rect2:
+	var scale := Vector2(viewport.x / css.x, viewport.y / css.y)
+	var top := 10.0 * scale.y
+	var height := (8.0 + 8.0 + 0.85 * 16.0 * 1.2) * scale.y
+	var gutter := 100.0 * scale.x
+	var w := viewport.x - gutter * 2.0
+	return Rect2((viewport.x - w) * 0.5, top, w, height)
+
+
+func _assert_pill_clears_intro(viewport: Vector2, css: Vector2) -> void:
+	var hint := _rotate_hint_rect(viewport, css)
+	var stage := Frame.stage_rect(viewport)
+	# AntennaLight is local (0, -68) and its diamond tip is 4px further up.
+	var antenna_tip_y := stage.get_center().y - 72.0 * Frame.ship_scale(viewport)
+	check(stage.position.y >= hint.end.y, "letterbox starts below the rotate pill %s (stage %.1f pill %.1f)" % [viewport, stage.position.y, hint.end.y])
+	check(antenna_tip_y >= hint.end.y + 8.0, "ship antenna clears the rotate pill %s (tip %.1f pill %.1f)" % [viewport, antenna_tip_y, hint.end.y])
+	check(not hint.intersects(Frame.back_rect(viewport)), "rotate pill clears Back %s" % viewport)
+	check(not hint.intersects(Frame.skip_rect(viewport)), "rotate pill clears Skip %s" % viewport)
+	check(absf(hint.get_center().x - viewport.x * 0.5) <= 1.0, "rotate pill stays horizontally centered %s" % viewport)
 
 
 func _init() -> void:
 	# 390 CSS-px phone → HudOverlay virtual canvas ~600×1298 portrait, ~1298×600 landscape.
-	for vp in [Vector2(600, 1298), Vector2(1298, 600), Vector2(390, 844), Vector2(844, 390), Vector2(360, 740)]:
+	# Without that rescale, stretch aspect expand keeps width 1366 and grows height.
+	var css_phone := Vector2(390, 844)
+	var phone_canvas := Vector2(600, round(css_phone.y * 600.0 / css_phone.x))
+	var expanded := Vector2(1366, 1366.0 * css_phone.y / css_phone.x)
+	for vp in [phone_canvas, Vector2(1298, 600), Vector2(390, 844), Vector2(844, 390), Vector2(360, 740), expanded]:
 		_assert_frame(vp)
+	_assert_pill_clears_intro(phone_canvas, css_phone)
+	_assert_pill_clears_intro(expanded, css_phone)
 
 	check(not Frame.needs_reflow(Vector2(1366, 768)), "desktop 1366 keeps authored cutscene")
 	check(not Frame.needs_reflow(Vector2(1280, 720)), "1280 screenshot keeps authored cutscene")
@@ -88,6 +122,9 @@ func _init() -> void:
 	check(html.find("Loads about 85 MB the first time.") > load_at, "download size still says about 85 MB")
 	check(html.find("Turn your phone sideways") >= 0, "portrait rotate hint copy")
 	check(html.find("orientation: portrait") >= 0 and html.find("max-width: 500px") >= 0, "hint only in phone portrait")
+	check(html.find("top: 10px") >= 0 and html.find("left: 50%") >= 0, "rotate pill stays top center")
+	check(html.find("max-width: calc(100vw - 200px)") >= 0, "rotate pill keeps side gutters for Back and Skip")
+	check(html.find("padding: 8px 12px") >= 0, "rotate pill padding matches the clearance test")
 	check(html.find("id=\"play-gate\"") >= 0 and html.find("id=\"play-btn\"") >= 0, "play-gate still present")
 	check(html.find("loadScript('index.js')") >= 0, "WASM still loads only after Play")
 	var quiet := FileAccess.get_file_as_string("res://scripts/ui/quiet_link.gd")

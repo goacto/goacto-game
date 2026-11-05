@@ -1,10 +1,14 @@
 extends RefCounted
 ## Phone framing for the intro cutscene.
-## A 390 CSS-px phone becomes a ~600 px virtual canvas (see HudOverlay). The authored
-## cutscene is 1366×768: the location title runs under Skip, and the ship sits past
-## the right edge. On a narrow or short canvas this letterboxes a 16:9 stage inside
-## the safe area and keeps the title off the Skip button.
-## Desktop (at least 1100×700, including a 1280 px screenshot) keeps the scene file.
+## A 390 CSS-px phone becomes a ~600 px virtual canvas (see HudOverlay). Without that
+## rescale, stretch aspect "expand" keeps a ~1366 px width and grows the height
+## (about 1366×2956). Either canvas is portrait. The authored cutscene is 1366×768,
+## so the ship sits near the top of that tall canvas and the title card (anchored to
+## the viewport center) hangs in the middle, under the HTML "Turn your phone sideways"
+## pill. Portrait letterboxes a 16:9 stage on the vertical center so the ship and the
+## title share that stage, below the pill.
+## Desktop (at least 1100×700 and landscape, including a 1280 px screenshot) keeps
+## the scene file.
 
 const DESKTOP_MIN_W := 1100.0
 const DESKTOP_MIN_H := 700.0
@@ -12,6 +16,10 @@ const EDGE := 16.0
 
 
 static func needs_reflow(viewport: Vector2) -> bool:
+	# Portrait includes the expanded ~1366-wide phone canvas, which is taller than
+	# DESKTOP_MIN_H and so used to skip this frame entirely.
+	if viewport.y > viewport.x:
+		return true
 	return viewport.x < DESKTOP_MIN_W or viewport.y < DESKTOP_MIN_H
 
 
@@ -46,21 +54,27 @@ static func dialogue_rect(viewport: Vector2) -> Rect2:
 	return Rect2(EDGE, y, maxf(40.0, viewport.x - EDGE * 2.0), h)
 
 
-## 16:9 letterbox between the location line and the dialogue panel.
+## 16:9 letterbox. Vertically centered on the canvas, then clamped into the band
+## between the location line and the dialogue panel so a short landscape phone
+## still clears that chrome.
 static func stage_rect(viewport: Vector2) -> Rect2:
 	var loc := location_rect(viewport)
 	var dlg := dialogue_rect(viewport)
 	var top := loc.end.y + 8.0
-	var height := maxf(48.0, dlg.position.y - 8.0 - top)
-	var avail := Rect2(EDGE, top, maxf(40.0, viewport.x - EDGE * 2.0), height)
+	var bottom := dlg.position.y - 8.0
+	var avail_h := maxf(48.0, bottom - top)
+	var avail_w := maxf(40.0, viewport.x - EDGE * 2.0)
 	var aspect := 16.0 / 9.0
-	var w := avail.size.x
+	var w := avail_w
 	var h := w / aspect
-	if h > avail.size.y:
-		h = avail.size.y
+	if h > avail_h:
+		h = avail_h
 		w = h * aspect
-	var origin := avail.position + (avail.size - Vector2(w, h)) * 0.5
-	return Rect2(origin, Vector2(w, h))
+	var y := (viewport.y - h) * 0.5
+	var y_max := top + avail_h - h
+	y = clampf(y, top, maxf(top, y_max))
+	var x := EDGE + (avail_w - w) * 0.5
+	return Rect2(x, y, w, h)
 
 
 static func intro_title_font(stage_width: float) -> int:
