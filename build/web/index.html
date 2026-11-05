@@ -28,11 +28,18 @@ body {
 	color: white;
 	background-color: black;
 	overflow: hidden;
-	touch-action: none;
+	/* Pinch-zoom stays available on the Play gate. The game canvas opts out below. */
+	touch-action: manipulation;
 }
 
 #canvas {
 	display: block;
+	touch-action: none;
+}
+
+#play-btn:focus-visible {
+	outline: 3px solid #f5f0e8;
+	outline-offset: 3px;
 }
 
 #canvas:focus {
@@ -137,6 +144,9 @@ body {
 		</style>
 		<link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
 <link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
+<link rel="manifest" href="index.manifest.json" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
 <script src="goacto-ping.js"></script>
 <script src="play-progress.js"></script>
 	</head>
