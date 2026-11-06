@@ -4,7 +4,7 @@ extends Node
 
 # Version and Build Info
 const VERSION: String = "v0.1.0-prototype"
-const BUILD_TIMESTAMP: String = "20261029-155849"  # UTC timestamp: YYYYMMDD-HHMMSS
+const BUILD_TIMESTAMP: String = "20261106-195825"  # UTC timestamp: YYYYMMDD-HHMMSS
 
 # Game States
 enum GameState {
@@ -1480,9 +1480,12 @@ signal daily_reward_available(day: int, reward: Dictionary)
 signal daily_reward_claimed(day: int, reward: Dictionary)
 signal milestone_reached(milestone_id: String, days: int)
 
+const DailyRewardCopy := preload("res://scripts/ui/daily_reward_copy.gd")
+
 const DAILY_REWARDS = [
 	# Day 1-7 (Week 1)
-	{"day": 1, "type": "xp", "amount": 25, "description": "Welcome back, Traveler!"},
+	# First arrival. "Welcome back" is for a return, and this day is not one.
+	{"day": 1, "type": "xp", "amount": 25, "description": "Welcome, Traveler."},
 	{"day": 2, "type": "xp", "amount": 30, "description": "Building momentum..."},
 	{"day": 3, "type": "xp", "amount": 35, "description": "Three days strong!"},
 	{"day": 4, "type": "xp", "amount": 40, "description": "Consistency is key."},
@@ -1592,6 +1595,8 @@ func check_daily_login() -> Dictionary:
 	var reward_day = ((int(player_data.total_login_days) - 1) % 30) + 1
 	var reward = _get_daily_reward(reward_day)
 	if reward:
+		# First visit must not say "Welcome back", even if the table line regresses.
+		reward["description"] = DailyRewardCopy.for_login(reward, int(player_data.total_login_days))
 		result.reward = reward
 		daily_reward_available.emit(reward_day, reward)
 
