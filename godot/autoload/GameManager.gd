@@ -4,7 +4,7 @@ extends Node
 
 # Version and Build Info
 const VERSION: String = "v0.1.0-prototype"
-const BUILD_TIMESTAMP: String = "20261106-195825"  # UTC timestamp: YYYYMMDD-HHMMSS
+const BUILD_TIMESTAMP: String = "20261108-013356"  # UTC timestamp: YYYYMMDD-HHMMSS
 
 # Game States
 enum GameState {

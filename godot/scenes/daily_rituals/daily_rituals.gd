@@ -284,7 +284,7 @@ func _show_streak_recovery(at_risk: Array) -> void:
 	recovery_vbox.add_theme_constant_override("separation", 8)
 
 	var warning_label = Label.new()
-	warning_label.text = "Streaks at Risk!"
+	warning_label.text = "Ready when you are"
 	warning_label.add_theme_font_size_override("font_size", 16)
 	warning_label.add_theme_color_override("font_color", Color(0.9, 0.6, 0.3))
 	recovery_vbox.add_child(warning_label)
@@ -294,7 +294,7 @@ func _show_streak_recovery(at_risk: Array) -> void:
 		row.add_theme_constant_override("separation", 8)
 
 		var name_label = Label.new()
-		name_label.text = habit.name + " (" + str(habit.streak) + " day streak)"
+		name_label.text = habit.name + " (" + str(habit.streak) + " days showed up)"
 		name_label.add_theme_font_size_override("font_size", 14)
 		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(name_label)
@@ -667,7 +667,7 @@ func _unarchive_habit(habit_id: String) -> void:
 
 func _use_grace_day(habit_id: String) -> void:
 	if HabitManager.use_grace_day(habit_id):
-		subtitle_label.text = "Streak saved with grace day!"
+		subtitle_label.text = "Welcome back!"
 		subtitle_label.add_theme_color_override("font_color", Color(0.7, 0.8, 0.5))
 	_load_habits()
 
@@ -1317,10 +1317,10 @@ func _add_habit_stat_row(container: VBoxContainer, habit_stat: Dictionary, perio
 	# Streak info
 	var streak_label = Label.new()
 	if int(habit_stat.streak) > 0:
-		streak_label.text = "%d streak" % int(habit_stat.streak)
+		streak_label.text = "%d days" % int(habit_stat.streak)
 		streak_label.add_theme_color_override("font_color", _get_streak_color(habit_stat.streak))
 	else:
-		streak_label.text = "no streak"
+		streak_label.text = "ready to start"
 		streak_label.add_theme_color_override("font_color", Color(0.45, 0.45, 0.5))
 	streak_label.add_theme_font_size_override("font_size", 12)
 	streak_label.custom_minimum_size = Vector2(70, 0)
@@ -1629,7 +1629,7 @@ func _show_streak_celebration(habit_name: String, streak: int) -> void:
 
 	# Streak count
 	var streak_label = Label.new()
-	streak_label.text = str(streak) + " Day Streak!"
+	streak_label.text = str(streak) + " days you showed up!"
 	streak_label.add_theme_font_size_override("font_size", 22)
 	streak_label.add_theme_color_override("font_color", Color(1, 1, 1))
 	streak_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -2211,7 +2211,7 @@ func _add_relationship_row(container: VBoxContainer, rel: Dictionary) -> void:
 	if rel.streak_weeks > 0:
 		var streak_label = Label.new()
 		streak_label.text = str(rel.streak_weeks) + "w"
-		streak_label.tooltip_text = str(rel.streak_weeks) + " week streak"
+		streak_label.tooltip_text = str(rel.streak_weeks) + " weeks connected"
 		streak_label.add_theme_font_size_override("font_size", 14)
 		streak_label.add_theme_color_override("font_color", Color(0.9, 0.7, 0.3))
 		hbox.add_child(streak_label)

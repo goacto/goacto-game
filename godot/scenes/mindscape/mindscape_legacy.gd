@@ -153,7 +153,7 @@ var zone_unlock_text: Dictionary = {
 	"focus_chamber": "Available from the start",
 	"daily_rituals": "Complete Chapter 1:\nFinish your first focus session",
 	"reflection_pool": "Complete Chapter 2:\nCreate a habit and complete 3 focus sessions",
-	"goal_compass": "Complete Chapter 3:\nMaintain a 5-day streak",
+	"goal_compass": "Complete Chapter 3:\nShow up on 5 days",
 	"training_arena": "Complete Chapter 4:\nSet and complete daily goals",
 	"aspect_shrine": "Complete Chapter 5:\nDefeat Doubt in combat",
 	"script_lab": "Complete Chapter 7:\nDefeat Fear and awaken Courage",
@@ -2508,7 +2508,7 @@ func _add_habit_display(habit: Dictionary) -> void:
 	vbox.add_child(name_label)
 
 	var streak_label = Label.new()
-	streak_label.text = str(habit.streak) + " day streak"
+	streak_label.text = str(habit.streak) + " days showed up"
 	streak_label.add_theme_font_size_override("font_size", 18)
 	streak_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.6))
 	vbox.add_child(streak_label)
@@ -3775,7 +3775,7 @@ var zone_tutorials: Dictionary = {
 	},
 	"habits": {
 		"title": "Daily Rituals",
-		"text": "Track your real-world habits here. Building streaks multiplies your rewards and powers up your Aspects."
+		"text": "Track your real-world habits here. Every day you show up adds to your rewards and powers up your Aspects."
 	},
 	"arena": {
 		"title": "Training Arena",
