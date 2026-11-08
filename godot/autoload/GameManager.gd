@@ -4,7 +4,7 @@ extends Node
 
 # Version and Build Info
 const VERSION: String = "v0.1.0-prototype"
-const BUILD_TIMESTAMP: String = "20261029-161317"  # UTC timestamp: YYYYMMDD-HHMMSS
+const BUILD_TIMESTAMP: String = "20261108-013356"  # UTC timestamp: YYYYMMDD-HHMMSS
 
 # Game States
 enum GameState {
@@ -159,6 +159,10 @@ func _ready() -> void:
 
 # Version overlay for debugging
 var version_overlay: CanvasLayer = null
+var _prototype_tag: Label = null
+var _reset_btn: Button = null
+
+const PhoneChrome := preload("res://scripts/ui/phone_chrome.gd")
 
 func _get_relative_time(timestamp_str: String) -> String:
 	# Parse YYYYMMDD-HHMMSS format
@@ -202,35 +206,18 @@ func _create_version_overlay() -> void:
 	version_overlay.layer = 100  # Always on top
 	add_child(version_overlay)
 
-	var hbox = HBoxContainer.new()
-	hbox.name = "VersionBar"
-	hbox.anchor_left = 1.0
-	hbox.anchor_right = 1.0
-	hbox.anchor_top = 1.0
-	hbox.anchor_bottom = 1.0
-	hbox.offset_left = -360
-	hbox.offset_right = -10
-	hbox.offset_top = -30
-	hbox.offset_bottom = -10
-	hbox.alignment = BoxContainer.ALIGNMENT_END
-	hbox.add_theme_constant_override("separation", 6)
-
-	# Version label
-	var label = Label.new()
-	label.name = "VersionLabel"
-
-	var build_info: String
-	if BUILD_TIMESTAMP == "LOCAL":
-		build_info = "Local Dev"
-	else:
-		var relative = _get_relative_time(BUILD_TIMESTAMP)
-		build_info = "%s (%s)" % [BUILD_TIMESTAMP, relative] if relative else BUILD_TIMESTAMP
-	label.text = "%s | %s" % [VERSION, build_info]
-
-	label.add_theme_font_size_override("font_size", 12)
-	label.add_theme_color_override("font_color", Color(1, 1, 1, 0.4))
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	hbox.add_child(label)
+	# One small Prototype tag. The timestamp lives in Settings (BuildStamp),
+	# so this row cannot cover the feedback link the way the old 360px stamp did.
+	var tag := Label.new()
+	tag.name = "PrototypeTag"
+	tag.text = PhoneChrome.PROTOTYPE_TEXT
+	tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	tag.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	tag.add_theme_font_size_override("font_size", 12)
+	tag.add_theme_color_override("font_color", Color(1, 1, 1, 0.55))
+	version_overlay.add_child(tag)
+	_prototype_tag = tag
 
 	# Reset button - debug builds only (public release build must not show it)
 	if OS.is_debug_build():
@@ -243,9 +230,12 @@ func _create_version_overlay() -> void:
 		reset_btn.add_theme_color_override("font_hover_color", Color(1, 0.6, 0.6, 0.9))
 		reset_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		reset_btn.pressed.connect(_reset_current_scene)
-		hbox.add_child(reset_btn)
+		version_overlay.add_child(reset_btn)
+		_reset_btn = reset_btn
 
-	version_overlay.add_child(hbox)
+	if not get_tree().root.size_changed.is_connected(_layout_prototype_tag):
+		get_tree().root.size_changed.connect(_layout_prototype_tag)
+	_layout_prototype_tag()
 
 	# Feedback button - bottom left
 	var feedback_btn = Button.new()
@@ -266,6 +256,22 @@ func _create_version_overlay() -> void:
 	feedback_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	feedback_btn.pressed.connect(_open_feedback_form)
 	version_overlay.add_child(feedback_btn)
+
+
+func _layout_prototype_tag() -> void:
+	if _prototype_tag == null or not is_instance_valid(_prototype_tag):
+		return
+	var vp := get_viewport().get_visible_rect().size
+	if vp.x < 2.0 or vp.y < 2.0:
+		return
+	var rect := PhoneChrome.prototype_rect(vp)
+	_prototype_tag.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_prototype_tag.position = rect.position
+	_prototype_tag.size = rect.size
+	if _reset_btn and is_instance_valid(_reset_btn):
+		_reset_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		_reset_btn.position = Vector2(rect.position.x, maxf(8.0, rect.position.y - 26.0))
+		_reset_btn.size = Vector2(rect.size.x, 22)
 
 
 const EarlyTestingLinks := preload("res://scripts/ui/early_testing.gd")
@@ -1474,9 +1480,12 @@ signal daily_reward_available(day: int, reward: Dictionary)
 signal daily_reward_claimed(day: int, reward: Dictionary)
 signal milestone_reached(milestone_id: String, days: int)
 
+const DailyRewardCopy := preload("res://scripts/ui/daily_reward_copy.gd")
+
 const DAILY_REWARDS = [
 	# Day 1-7 (Week 1)
-	{"day": 1, "type": "xp", "amount": 25, "description": "Welcome back, Traveler!"},
+	# First arrival. "Welcome back" is for a return, and this day is not one.
+	{"day": 1, "type": "xp", "amount": 25, "description": "Welcome, Traveler."},
 	{"day": 2, "type": "xp", "amount": 30, "description": "Building momentum..."},
 	{"day": 3, "type": "xp", "amount": 35, "description": "Three days strong!"},
 	{"day": 4, "type": "xp", "amount": 40, "description": "Consistency is key."},
@@ -1586,6 +1595,8 @@ func check_daily_login() -> Dictionary:
 	var reward_day = ((int(player_data.total_login_days) - 1) % 30) + 1
 	var reward = _get_daily_reward(reward_day)
 	if reward:
+		# First visit must not say "Welcome back", even if the table line regresses.
+		reward["description"] = DailyRewardCopy.for_login(reward, int(player_data.total_login_days))
 		result.reward = reward
 		daily_reward_available.emit(reward_day, reward)
 

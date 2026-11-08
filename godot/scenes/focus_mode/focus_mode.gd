@@ -34,6 +34,8 @@ var current_topic_id: String = ""
 # Difficulty mode
 enum DifficultyMode { EASY, HARD }
 var difficulty: DifficultyMode = DifficultyMode.EASY
+const QuietLink := preload("res://scripts/ui/quiet_link.gd")
+const QuietReturn := preload("res://scripts/ui/quiet_return.gd")
 const AspectLabel := preload("res://scripts/ui/aspect_label.gd")
 const EASY_XP_MULTIPLIER: float = 0.7
 const HARD_XP_MULTIPLIER: float = 1.5
@@ -1704,6 +1706,13 @@ func _show_session_summary() -> void:
 	xp_label.add_theme_color_override("font_color", Color(0.9, 0.8, 0.3))
 	xp_row.add_child(xp_label)
 
+	# One quiet session-end line the first time a focus session ends.
+	# The save count is still 0 here; the journal submit records the session.
+	var prior_sessions := int(GameManager.player_data.get("total_focus_sessions", 0))
+	if QuietReturn.should_show(prior_sessions):
+		var day_two_xp := QuietReturn.day_two_xp(GameManager.DAILY_REWARDS)
+		vbox.add_child(QuietReturn.make(day_two_xp))
+
 	# Continue button
 	var spacer2 = Control.new()
 	spacer2.custom_minimum_size = Vector2(0, 15)
@@ -1715,6 +1724,9 @@ func _show_session_summary() -> void:
 	continue_btn.add_theme_font_size_override("font_size", 22)
 	continue_btn.pressed.connect(_close_summary_show_journal)
 	vbox.add_child(continue_btn)
+
+	# One quiet link to the $7 workbook (no pop-up).
+	vbox.add_child(QuietLink.make())
 
 	# Center the panel on screen
 	summary_panel.position = Vector2(

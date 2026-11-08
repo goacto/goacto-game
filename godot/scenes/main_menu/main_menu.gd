@@ -18,7 +18,8 @@ const FitViewport := preload("res://scripts/ui/fit_viewport.gd")
 # Visual effects
 @onready var stars_container: Control = $StarsContainer
 @onready var glow_orb: Control = $GlowOrb
-@onready var title_glow: Label = $CenterContainer/VBox/TitleContainer/TitleGlow
+# TitleGlow was a second "MINDSCAPE" stacked under the real title. Removed.
+var title_glow: Label = null
 
 # Load game panel
 var load_panel: PanelContainer = null
