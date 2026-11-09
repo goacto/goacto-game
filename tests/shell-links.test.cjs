@@ -6,7 +6,7 @@ const path = require("node:path");
 const html = fs.readFileSync(path.join(__dirname, "../build/web/index.html"), "utf8");
 
 const FOCUS_URL = "https://focus.goacto.com";
-const GUIDE_URL = "https://goacto.com/pages/atomic-habits";
+const GUIDE_URL = "https://goacto.com/pages/free-book-guide";
 const FOCUS_LINE = "Mindscape: practice focus as a short browser game. Want a simple daily focus tracker? Try Focus Log.";
 
 function anchors(source) {
