@@ -8,6 +8,7 @@ const SETTINGS_PATH = "user://mindscape_settings.json"
 const SAVE_SLOT_PREFIX = "user://mindscape_save_slot_"
 const JOURNAL_SLOT_PREFIX = "user://mindscape_journal_slot_"
 const NUM_SAVE_SLOTS = 3
+const EvolutionLevel := preload("res://scripts/progression/evolution_level.gd")
 
 var current_slot: int = 0  # 0 = auto-save, 1-3 = manual slots
 
@@ -435,7 +436,7 @@ func get_slot_info(slot: int) -> Dictionary:
 
 	# Get player data
 	var player = data.get("player", {})
-	info["evolution_level"] = player.get("evolution_level", 1)
+	info["evolution_level"] = EvolutionLevel.level_from_player(player)
 	info["habits_completed"] = player.get("total_habits_completed", 0)
 
 	# Get campaign data for chapter info
