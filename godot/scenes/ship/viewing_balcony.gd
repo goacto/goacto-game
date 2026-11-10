@@ -982,7 +982,7 @@ func _complete_meditation() -> void:
 	# Award XP based on duration
 	var xp_reward = int(meditation_duration / 60) * 10
 	if GameManager.has_method("add_aspect_experience"):
-		GameManager.add_aspect_experience("spirit", xp_reward)
+		GameManager.add_aspect_experience("wisdom", xp_reward)
 
 	# Track for aspect quests
 	if GameManager:
@@ -991,7 +991,7 @@ func _complete_meditation() -> void:
 	_play_sfx("res://audio/sfx/success.wav")
 
 	_close_meditation_panel()
-	_show_dialogue("Meditation Complete", "You feel centered and at peace.\n\nThe starlight has filled you with calm clarity.\n\n+%d Spirit XP" % xp_reward)
+	_show_dialogue("Meditation Complete", "You feel centered and at peace.\n\nThe starlight has filled you with calm clarity.\n\n+%d Wisdom XP" % xp_reward)
 
 
 func _close_meditation_panel() -> void:

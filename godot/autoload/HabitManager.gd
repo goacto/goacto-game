@@ -8,6 +8,8 @@ signal streak_recovered(habit_id: String, grace_days_used: int)
 signal daily_reset_occurred
 signal habit_reminder_triggered(habit_id: String, habit_name: String)
 
+const HabitRules := preload("res://scripts/progression/habit_rules.gd")
+
 # Habit categories matching our design
 enum HabitDomain {
 	HEALTH,
@@ -1145,7 +1147,7 @@ func _check_reminders() -> void:
 			continue
 
 		# Check if habit is already completed today
-		if habit_id in todays_completions:
+		if HabitRules.completed_today(todays_completions, habit_id):
 			continue
 
 		# Parse reminder time
@@ -1246,7 +1248,7 @@ func get_next_reminder() -> Dictionary:
 			continue
 
 		# Skip if already completed today
-		if habit_id in todays_completions:
+		if HabitRules.completed_today(todays_completions, habit_id):
 			continue
 
 		var time_parts = reminder.get("time", "09:00").split(":")

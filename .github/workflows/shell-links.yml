@@ -14,4 +14,4 @@ jobs:
         with:
           node-version: "22"
       - name: Fail if Focus Log or the free book guide leaves the web shell
-        run: node --test tests/shell-links.test.cjs
+        run: node --test tests/shell-links.test.cjs tests/play-progress.test.cjs tests/goacto-ping.test.cjs

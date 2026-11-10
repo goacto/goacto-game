@@ -368,25 +368,24 @@ func _deferred_goto_scene(scene_path: String) -> void:
 	get_tree().change_scene_to_file(scene_path)
 
 
-## Add experience to an aspect based on habit domain
-func add_aspect_experience(domain: String, amount: int) -> void:
+const AspectXp := preload("res://scripts/progression/aspect_xp.gd")
+
+
+## Add experience. token is an Aspect id ("wisdom"), a habit domain ("mindfulness"), or "all".
+func add_aspect_experience(token: String, amount: int) -> void:
 	for aspect_key in player_data.aspects:
 		var aspect = player_data.aspects[aspect_key]
-		if aspect.domain == domain or domain == "all":
-			aspect.experience += amount
-			_check_aspect_levelup(aspect_key)
-
-
-## Check if aspect should level up
-func _check_aspect_levelup(aspect_key: String) -> void:
-	var aspect = player_data.aspects[aspect_key]
-	var exp_needed = aspect.level * 100  # Simple scaling: level 1 needs 100, level 2 needs 200, etc.
-
-	if aspect.experience >= exp_needed:
-		aspect.experience -= exp_needed
-		aspect.level += 1
-		aspect_leveled_up.emit(aspect.name, aspect.level)
-		print("[GameManager] ", aspect.name, " leveled up to ", aspect.level, "!")
+		if not AspectXp.targets(str(aspect_key), str(aspect.get("domain", "")), token):
+			continue
+		var before := int(aspect.level)
+		var next := AspectXp.apply(before, float(aspect.experience), amount)
+		aspect.experience = next.experience
+		aspect.level = int(next.level)
+		var lvl := before
+		while lvl < int(aspect.level):
+			lvl += 1
+			aspect_leveled_up.emit(aspect.name, lvl)
+			print("[GameManager] ", aspect.name, " leveled up to ", lvl, "!")
 
 
 ## Evolve the world based on completed actions
@@ -401,9 +400,12 @@ func get_world_evolution_normalized() -> float:
 	return player_data.world_evolution_level / 100.0
 
 
+const EvolutionLevel := preload("res://scripts/progression/evolution_level.gd")
+
+
 ## Get evolution level as an integer (1-10, each level is 10% evolution)
 func get_evolution_level() -> int:
-	return int(player_data.world_evolution_level / 10.0) + 1
+	return EvolutionLevel.level_from_percent(float(player_data.world_evolution_level))
 
 
 ## Get progress within current evolution level (0.0 to 1.0)
@@ -1295,7 +1297,8 @@ func check_quests_for_trigger(trigger_type: String, data: Dictionary = {}) -> vo
 		match trigger_type:
 			"focus_session_completed":
 				if requirements.has("focus_sessions"):
-					increment_quest_progress(quest_id, "focus_sessions", 1)
+					if QuestRules.focus_session_counts(requirements, int(data.get("duration_minutes", 0))):
+						increment_quest_progress(quest_id, "focus_sessions", 1)
 				if requirements.has("single_session_minutes"):
 					var duration = data.get("duration_minutes", 0)
 					if duration >= requirements.single_session_minutes:
@@ -1379,25 +1382,9 @@ func _check_quest_completion(quest_id: String) -> void:
 	var is_complete = true
 
 	for req_key in requirements:
-		var req_value = requirements[req_key]
-		var prog_value = progress.get(req_key, progress.get(req_key + "_completed", false))
-
-		# Handle different requirement types
-		if req_key.ends_with("_hours") or req_key.ends_with("_days"):
-			continue  # Time limits checked separately
-
-		if typeof(req_value) == TYPE_BOOL:
-			if prog_value != req_value:
-				is_complete = false
-				break
-		elif typeof(req_value) == TYPE_INT or typeof(req_value) == TYPE_FLOAT:
-			if typeof(prog_value) == TYPE_ARRAY:
-				if prog_value.size() < req_value:
-					is_complete = false
-					break
-			elif prog_value < req_value:
-				is_complete = false
-				break
+		if not QuestRules.requirement_met(str(req_key), requirements[req_key], progress):
+			is_complete = false
+			break
 
 	if is_complete:
 		complete_quest(quest_id)
@@ -1481,6 +1468,8 @@ signal daily_reward_claimed(day: int, reward: Dictionary)
 signal milestone_reached(milestone_id: String, days: int)
 
 const DailyRewardCopy := preload("res://scripts/ui/daily_reward_copy.gd")
+const QuestRules := preload("res://scripts/progression/quest_rules.gd")
+const LoginRewards := preload("res://scripts/progression/login_rewards.gd")
 
 const DAILY_REWARDS = [
 	# Day 1-7 (Week 1)
@@ -1636,8 +1625,9 @@ func _check_milestone(total_days: int) -> Dictionary:
 func claim_daily_reward(day: int) -> bool:
 	_ensure_login_data()
 
-	if day in player_data.claimed_daily_rewards:
-		return false  # Already claimed
+	var claim_id = LoginRewards.claim_token(int(player_data.total_login_days), day)
+	if claim_id in player_data.claimed_daily_rewards:
+		return false  # Already claimed this cycle
 
 	var reward = _get_daily_reward(day)
 	if reward.is_empty():
@@ -1647,25 +1637,30 @@ func claim_daily_reward(day: int) -> bool:
 	if reward.has("amount"):
 		add_aspect_experience("all", reward.amount)
 
-	# Handle special bonuses
+	# Handle special bonuses. The 30-day table repeats; each unlock is granted once.
 	if reward.has("bonus"):
 		match reward.bonus:
 			"lore_fragment":
 				if not player_data.has("unlocked_lore"):
 					player_data["unlocked_lore"] = []
-				player_data.unlocked_lore.append("daily_lore_" + str(day))
+				var lore_id := "daily_lore_" + str(day)
+				if lore_id not in player_data.unlocked_lore:
+					player_data.unlocked_lore.append(lore_id)
 			"cosmetic_color":
 				if not player_data.has("unlocked_colors"):
 					player_data["unlocked_colors"] = []
-				player_data.unlocked_colors.append("streak_gold")
+				if "streak_gold" not in player_data.unlocked_colors:
+					player_data.unlocked_colors.append("streak_gold")
 			"companion_accessory":
-				player_data.companion_accessories.append("star_trail")
+				if "star_trail" not in player_data.companion_accessories:
+					player_data.companion_accessories.append("star_trail")
 			"title_dedicated":
 				if not player_data.has("unlocked_titles"):
 					player_data["unlocked_titles"] = []
-				player_data.unlocked_titles.append("The Dedicated")
+				if "The Dedicated" not in player_data.unlocked_titles:
+					player_data.unlocked_titles.append("The Dedicated")
 
-	player_data.claimed_daily_rewards.append(day)
+	player_data.claimed_daily_rewards.append(claim_id)
 	daily_reward_claimed.emit(day, reward)
 	SaveManager.save_game()
 	return true
